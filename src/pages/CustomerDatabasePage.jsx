@@ -137,7 +137,7 @@ export const CustomerDatabasePage = () => {
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-burgundy-900 flex-wrap">
             <Database className="w-4 h-4 text-gold-600" />
-            <span>Customer Directory Module</span>
+            <span>Database Partition</span>
             <span>•</span>
             <span className="text-slate-500 font-mono">Total {filteredCustomers.length} Records</span>
             {currentUser?.role === 'Sales Manager' && (

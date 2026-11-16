@@ -11,6 +11,7 @@ import { Toast } from './components/common/Toast';
 // Pages
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { CustomerManagementPage } from './pages/CustomerManagementPage';
 import { CustomerDatabasePage } from './pages/CustomerDatabasePage';
 import { TelecallingPage } from './pages/TelecallingPage';
 import { DailyActivitiesPage } from './pages/DailyActivitiesPage';
@@ -39,10 +40,11 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
   const getPageTitle = (path) => {
     if (path.startsWith('/dashboard')) return 'Executive Dashboard';
     if (path.startsWith('/telecalling')) return 'RM Focused Telecalling';
-    if (path.startsWith('/customers/old/known')) return 'Customer Database • Old Known';
-    if (path.startsWith('/customers/old/unknown')) return 'Customer Database • Old Unknown';
-    if (path.startsWith('/customers/new/known')) return 'Customer Database • New Known';
-    if (path.startsWith('/customers/new/unknown')) return 'Customer Database • New Unknown';
+    if (path === '/customers') return 'Customer Management Directory';
+    if (path.startsWith('/customers/old/known')) return 'Database • Old Known';
+    if (path.startsWith('/customers/old/unknown')) return 'Database • Old Unknown';
+    if (path.startsWith('/customers/new/known')) return 'Database • New Known';
+    if (path.startsWith('/customers/new/unknown')) return 'Database • New Unknown';
     if (path.startsWith('/daily-activities')) return 'Field Sales Daily Activities';
     if (path.startsWith('/performance')) return 'Performance & Case Disposition';
     if (path.startsWith('/resignation')) return 'Resignation Management';
@@ -99,6 +101,15 @@ export function App() {
               element={
                 <ProtectedLayout requiredRoute="telecalling">
                   <TelecallingPage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/customers"
+              element={
+                <ProtectedLayout requiredRoute="customers">
+                  <CustomerManagementPage />
                 </ProtectedLayout>
               }
             />

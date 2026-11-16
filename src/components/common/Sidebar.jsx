@@ -172,7 +172,33 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
           </NavLink>
         )}
 
-        {/* 5. Customer Database */}
+        {/* Dedicated Customer Management Menu */}
+        {canAccessRoute('customers') && (
+          <NavLink
+            to="/customers"
+            end
+            onClick={() => isMobile && setIsOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition ${
+                isActive
+                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            <div className="flex items-center gap-3 truncate">
+              <Users className="w-4 h-4 shrink-0 text-gold-400" />
+              {isExpanded && <span>Customer</span>}
+            </div>
+            {isExpanded && (
+              <span className="text-[10px] bg-white/15 text-gold-200 font-semibold px-1.5 py-0.5 rounded-full">
+                {scopedCustomers.length}
+              </span>
+            )}
+          </NavLink>
+        )}
+
+        {/* Database Tree (Old & New) */}
         {canAccessRoute('customers') && (
           <div>
             <button
@@ -185,14 +211,14 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
                 }
               }}
               className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition ${
-                location.pathname.startsWith('/customers')
+                location.pathname.includes('/customers/old') || location.pathname.includes('/customers/new')
                   ? 'bg-white/15 text-gold-300 font-bold'
                   : 'text-white/80 hover:bg-white/10 hover:text-white'
               }`}
             >
               <div className="flex items-center gap-3">
                 <Database className="w-4 h-4 shrink-0 text-amber-300" />
-                {isExpanded && <span>Customer Database</span>}
+                {isExpanded && <span>Database</span>}
               </div>
               {isExpanded && (
                 <ChevronDown
