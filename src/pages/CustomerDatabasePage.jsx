@@ -32,7 +32,6 @@ export const CustomerDatabasePage = () => {
   const [selectedState, setSelectedState] = useState('All');
   const [selectedCallingStatus, setSelectedCallingStatus] = useState('All');
   const [selectedSource, setSelectedSource] = useState('All');
-  const [dateFilter, setDateFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
@@ -93,14 +92,9 @@ export const CustomerDatabasePage = () => {
         return false;
       }
 
-      // 7. Date filter
-      if (dateFilter && c.createdAt !== dateFilter) {
-        return false;
-      }
-
       return true;
     });
-  }, [customers, normalizedDb, normalizedType, currentUser, searchTerm, selectedState, selectedCallingStatus, selectedSource, dateFilter]);
+  }, [customers, normalizedDb, normalizedType, currentUser, searchTerm, selectedState, selectedCallingStatus, selectedSource]);
 
   // Pagination calculation
   const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage) || 1;
@@ -201,45 +195,20 @@ export const CustomerDatabasePage = () => {
           </div>
         </div>
 
-        {/* Date Filter & Reset */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-slate-500 font-medium">Filter by Creation Date:</span>
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => {
-                setDateFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="text-xs rounded-lg border border-slate-300 py-1 px-2 focus:outline-none focus:border-burgundy-800 bg-white"
-            />
-            {dateFilter && (
-              <button
-                onClick={() => setDateFilter('')}
-                className="text-rose-600 hover:underline font-semibold"
-              >
-                Clear Date
-              </button>
-            )}
-          </div>
-
-          {(searchTerm || selectedState !== 'All' || selectedCallingStatus !== 'All' || selectedSource !== 'All' || dateFilter) && (
+        {(searchTerm || selectedSource !== 'All') && (
+          <div className="flex justify-end pt-2 border-t border-slate-100 text-xs">
             <button
               onClick={() => {
                 setSearchTerm('');
-                setSelectedState('All');
-                setSelectedCallingStatus('All');
                 setSelectedSource('All');
-                setDateFilter('');
                 setCurrentPage(1);
               }}
               className="text-xs text-burgundy-800 font-bold hover:underline"
             >
-              Reset All Filters
+              Reset Filters
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Main Table */}
@@ -252,9 +221,9 @@ export const CustomerDatabasePage = () => {
                 <th className="px-4 py-3">Customer ID</th>
                 {normalizedType === 'known' ? (
                   <>
-                    <th className="px-4 py-3">Customer / Firm Name</th>
+                    <th className="px-4 py-3">Customer</th>
                     <th className="px-4 py-3">Mobile Contact</th>
-                    <th className="px-4 py-3">Business / Occupation</th>
+                    <th className="px-4 py-3">Business</th>
                   </>
                 ) : (
                   <>
