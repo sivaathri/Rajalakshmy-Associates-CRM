@@ -28,9 +28,6 @@ export const CustomerManagementPage = () => {
 
   // State
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState('All'); // 'All' | 'known' | 'unknown'
-  const [selectedState, setSelectedState] = useState('All');
-  const [selectedDb, setSelectedDb] = useState('All'); // 'All' | 'old' | 'new'
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
@@ -56,43 +53,16 @@ export const CustomerManagementPage = () => {
 
   // Filtered dataset
   const filteredCustomers = useMemo(() => {
+    if (!searchTerm.trim()) return scopedCustomers;
+    const q = searchTerm.toLowerCase();
     return scopedCustomers.filter(c => {
-      // Type filter
-      if (selectedType !== 'All' && c.customerType !== selectedType) {
-        return false;
-      }
-
-      // State filter
-      if (selectedState !== 'All' && c.state !== selectedState) {
-        return false;
-      }
-
-      // Database filter
-      if (selectedDb !== 'All' && c.databaseType !== selectedDb) {
-        return false;
-      }
-
-      // Search query
-      if (searchTerm.trim()) {
-        const q = searchTerm.toLowerCase();
-        const matchesName = c.name && c.name.toLowerCase().includes(q);
-        const matchesMobile = c.mobile && c.mobile.includes(q);
-        const matchesBusiness = c.business && c.business.toLowerCase().includes(q);
-        const matchesCity = c.city && c.city.toLowerCase().includes(q);
-        if (!matchesName && !matchesMobile && !matchesBusiness && !matchesCity) {
-          return false;
-        }
-      }
-
-      return true;
+      const matchesName = c.name && c.name.toLowerCase().includes(q);
+      const matchesMobile = c.mobile && c.mobile.includes(q);
+      const matchesBusiness = c.business && c.business.toLowerCase().includes(q);
+      const matchesCity = c.city && c.city.toLowerCase().includes(q);
+      return matchesName || matchesMobile || matchesBusiness || matchesCity;
     });
-  }, [scopedCustomers, selectedType, selectedState, selectedDb, searchTerm]);
-
-  // Aggregate Metrics
-  const knownCount = scopedCustomers.filter(c => c.customerType === 'known').length;
-  const unknownCount = scopedCustomers.filter(c => c.customerType === 'unknown').length;
-  const totalServicesCount = scopedCustomers.reduce((acc, c) => acc + (c.services?.length || 0), 0);
-  const totalDocsCount = scopedCustomers.reduce((acc, c) => acc + (c.documents?.length || 0), 0);
+  }, [scopedCustomers, searchTerm]);
 
   // Pagination
   const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage) || 1;
@@ -164,104 +134,20 @@ export const CustomerManagementPage = () => {
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Customers</span>
-          <span className="text-2xl font-black text-slate-900">{scopedCustomers.length}</span>
-          <span className="text-[10px] text-slate-500 block mt-0.5">Active directory accounts</span>
-        </div>
-
-        <div className="rounded-xl border border-burgundy-200 bg-burgundy-50/60 p-4 shadow-sm">
-          <span className="text-[10px] uppercase font-bold text-burgundy-800 block">Known Customers</span>
-          <span className="text-2xl font-black text-burgundy-950">{knownCount}</span>
-          <span className="text-[10px] text-burgundy-700 block mt-0.5">Verified enterprises</span>
-        </div>
-
-        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm">
-          <span className="text-[10px] uppercase font-bold text-amber-800 block">Unknown Leads</span>
-          <span className="text-2xl font-black text-amber-950">{unknownCount}</span>
-          <span className="text-[10px] text-amber-700 block mt-0.5">Field mobile contacts</span>
-        </div>
-
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm">
-          <span className="text-[10px] uppercase font-bold text-emerald-800 block">Service History Entries</span>
-          <span className="text-2xl font-black text-emerald-950">{totalServicesCount}</span>
-          <span className="text-[10px] text-emerald-700 block mt-0.5">{totalDocsCount} KYC documents attached</span>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {/* Search input */}
-          <div className="relative">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Search Directory</label>
-            <div className="relative flex items-center">
-              <Search className="absolute left-3 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search name, phone, business..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full rounded-xl border border-slate-300 py-1.5 pl-9 pr-3 text-xs focus:outline-none focus:border-burgundy-800"
-              />
-            </div>
-          </div>
-
-          {/* Customer Type Filter */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Customer Classification</label>
-            <select
-              value={selectedType}
-              onChange={(e) => {
-                setSelectedType(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full text-xs rounded-xl border border-slate-300 py-1.5 px-3 bg-white focus:outline-none focus:border-burgundy-800"
-            >
-              <option value="All">All Classifications</option>
-              <option value="known">Known Customers</option>
-              <option value="unknown">Unknown Leads</option>
-            </select>
-          </div>
-
-          {/* State Filter */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">State / Territory</label>
-            <select
-              value={selectedState}
-              onChange={(e) => {
-                setSelectedState(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full text-xs rounded-xl border border-slate-300 py-1.5 px-3 bg-white focus:outline-none focus:border-burgundy-800"
-            >
-              <option value="All">All States (Tamil Nadu & Puducherry)</option>
-              <option value="Tamil Nadu">Tamil Nadu</option>
-              <option value="Puducherry">Puducherry</option>
-            </select>
-          </div>
-
-          {/* Database Source */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Database Partition</label>
-            <select
-              value={selectedDb}
-              onChange={(e) => {
-                setSelectedDb(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full text-xs rounded-xl border border-slate-300 py-1.5 px-3 bg-white focus:outline-none focus:border-burgundy-800"
-            >
-              <option value="All">All Databases (Old & New)</option>
-              <option value="old">Old Database</option>
-              <option value="new">New Database</option>
-            </select>
-          </div>
+      {/* Search Bar */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+        <div className="relative flex items-center">
+          <Search className="absolute left-3.5 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search customer name, mobile, business, city..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full rounded-xl border border-slate-300 py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-burgundy-800"
+          />
         </div>
       </div>
 
