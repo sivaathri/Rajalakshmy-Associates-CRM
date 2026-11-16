@@ -11,7 +11,8 @@ import {
   Shield,
   Briefcase,
   PhoneCall,
-  Menu
+  Menu,
+  X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,6 +24,7 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const navigate = useNavigate();
 
   // Calculate pending follow-ups for currentUser
@@ -53,29 +55,29 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
   const rolesList = ['Admin', 'Manager', 'Ops', 'RM', 'Sales Manager'];
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#E8E1D5] bg-white/95 px-4 md:px-6 backdrop-blur shadow-sm">
-      {/* Left: Mobile hamburger & Page Title */}
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#E8E1D5] bg-white/95 px-3 sm:px-4 md:px-6 backdrop-blur shadow-sm">
+      {/* Left: Hamburger & Page Title */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           onClick={toggleSidebar}
-          className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-burgundy-800 transition"
+          className="rounded-lg p-1.5 sm:p-2 text-slate-600 hover:bg-slate-100 hover:text-burgundy-800 transition shrink-0"
           title="Toggle Navigation Menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        <div>
-          <h1 className="text-lg md:text-xl font-bold tracking-tight text-burgundy-900 font-corporate">
+        <div className="min-w-0">
+          <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-burgundy-900 font-corporate truncate max-w-[140px] xs:max-w-[200px] sm:max-w-xs md:max-w-none">
             {pageTitle || 'Rajalakshmy Associates CRM'}
           </h1>
-          <p className="text-xs text-slate-500 hidden sm:block">
+          <p className="text-[10px] sm:text-xs text-slate-500 hidden sm:block truncate">
             Corporate Financial Advisory & Field CRM Platform
           </p>
         </div>
       </div>
 
-      {/* Middle: Universal Search */}
-      <div className="relative hidden md:block w-72 lg:w-96">
+      {/* Middle: Universal Search (Desktop / Tablet) */}
+      <div className="relative hidden md:block w-64 lg:w-96">
         <div className="relative flex items-center">
           <Search className="absolute left-3 w-4 h-4 text-slate-400" />
           <input
@@ -117,17 +119,26 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-2 md:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0">
+        {/* Mobile Search Toggle */}
+        <button
+          onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+          className="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 md:hidden"
+          title="Search contacts"
+        >
+          <Search className="w-4 h-4" />
+        </button>
+
         {/* Pending Follow-ups Quick Button */}
         <button
           onClick={() => setShowFollowUpModal(true)}
-          className="relative flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-2.5 py-1.5 text-xs font-semibold text-amber-900 transition hover:bg-amber-100 hover:border-amber-400 shadow-sm"
+          className="relative flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-2 sm:px-2.5 py-1.5 text-xs font-semibold text-amber-900 transition hover:bg-amber-100 hover:border-amber-400 shadow-sm"
           title="View Pending Follow-ups"
         >
           <CalendarCheck className="w-4 h-4 text-amber-700" />
           <span className="hidden sm:inline">Follow-ups</span>
           {pendingFollowUps.length > 0 && (
-            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-burgundy-800 px-1.5 text-[11px] font-bold text-white shadow">
+            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-burgundy-800 px-1.5 text-[10px] sm:text-[11px] font-bold text-white shadow">
               {pendingFollowUps.length}
             </span>
           )}
@@ -137,13 +148,13 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
         <div className="relative">
           <button
             onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
-            className="flex items-center gap-1.5 rounded-xl border border-gold-300 bg-gold-50/70 px-2.5 py-1.5 text-xs font-medium text-amber-950 hover:bg-gold-100 transition shadow-sm"
+            className="flex items-center gap-1 rounded-xl border border-gold-300 bg-gold-50/70 px-2 sm:px-2.5 py-1.5 text-xs font-medium text-amber-950 hover:bg-gold-100 transition shadow-sm"
             title="Switch Prototype Role"
           >
-            <Shield className="w-3.5 h-3.5 text-gold-700" />
-            <span className="font-semibold hidden sm:inline">Role:</span>
-            <span className="font-bold text-burgundy-900">{currentUser?.role || 'Select'}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+            <Shield className="w-3.5 h-3.5 text-gold-700 hidden xs:inline" />
+            <span className="font-semibold hidden md:inline">Role:</span>
+            <span className="font-bold text-burgundy-900 text-[11px] sm:text-xs">{currentUser?.role || 'Role'}</span>
+            <ChevronDown className="w-3 h-3 text-slate-500" />
           </button>
 
           {roleSwitcherOpen && (
@@ -178,14 +189,14 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
         <div className="relative">
           <button
             onClick={() => setProfileOpen(!profileOpen)}
-            className="flex items-center gap-2 rounded-xl p-1.5 hover:bg-slate-100 transition"
+            className="flex items-center gap-1.5 rounded-xl p-1 hover:bg-slate-100 transition"
           >
             <img
               src={currentUser?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'}
               alt={currentUser?.name}
-              className="w-8 h-8 rounded-full object-cover border border-gold-400 ring-2 ring-burgundy-800/10 shadow-sm"
+              className="w-8 h-8 rounded-full object-cover border border-gold-400 ring-2 ring-burgundy-800/10 shadow-sm shrink-0"
             />
-            <div className="text-left hidden lg:block">
+            <div className="text-left hidden xl:block">
               <div className="text-xs font-bold text-slate-800 leading-tight">
                 {currentUser?.name || 'User'}
               </div>
@@ -193,7 +204,7 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
                 {currentUser?.id} • {currentUser?.role}
               </div>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden lg:block" />
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden xl:block" />
           </button>
 
           {profileOpen && (
@@ -216,7 +227,7 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
               <div className="py-2 text-xs text-slate-600 space-y-1">
                 <div className="flex items-center gap-2 text-[11px]">
                   <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{currentUser?.title}</span>
+                  <span className="truncate">{currentUser?.title}</span>
                 </div>
                 <div className="flex items-center gap-2 text-[11px]">
                   <PhoneCall className="w-3.5 h-3.5 text-slate-400" />
@@ -241,6 +252,58 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
           )}
         </div>
       </div>
+
+      {/* Mobile Floating Search Drawer */}
+      {mobileSearchOpen && (
+        <div className="absolute top-16 left-0 right-0 bg-white border-b border-slate-200 p-3 shadow-lg z-50 md:hidden animate-fade-in">
+          <div className="relative flex items-center">
+            <Search className="absolute left-3 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search customer name, phone, business..."
+              value={searchQuery}
+              onChange={handleSearch}
+              autoFocus
+              className="w-full rounded-xl border border-slate-300 py-2 pl-9 pr-9 text-xs focus:outline-none focus:border-burgundy-800"
+            />
+            <button
+              onClick={() => {
+                setMobileSearchOpen(false);
+                setSearchQuery('');
+                setIsSearching(false);
+              }}
+              className="absolute right-3 text-slate-400 hover:text-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {isSearching && searchResults.length > 0 && (
+            <div className="mt-2 divide-y divide-slate-100 max-h-56 overflow-y-auto">
+              {searchResults.map(c => (
+                <div
+                  key={c.id}
+                  onClick={() => {
+                    setMobileSearchOpen(false);
+                    setIsSearching(false);
+                    setSearchQuery('');
+                    startCallingCustomer(c);
+                  }}
+                  className="py-2 flex items-center justify-between text-xs"
+                >
+                  <div>
+                    <div className="font-bold text-slate-900">{c.name}</div>
+                    <div className="text-[11px] text-slate-500">{c.mobile} • {c.business || c.city}</div>
+                  </div>
+                  <span className="text-[10px] font-bold bg-burgundy-50 text-burgundy-800 px-2 py-0.5 rounded-full">
+                    {c.databaseType}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </header>
   );
 };

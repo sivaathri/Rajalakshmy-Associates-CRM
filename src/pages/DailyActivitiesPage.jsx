@@ -127,7 +127,7 @@ export const DailyActivitiesPage = () => {
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex border-b border-slate-200 bg-white rounded-2xl px-4 text-xs font-bold shadow-sm">
+      <div className="flex border-b border-slate-200 bg-white rounded-2xl px-2 sm:px-4 text-xs font-bold shadow-sm overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('form')}
           className={`py-3 px-4 border-b-2 transition flex items-center gap-2 ${
@@ -298,7 +298,7 @@ export const DailyActivitiesPage = () => {
               Field Sales Submission Records ({filteredActivities.length})
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-700">
+              <table className="w-full text-left text-xs text-slate-700 min-w-[760px]">
                 <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
                   <tr>
                     <th className="px-4 py-3">ID</th>

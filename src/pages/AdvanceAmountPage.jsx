@@ -73,7 +73,7 @@ export const AdvanceAmountPage = () => {
           All Advance Requisitions ({advanceAmounts.length})
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
+          <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
             <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
               <tr>
                 <th className="px-4 py-3">ID</th>

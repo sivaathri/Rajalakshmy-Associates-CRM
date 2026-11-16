@@ -185,7 +185,7 @@ export const TelecallingPage = () => {
       </div>
 
       {/* Module Tabs */}
-      <div className="flex border-b border-slate-200 bg-white rounded-2xl px-4 text-xs font-bold shadow-sm">
+      <div className="flex border-b border-slate-200 bg-white rounded-2xl px-2 sm:px-4 text-xs font-bold shadow-sm overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setActiveTab('focused')}
           className={`py-3 px-4 border-b-2 transition flex items-center gap-2 ${
@@ -466,7 +466,8 @@ export const TelecallingPage = () => {
 
           {/* Full Queue Table */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <table className="w-full text-left text-xs text-slate-700">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
               <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
                 <tr>
                   <th className="px-4 py-3">Customer ID</th>
@@ -510,6 +511,7 @@ export const TelecallingPage = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -672,7 +674,7 @@ export const TelecallingPage = () => {
               Detailed Call Audit History Records ({filteredCalls.length})
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-700">
+              <table className="w-full text-left text-xs text-slate-700 min-w-[760px]">
                 <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
                   <tr>
                     <th className="px-4 py-3">Call ID</th>
