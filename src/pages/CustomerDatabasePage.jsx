@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { formatDate, getStatusBadgeClass, exportToCSV } from '../utils/formatters';
 import { CustomerDetailModal } from '../components/customers/CustomerDetailModal';
-import { AddCustomerModal } from '../components/customers/AddCustomerModal';
 
 export const CustomerDatabasePage = () => {
   const { dbType = 'old', custType = 'known' } = useParams();
@@ -39,7 +38,6 @@ export const CustomerDatabasePage = () => {
 
   // Modals
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Normalize route params
   const normalizedDb = dbType.toLowerCase(); // 'old' or 'new'
@@ -163,14 +161,6 @@ export const CustomerDatabasePage = () => {
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
             <span>Export CSV</span>
-          </button>
-
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-burgundy-900 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-burgundy-800 transition"
-          >
-            <Plus className="w-4 h-4 text-gold-400" />
-            <span>Add Customer</span>
           </button>
         </div>
       </div>
@@ -433,13 +423,6 @@ export const CustomerDatabasePage = () => {
           onClose={() => setSelectedCustomer(null)}
         />
       )}
-
-      <AddCustomerModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        defaultDatabase={normalizedDb}
-        defaultType={normalizedType}
-      />
     </div>
   );
 };
