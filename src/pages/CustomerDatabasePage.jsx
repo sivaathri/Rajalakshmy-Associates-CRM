@@ -283,6 +283,7 @@ export const CustomerDatabasePage = () => {
           <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
             <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
               <tr>
+                <th className="px-4 py-3 text-center w-16">Sl No</th>
                 <th className="px-4 py-3">Customer ID</th>
                 {normalizedType === 'known' ? (
                   <>
@@ -305,16 +306,24 @@ export const CustomerDatabasePage = () => {
             <tbody className="divide-y divide-slate-100">
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={normalizedType === 'known' ? 8 : 6} className="text-center py-12 text-slate-400">
+                  <td colSpan={normalizedType === 'known' ? 9 : 7} className="text-center py-12 text-slate-400">
                     No customer records found matching the active filter criteria.
                   </td>
                 </tr>
               ) : (
-                paginatedData.map((cust) => (
-                  <tr key={cust.id} className="hover:bg-[#FAF6EF]/60 transition">
-                    <td className="px-4 py-3 font-mono font-bold text-burgundy-900">
-                      {cust.id}
-                    </td>
+                paginatedData.map((cust, idx) => {
+                  const slNo = (currentPage - 1) * itemsPerPage + idx + 1;
+                  return (
+                    <tr key={cust.id} className="hover:bg-[#FAF6EF]/60 transition">
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex items-center justify-center h-6 w-6 rounded-md bg-burgundy-50 border border-burgundy-200 text-burgundy-900 font-bold text-xs">
+                          {slNo}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3 font-mono font-bold text-burgundy-900">
+                        {cust.id}
+                      </td>
 
                     {normalizedType === 'known' ? (
                       <>
@@ -382,8 +391,9 @@ export const CustomerDatabasePage = () => {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })
+            )}
             </tbody>
           </table>
         </div>

@@ -281,65 +281,66 @@ export const CustomerManagementPage = () => {
           <table className="w-full text-left text-xs text-slate-700 min-w-[850px]">
             <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
               <tr>
+                <th className="px-4 py-3 text-center w-16">Sl No</th>
                 <th className="px-4 py-3">Customer ID</th>
                 <th className="px-4 py-3">Customer / Enterprise</th>
                 <th className="px-4 py-3">Mobile Contact</th>
                 <th className="px-4 py-3">Location</th>
-               
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 italic">
+                  <td colSpan={6} className="py-12 text-center text-slate-400 italic">
                     No customers found matching your filter criteria.
                   </td>
                 </tr>
               ) : (
-                paginatedData.map(c => (
-                  <tr key={c.id} className="hover:bg-[#FAF6EF]/60 transition">
-                    <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{c.id}</td>
+                paginatedData.map((c, idx) => {
+                  const slNo = (currentPage - 1) * itemsPerPage + idx + 1;
+                  return (
+                    <tr key={c.id} className="hover:bg-[#FAF6EF]/60 transition">
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex items-center justify-center h-6 w-6 rounded-md bg-burgundy-50 border border-burgundy-200 text-burgundy-900 font-bold text-xs">
+                          {slNo}
+                        </span>
+                      </td>
 
-                    <td className="px-4 py-3">
-                      <div className="font-bold text-slate-900">{c.name}</div>
-                      <div className="text-[11px] text-slate-500 truncate max-w-xs">{c.business || 'General Business'}</div>
-                    </td>
+                      <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{c.id}</td>
 
-                    <td className="px-4 py-3">
-                      <span className="font-semibold text-slate-800">{c.mobile}</span>
-                      {c.altMobile && (
-                        <span className="text-[10px] text-slate-400 block">Alt: {c.altMobile}</span>
-                      )}
-                    </td>
+                      <td className="px-4 py-3">
+                        <div className="font-bold text-slate-900">{c.name}</div>
+                        <div className="text-[11px] text-slate-500 truncate max-w-xs">{c.business || 'General Business'}</div>
+                      </td>
 
-                    <td className="px-4 py-3">
-                      <span className="font-medium text-slate-700">{c.city || 'Tamil Nadu'}</span>
-                      <span className="text-[10px] text-slate-400 block">{c.state}</span>
-                    </td>
+                      <td className="px-4 py-3">
+                        <span className="font-semibold text-slate-800">{c.mobile}</span>
+                        {c.altMobile && (
+                          <span className="text-[10px] text-slate-400 block">Alt: {c.altMobile}</span>
+                        )}
+                      </td>
 
-                  
+                      <td className="px-4 py-3">
+                        <span className="font-medium text-slate-700">{c.city || 'Tamil Nadu'}</span>
+                        <span className="text-[10px] text-slate-400 block">{c.state}</span>
+                      </td>
 
-               
-
-                  
-
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                       
-
-                        <button
-                          onClick={() => setSelectedCustomer(c)}
-                          className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-burgundy-900 text-white hover:bg-burgundy-800 transition"
-                          title="View Full Profile, Documents & Service History"
-                        >
-                          <Eye className="w-3 h-3" />
-                          <span>View</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setSelectedCustomer(c)}
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-burgundy-900 text-white hover:bg-burgundy-800 transition"
+                            title="View Full Profile, Documents & Service History"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>View</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
