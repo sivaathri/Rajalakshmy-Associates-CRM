@@ -14,6 +14,11 @@ export const ResignationPage = () => {
   const [reason, setReason] = useState('');
 
   const canReview = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
+  const isSalesManager = currentUser?.role === 'Sales Manager';
+
+  const displayedResignations = isSalesManager
+    ? resignations.filter(r => r.employeeId === currentUser?.id)
+    : resignations;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -58,8 +63,13 @@ export const ResignationPage = () => {
 
       {/* Resignation Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="px-6 py-3 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800">
-          All Resignation Records ({resignations.length})
+        <div className="px-6 py-3 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800 flex items-center justify-between">
+          <span>Resignation Records ({displayedResignations.length})</span>
+          {isSalesManager && (
+            <span className="text-[11px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+              Personal Record: {currentUser?.name}
+            </span>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
@@ -76,7 +86,7 @@ export const ResignationPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {resignations.map(r => (
+              {displayedResignations.map(r => (
                 <tr key={r.id} className="hover:bg-[#FAF6EF]/60 transition">
                   <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{r.id}</td>
                   <td className="px-4 py-3">

@@ -30,7 +30,13 @@ export const AdvanceAmountPage = () => {
     setShowModal(false);
   };
 
-  const totalAdvanceApproved = advanceAmounts
+  const isSalesManager = currentUser?.role === 'Sales Manager';
+
+  const displayedAdvances = isSalesManager
+    ? advanceAmounts.filter(a => a.employeeId === currentUser?.id)
+    : advanceAmounts;
+
+  const totalAdvanceApproved = displayedAdvances
     .filter(a => a.status === 'Approved')
     .reduce((sum, a) => sum + (a.requestedAmount || 0), 0);
 
@@ -69,8 +75,13 @@ export const AdvanceAmountPage = () => {
 
       {/* Advance Requests Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="px-6 py-3 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800">
-          All Advance Requisitions ({advanceAmounts.length})
+        <div className="px-6 py-3 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800 flex items-center justify-between">
+          <span>Advance Requisitions ({displayedAdvances.length})</span>
+          {isSalesManager && (
+            <span className="text-[11px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+              Personal Requests: {currentUser?.name}
+            </span>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
@@ -86,7 +97,7 @@ export const AdvanceAmountPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {advanceAmounts.map(a => (
+              {displayedAdvances.map(a => (
                 <tr key={a.id} className="hover:bg-[#FAF6EF]/60 transition">
                   <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{a.id}</td>
                   <td className="px-4 py-3">

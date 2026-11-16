@@ -40,25 +40,44 @@ export const DashboardPage = () => {
   const { customers, calls, activities, performanceCases, startCallingCustomer } = useCRM();
   const { currentUser, setShowFollowUpModal } = useAuth();
 
+  const isSalesManager = currentUser?.role === 'Sales Manager';
+
+  // Scoped datasets for Sales Manager (strictly created / submitted by them)
+  const scopedActivities = isSalesManager
+    ? activities.filter(a => a.submittedBy === currentUser?.id || a.submittedByName === currentUser?.name)
+    : activities;
+
+  const scopedCases = isSalesManager
+    ? performanceCases.filter(c => c.submittedBy === currentUser?.id || c.submittedByName === currentUser?.name)
+    : performanceCases;
+
+  const scopedCustomers = isSalesManager
+    ? customers.filter(c => c.submittedBy === currentUser?.id || c.referenceFrom?.includes(currentUser?.name) || c.assignedTo === currentUser?.id)
+    : customers;
+
+  const scopedCalls = isSalesManager
+    ? calls.filter(c => c.employeeId === currentUser?.id || scopedCustomers.some(cust => cust.id === c.customerId))
+    : calls;
+
   const [isAddCustOpen, setIsAddCustOpen] = useState(false);
   const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
   const [selectedCustDetail, setSelectedCustDetail] = useState(null);
 
   // Compute Required Dashboard Metrics
-  const totalCustomers = customers.length;
-  const oldKnown = customers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
-  const oldUnknown = customers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;
-  const newKnown = customers.filter(c => c.databaseType === 'new' && c.customerType === 'known').length;
-  const newUnknown = customers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown').length;
+  const totalCustomers = scopedCustomers.length;
+  const oldKnown = scopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
+  const oldUnknown = scopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;
+  const newKnown = scopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'known').length;
+  const newUnknown = scopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown').length;
 
-  const totalCalls = calls.length;
+  const totalCalls = scopedCalls.length;
   const todayStr = new Date().toISOString().split('T')[0];
-  const todayCalls = calls.filter(c => c.callDate === todayStr || c.callDate === '2026-11-16').length;
+  const todayCalls = scopedCalls.filter(c => c.callDate === todayStr || c.callDate === '2026-11-16').length;
 
-  const pendingFollowUps = customers.filter(c => c.callingStatus === 'Reminder');
-  const totalCases = performanceCases.length;
-  const approvedCases = performanceCases.filter(c => c.status === 'Approved').length;
-  const approvedVolume = performanceCases
+  const pendingFollowUps = scopedCustomers.filter(c => c.callingStatus === 'Reminder');
+  const totalCases = scopedCases.length;
+  const approvedCases = scopedCases.filter(c => c.status === 'Approved').length;
+  const approvedVolume = scopedCases
     .filter(c => c.status === 'Approved')
     .reduce((sum, c) => sum + (c.caseAmount || 0), 0);
 
@@ -169,10 +188,13 @@ export const DashboardPage = () => {
       {/* Top Welcome & Quick Actions Bar */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider">
-            <span>Rajalakshmy Associates CRM </span>
-
-
+          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider flex-wrap">
+            <span>Rajalakshmy Associates CRM</span>
+            {isSalesManager && (
+              <span className="bg-gold-500/20 text-gold-300 border border-gold-400/40 text-[10px] px-2 py-0.5 rounded-full font-extrabold">
+                Personal Activity Dashboard
+              </span>
+            )}
           </div>
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             {currentUser?.name}!
@@ -443,37 +465,44 @@ export const DashboardPage = () => {
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
             <h4 className="text-sm font-bold text-slate-900 font-corporate">
               Recent Field Activities & Lead Submissions
+              {isSalesManager && <span className="text-burgundy-900 text-xs font-semibold ml-1.5">(Your Submissions)</span>}
             </h4>
             <span className="text-xs font-semibold text-slate-500">Latest 5</span>
           </div>
 
           <div className="space-y-2.5 max-h-72 overflow-y-auto">
-            {activities.slice(0, 5).map(act => (
-              <div
-                key={act.id}
-                className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900">{act.customerName}</span>
-                    <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                      {act.source}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">
-                    {act.mobile} • By <span className="font-semibold text-slate-700">{act.submittedByName}</span>
-                  </div>
-                  <div className="text-[10px] text-emerald-800 font-medium">
-                    Auto Classified: {act.classifiedTo}
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <span className="text-[10px] text-slate-400 block">{act.submissionDate}</span>
-                  <span className="text-[10px] text-slate-500">{act.submissionTime}</span>
-                </div>
+            {scopedActivities.length === 0 ? (
+              <div className="text-center py-6 text-xs text-slate-400 italic">
+                No recent field submissions logged.
               </div>
-            ))}
+            ) : (
+              scopedActivities.slice(0, 5).map(act => (
+                <div
+                  key={act.id}
+                  className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-900">{act.customerName}</span>
+                      <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                        {act.source}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">
+                      {act.mobile} • By <span className="font-semibold text-slate-700">{act.submittedByName}</span>
+                    </div>
+                    <div className="text-[10px] text-emerald-800 font-medium">
+                      Auto Classified: {act.classifiedTo}
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 block">{act.submissionDate}</span>
+                    <span className="text-[10px] text-slate-500">{act.submissionTime}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

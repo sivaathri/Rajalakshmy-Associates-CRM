@@ -28,7 +28,29 @@ export const CRMProvider = ({ children }) => {
   const [customers, setCustomers] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-      return saved ? JSON.parse(saved) : INITIAL_CUSTOMERS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const c1033 = parsed.find(c => c.id === 'CUST-1033');
+        if (c1033 && (!c1033.submittedBy || c1033.name !== 'Annapoorna Caterers & Bakers')) {
+          return parsed.map(c => {
+            const initialMatch = INITIAL_CUSTOMERS.find(ic => ic.id === c.id);
+            if (initialMatch && initialMatch.submittedBy) {
+              return {
+                ...c,
+                name: initialMatch.name,
+                business: initialMatch.business,
+                submittedBy: initialMatch.submittedBy,
+                submittedByName: initialMatch.submittedByName,
+                referenceFrom: initialMatch.referenceFrom,
+                assignedTo: initialMatch.assignedTo || c.assignedTo
+              };
+            }
+            return c;
+          });
+        }
+        return parsed;
+      }
+      return INITIAL_CUSTOMERS;
     } catch {
       return INITIAL_CUSTOMERS;
     }
@@ -46,7 +68,15 @@ export const CRMProvider = ({ children }) => {
   const [activities, setActivities] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ACTIVITIES);
-      return saved ? JSON.parse(saved) : INITIAL_DAILY_ACTIVITIES;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!parsed.some(a => a.id === 'ACT-506')) {
+          const emp5Activities = INITIAL_DAILY_ACTIVITIES.filter(a => a.submittedBy === 'EMP005' && a.id !== 'ACT-503');
+          return [...emp5Activities, ...parsed];
+        }
+        return parsed;
+      }
+      return INITIAL_DAILY_ACTIVITIES;
     } catch {
       return INITIAL_DAILY_ACTIVITIES;
     }
@@ -55,7 +85,15 @@ export const CRMProvider = ({ children }) => {
   const [performanceCases, setPerformanceCases] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PERFORMANCE);
-      return saved ? JSON.parse(saved) : INITIAL_PERFORMANCE_CASES;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!parsed.some(c => c.id === 'CASE-307')) {
+          const emp5Cases = INITIAL_PERFORMANCE_CASES.filter(c => c.submittedBy === 'EMP005');
+          return [...parsed, ...emp5Cases];
+        }
+        return parsed;
+      }
+      return INITIAL_PERFORMANCE_CASES;
     } catch {
       return INITIAL_PERFORMANCE_CASES;
     }
@@ -73,7 +111,15 @@ export const CRMProvider = ({ children }) => {
   const [advanceAmounts, setAdvanceAmounts] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ADVANCES);
-      return saved ? JSON.parse(saved) : INITIAL_ADVANCE_AMOUNTS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!parsed.some(a => a.id === 'ADV-605')) {
+          const emp5Advances = INITIAL_ADVANCE_AMOUNTS.filter(a => a.employeeId === 'EMP005');
+          return [...parsed, ...emp5Advances];
+        }
+        return parsed;
+      }
+      return INITIAL_ADVANCE_AMOUNTS;
     } catch {
       return INITIAL_ADVANCE_AMOUNTS;
     }
@@ -139,6 +185,8 @@ export const CRMProvider = ({ children }) => {
       referenceFrom: customerData.referenceFrom || '',
       assignedTo: customerData.assignedTo || (currentUser?.id || 'EMP004'),
       assignedName: customerData.assignedName || (currentUser?.name || 'Ananya Subramanian'),
+      submittedBy: customerData.submittedBy || currentUser?.id || 'EMP005',
+      submittedByName: customerData.submittedByName || currentUser?.name || 'Murugan Velu',
       callingStatus: 'Pending',
       lastCallDate: '',
       reminderDate: '',

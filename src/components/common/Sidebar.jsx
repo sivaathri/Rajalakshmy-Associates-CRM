@@ -36,15 +36,32 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
     location.pathname.includes('/new/')
   );
 
-  // Compute pending counts
-  const pendingCasesCount = performanceCases.filter(c => c.status === 'Pending Approval').length;
-  const pendingAdvanceCount = advanceAmounts.filter(a => a.status === 'Pending Approval').length;
-  const pendingResignationCount = resignations.filter(r => r.status === 'Pending Approval').length;
+  const isSalesManager = currentUser?.role === 'Sales Manager';
 
-  const oldKnownCount = customers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
-  const oldUnknownCount = customers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;
-  const newKnownCount = customers.filter(c => c.databaseType === 'new' && c.customerType === 'known').length;
-  const newUnknownCount = customers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown').length;
+  // Compute pending counts (scoped to user if Sales Manager)
+  const pendingCasesCount = performanceCases.filter(c => {
+    if (isSalesManager) return (c.submittedBy === currentUser?.id || c.submittedByName === currentUser?.name) && c.status === 'Pending Approval';
+    return c.status === 'Pending Approval';
+  }).length;
+
+  const pendingAdvanceCount = advanceAmounts.filter(a => {
+    if (isSalesManager) return a.employeeId === currentUser?.id && a.status === 'Pending Approval';
+    return a.status === 'Pending Approval';
+  }).length;
+
+  const pendingResignationCount = resignations.filter(r => {
+    if (isSalesManager) return r.employeeId === currentUser?.id && r.status === 'Pending Approval';
+    return r.status === 'Pending Approval';
+  }).length;
+
+  const scopedCustomers = isSalesManager
+    ? customers.filter(c => c.submittedBy === currentUser?.id || c.referenceFrom?.includes(currentUser?.name) || c.assignedTo === currentUser?.id)
+    : customers;
+
+  const oldKnownCount = scopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
+  const oldUnknownCount = scopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;
+  const newKnownCount = scopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'known').length;
+  const newUnknownCount = scopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown').length;
 
   const NavContent = ({ isExpanded = true, isMobile = false }) => (
     <>

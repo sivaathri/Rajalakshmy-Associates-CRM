@@ -23,23 +23,35 @@ export const PerformancePage = () => {
   const { performanceCases, approvePerformanceCase } = useCRM();
   const { currentUser } = useAuth();
 
+  const isSalesManager = currentUser?.role === 'Sales Manager';
+
   const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Pending Approval' | 'Approved' | 'Rejected'
-  const [empFilter, setEmpFilter] = useState('All');
+  const [empFilter, setEmpFilter] = useState(isSalesManager ? (currentUser?.id || 'EMP005') : 'All');
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [rejectingCase, setRejectingCase] = useState(null);
 
   // Check if current user has permission to approve/reject
   const canApprove = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
 
+  // Base cases scoped by role (Sales Manager only sees their own created/submitted cases)
+  const baseCases = useMemo(() => {
+    if (isSalesManager) {
+      return performanceCases.filter(
+        c => c.submittedBy === currentUser?.id || c.submittedByName === currentUser?.name
+      );
+    }
+    return performanceCases;
+  }, [performanceCases, isSalesManager, currentUser]);
+
   // Filter dataset
   const filteredCases = useMemo(() => {
-    return performanceCases.filter(c => {
+    return baseCases.filter(c => {
       // Role scope: regular RM or Sales Exec can view their own, or all if Admin/Manager
-      if (!canApprove && empFilter === 'MyOnly' && c.submittedBy !== currentUser?.id) {
+      if (!isSalesManager && !canApprove && empFilter === 'MyOnly' && c.submittedBy !== currentUser?.id) {
         return false;
       }
 
-      if (empFilter !== 'All' && empFilter !== 'MyOnly' && c.submittedBy !== empFilter) {
+      if (!isSalesManager && empFilter !== 'All' && empFilter !== 'MyOnly' && c.submittedBy !== empFilter) {
         return false;
       }
 
@@ -49,15 +61,15 @@ export const PerformancePage = () => {
 
       return true;
     });
-  }, [performanceCases, statusFilter, empFilter, canApprove, currentUser]);
+  }, [baseCases, isSalesManager, statusFilter, empFilter, canApprove, currentUser]);
 
-  // Aggregate Metrics
-  const totalVolume = performanceCases.reduce((sum, c) => sum + (c.caseAmount || 0), 0);
-  const approvedCases = performanceCases.filter(c => c.status === 'Approved');
+  // Aggregate Metrics (Scoped to user if Sales Manager)
+  const totalVolume = baseCases.reduce((sum, c) => sum + (c.caseAmount || 0), 0);
+  const approvedCases = baseCases.filter(c => c.status === 'Approved');
   const approvedVolume = approvedCases.reduce((sum, c) => sum + (c.caseAmount || 0), 0);
-  const pendingCases = performanceCases.filter(c => c.status === 'Pending Approval');
+  const pendingCases = baseCases.filter(c => c.status === 'Pending Approval');
   const pendingVolume = pendingCases.reduce((sum, c) => sum + (c.caseAmount || 0), 0);
-  const rejectedCases = performanceCases.filter(c => c.status === 'Rejected');
+  const rejectedCases = baseCases.filter(c => c.status === 'Rejected');
 
   const handleExport = () => {
     const data = filteredCases.map(c => ({
@@ -81,17 +93,24 @@ export const PerformancePage = () => {
       {/* Top Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider flex-wrap">
             <Award className="w-4 h-4" />
             <span>Business Performance & Case Disposition</span>
             <span>•</span>
             <span>{currentUser?.name} ({currentUser?.role})</span>
+            {isSalesManager && (
+              <span className="bg-gold-500/20 text-gold-300 border border-gold-400/40 text-[10px] px-2 py-0.5 rounded-full font-extrabold">
+                Personal Cases Only
+              </span>
+            )}
           </div>
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             Case Disposition & Approval Console
           </h2>
           <p className="text-xs text-white/80 max-w-xl">
-            Log financial advisory cases, debt syndication, and loan sanctions. Admin and Managers review submissions with one-click approval workflows.
+            {isSalesManager
+              ? `Displaying loan and financial advisory cases filed exclusively by ${currentUser?.name}. Tracking approval status from executive management.`
+              : 'Log financial advisory cases, debt syndication, and loan sanctions. Admin and Managers review submissions with one-click approval workflows.'}
           </p>
         </div>
 
@@ -162,7 +181,7 @@ export const PerformancePage = () => {
                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
               }`}
             >
-              {st} ({performanceCases.filter(c => st === 'All' ? true : c.status === st).length})
+              {st} ({baseCases.filter(c => st === 'All' ? true : c.status === st).length})
             </button>
           ))}
         </div>

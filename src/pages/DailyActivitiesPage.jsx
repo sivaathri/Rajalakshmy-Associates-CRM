@@ -22,22 +22,34 @@ export const DailyActivitiesPage = () => {
   const { activities, employees } = useCRM();
   const { currentUser } = useAuth();
 
+  const isSalesManager = currentUser?.role === 'Sales Manager';
+
   const [activeTab, setActiveTab] = useState('form'); // 'form' | 'excel' | 'reports'
 
   // Reports Filter state
-  const [selectedEmp, setSelectedEmp] = useState('All');
+  const [selectedEmp, setSelectedEmp] = useState(isSalesManager ? (currentUser?.id || 'EMP005') : 'All');
   const [dateFilterMode, setDateFilterMode] = useState('today'); // 'today' | 'month' | 'range' | 'all'
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedSource, setSelectedSource] = useState('All');
 
+  // Base activities scoped by role (Sales Manager only sees their own created/submitted data)
+  const baseActivities = useMemo(() => {
+    if (isSalesManager) {
+      return activities.filter(
+        act => act.submittedBy === currentUser?.id || act.submittedByName === currentUser?.name
+      );
+    }
+    return activities;
+  }, [activities, isSalesManager, currentUser]);
+
   // Filtered Activities
   const filteredActivities = useMemo(() => {
     const todayStr = '2026-11-16'; // Local system current date
 
-    return activities.filter(act => {
-      // Employee filter
-      if (selectedEmp !== 'All' && act.submittedBy !== selectedEmp) {
+    return baseActivities.filter(act => {
+      // Employee filter (for non-Sales Manager)
+      if (!isSalesManager && selectedEmp !== 'All' && act.submittedBy !== selectedEmp) {
         return false;
       }
 
@@ -60,14 +72,14 @@ export const DailyActivitiesPage = () => {
 
       return true;
     });
-  }, [activities, selectedEmp, selectedSource, dateFilterMode, startDate, endDate]);
+  }, [baseActivities, isSalesManager, selectedEmp, selectedSource, dateFilterMode, startDate, endDate]);
 
-  // Aggregate Metrics
-  const todayRecordsCount = activities.filter(
+  // Aggregate Metrics (Scoped to user if Sales Manager)
+  const todayRecordsCount = baseActivities.filter(
     a => a.submissionDate === '2026-11-16' || a.submissionDate === new Date().toISOString().split('T')[0]
   ).length;
 
-  const monthlyRecordsCount = activities.filter(
+  const monthlyRecordsCount = baseActivities.filter(
     a => a.submissionDate.startsWith('2026-11')
   ).length;
 
@@ -100,17 +112,24 @@ export const DailyActivitiesPage = () => {
       {/* Top Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider flex-wrap">
             <CalendarCheck className="w-4 h-4" />
             <span>Field Sales Lead Intake</span>
             <span>•</span>
             <span>{currentUser?.name} ({currentUser?.role})</span>
+            {isSalesManager && (
+              <span className="bg-gold-500/20 text-gold-300 border border-gold-400/40 text-[10px] px-2 py-0.5 rounded-full font-extrabold">
+                Personal Submissions Only
+              </span>
+            )}
           </div>
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             Daily Field Activities & Lead Ingestion
           </h2>
           <p className="text-xs text-white/80 max-w-xl">
-            Register single prospect leads from field visits or upload bulk Excel spreadsheets. All entries automatically categorize into New Database.
+            {isSalesManager
+              ? `Displaying field sales records created and submitted exclusively by ${currentUser?.name}. Entries from other representatives are filtered out.`
+              : 'Register single prospect leads from field visits or upload bulk Excel spreadsheets. All entries automatically categorize into New Database.'}
           </p>
         </div>
 
@@ -211,18 +230,27 @@ export const DailyActivitiesPage = () => {
               {/* Employee Filter */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Filter by Submitting Employee</label>
-                <select
-                  value={selectedEmp}
-                  onChange={(e) => setSelectedEmp(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white"
-                >
-                  <option value="All">All Field Representatives</option>
-                  {employees.map(emp => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name} ({emp.id} - {emp.role})
-                    </option>
-                  ))}
-                </select>
+                {isSalesManager ? (
+                  <div className="w-full text-xs rounded-xl border border-gold-300 bg-gold-50/70 py-2 px-3 text-slate-800 font-bold flex items-center justify-between">
+                    <span className="truncate">{currentUser?.name} ({currentUser?.id})</span>
+                    <span className="text-[10px] text-burgundy-900 bg-white/80 px-2 py-0.5 rounded-full border border-burgundy-200 shrink-0 font-extrabold">
+                      Only My Entries
+                    </span>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedEmp}
+                    onChange={(e) => setSelectedEmp(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white"
+                  >
+                    <option value="All">All Field Representatives</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name} ({emp.id} - {emp.role})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* Time Period Filter */}
@@ -294,8 +322,16 @@ export const DailyActivitiesPage = () => {
 
           {/* Activities Table */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="px-6 py-3 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800">
-              Field Sales Submission Records ({filteredActivities.length})
+            <div className="px-6 py-3 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800 flex items-center justify-between">
+              <span>
+                Field Sales Submission Records ({filteredActivities.length})
+                {isSalesManager && <span className="text-burgundy-900 font-semibold ml-1.5">• Sourced by {currentUser?.name}</span>}
+              </span>
+              {isSalesManager && (
+                <span className="text-[11px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  Sales Manager Private View
+                </span>
+              )}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-700 min-w-[760px]">

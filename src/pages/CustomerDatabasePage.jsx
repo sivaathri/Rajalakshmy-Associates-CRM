@@ -61,6 +61,16 @@ export const CustomerDatabasePage = () => {
         return false;
       }
 
+      // Role restriction: Sales Manager only sees their own created/submitted or assigned records
+      if (
+        currentUser?.role === 'Sales Manager' &&
+        c.submittedBy !== currentUser.id &&
+        !c.referenceFrom?.includes(currentUser.name) &&
+        c.assignedTo !== currentUser.id
+      ) {
+        return false;
+      }
+
       // 3. Search query
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
@@ -125,11 +135,16 @@ export const CustomerDatabasePage = () => {
       {/* Top Banner Header */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-burgundy-900">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-burgundy-900 flex-wrap">
             <Database className="w-4 h-4 text-gold-600" />
             <span>Customer Directory Module</span>
             <span>•</span>
             <span className="text-slate-500 font-mono">Total {filteredCustomers.length} Records</span>
+            {currentUser?.role === 'Sales Manager' && (
+              <span className="text-[10px] bg-gold-100 text-amber-900 border border-gold-300 px-2 py-0.5 rounded-full font-bold">
+                Created / Sourced by {currentUser?.name}
+              </span>
+            )}
           </div>
           <h2 className="text-xl font-bold text-slate-900 mt-1 font-corporate">
             {sectionTitle}

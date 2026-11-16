@@ -34,21 +34,70 @@ export const ReportsPage = () => {
   const { customers, calls, activities, performanceCases, employees } = useCRM();
   const { currentUser } = useAuth();
 
+  const isSalesManager = currentUser?.role === 'Sales Manager';
+
   // Filters
   const [datePreset, setDatePreset] = useState('this-month'); // 'today' | 'this-week' | 'this-month' | 'custom'
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
 
-  // 1. Database breakdown
-  const oldKnown = customers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
-  const oldUnknown = customers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;
-  const newKnown = customers.filter(c => c.databaseType === 'new' && c.customerType === 'known').length;
-  const newUnknown = customers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown').length;
+  // Scoped datasets for Sales Manager (only their own created/submitted records)
+  const scopedActivities = useMemo(() => {
+    if (isSalesManager) {
+      return activities.filter(a => a.submittedBy === currentUser?.id || a.submittedByName === currentUser?.name);
+    }
+    return activities;
+  }, [activities, isSalesManager, currentUser]);
 
-  // 2. Source-wise submissions
-  const billsCount = customers.filter(c => c.source === 'Bills').length;
-  const openSourceCount = customers.filter(c => c.source === 'Open Source').length;
-  const referenceCount = customers.filter(c => c.source === 'Reference').length;
+  const scopedCases = useMemo(() => {
+    if (isSalesManager) {
+      return performanceCases.filter(c => c.submittedBy === currentUser?.id || c.submittedByName === currentUser?.name);
+    }
+    return performanceCases;
+  }, [performanceCases, isSalesManager, currentUser]);
+
+  const scopedCustomers = useMemo(() => {
+    if (isSalesManager) {
+      return customers.filter(c =>
+        c.submittedBy === currentUser?.id ||
+        c.referenceFrom?.includes(currentUser?.name) ||
+        c.assignedTo === currentUser?.id
+      );
+    }
+    return customers;
+  }, [customers, isSalesManager, currentUser]);
+
+  const scopedCalls = useMemo(() => {
+    if (isSalesManager) {
+      const custIds = new Set(scopedCustomers.map(c => c.id));
+      return calls.filter(c => c.employeeId === currentUser?.id || custIds.has(c.customerId));
+    }
+    return calls;
+  }, [calls, scopedCustomers, isSalesManager, currentUser]);
+
+  const scopedEmployees = useMemo(() => {
+    if (isSalesManager) {
+      return employees.filter(e => e.id === currentUser?.id || e.name === currentUser?.name);
+    }
+    return employees;
+  }, [employees, isSalesManager, currentUser]);
+
+  // 1. Database breakdown (scoped)
+  const oldKnown = scopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
+  const oldUnknown = scopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;
+  const newKnown = scopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'known').length;
+  const newUnknown = scopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown').length;
+
+  // 2. Source-wise submissions (scoped)
+  const billsCount = isSalesManager
+    ? scopedActivities.filter(a => a.source === 'Bills').length
+    : customers.filter(c => c.source === 'Bills').length;
+  const openSourceCount = isSalesManager
+    ? scopedActivities.filter(a => a.source === 'Open Source').length
+    : customers.filter(c => c.source === 'Open Source').length;
+  const referenceCount = isSalesManager
+    ? scopedActivities.filter(a => a.source === 'Reference').length
+    : customers.filter(c => c.source === 'Reference').length;
 
   const sourceChartData = [
     { name: '1. Bills', count: billsCount, fill: '#79091D' },
@@ -58,10 +107,10 @@ export const ReportsPage = () => {
 
   // 3. Employee-wise breakdown
   const employeePerformanceReport = useMemo(() => {
-    return employees.map(emp => {
-      const empCalls = calls.filter(c => c.employeeId === emp.id);
-      const empActivities = activities.filter(a => a.submittedBy === emp.id);
-      const empCases = performanceCases.filter(c => c.submittedBy === emp.id);
+    return scopedEmployees.map(emp => {
+      const empCalls = scopedCalls.filter(c => c.employeeId === emp.id);
+      const empActivities = scopedActivities.filter(a => a.submittedBy === emp.id);
+      const empCases = scopedCases.filter(c => c.submittedBy === emp.id);
       const approvedCases = empCases.filter(c => c.status === 'Approved');
       const approvedAmount = approvedCases.reduce((sum, c) => sum + (c.caseAmount || 0), 0);
 
@@ -78,7 +127,7 @@ export const ReportsPage = () => {
         approvedAmount
       };
     }).sort((a, b) => b.approvedAmount - a.approvedAmount);
-  }, [employees, calls, activities, performanceCases]);
+  }, [scopedEmployees, scopedCalls, scopedActivities, scopedCases]);
 
   // Top 6 performers for Chart
   const topPerformersChart = employeePerformanceReport
@@ -111,15 +160,22 @@ export const ReportsPage = () => {
       {/* Top Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider flex-wrap">
             <BarChart3 className="w-4 h-4" />
             <span>Corporate Executive Intelligence</span>
+            {isSalesManager && (
+              <span className="bg-gold-500/20 text-gold-300 border border-gold-400/40 text-[10px] px-2 py-0.5 rounded-full font-extrabold">
+                Personal Analytics Only
+              </span>
+            )}
           </div>
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             CRM Reports & Performance Analytics
           </h2>
           <p className="text-xs text-white/80 max-w-xl">
-            Detailed employee calling productivity, field lead source attribution, database composition, and case sanction leaderboards.
+            {isSalesManager
+              ? `Displaying field lead source attribution, customer database counts, and performance conversions generated exclusively by ${currentUser?.name}.`
+              : 'Detailed employee calling productivity, field lead source attribution, database composition, and case sanction leaderboards.'}
           </p>
         </div>
 

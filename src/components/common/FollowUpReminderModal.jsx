@@ -29,6 +29,14 @@ export const FollowUpReminderModal = () => {
     if (currentUser?.role === 'RM') {
       return c.callingStatus === 'Reminder' && c.assignedTo === currentUser.id;
     }
+    if (currentUser?.role === 'Sales Manager') {
+      return (
+        c.callingStatus === 'Reminder' &&
+        (c.submittedBy === currentUser.id ||
+          c.referenceFrom?.includes(currentUser.name) ||
+          c.assignedTo === currentUser.id)
+      );
+    }
     return c.callingStatus === 'Reminder';
   });
 
