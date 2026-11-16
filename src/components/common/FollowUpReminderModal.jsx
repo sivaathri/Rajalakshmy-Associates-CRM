@@ -183,17 +183,6 @@ export const FollowUpReminderModal = () => {
                       /* Action Buttons */
                       <div className="mt-3 flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-200/60">
                         <button
-                          onClick={() => {
-                            setShowFollowUpModal(false);
-                            startCallingCustomer(c);
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition"
-                        >
-                          <PhoneCall className="w-3.5 h-3.5" />
-                          Call Now
-                        </button>
-
-                        <button
                           onClick={() => handleComplete(c.id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition"
                         >

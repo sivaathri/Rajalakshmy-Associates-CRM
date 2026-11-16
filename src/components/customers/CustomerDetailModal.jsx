@@ -128,16 +128,6 @@ export const CustomerDetailModal = ({ customer, onClose }) => {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => {
-                onClose();
-                startCallingCustomer(customer);
-              }}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-md transition"
-            >
-              <PhoneCall className="w-3.5 h-3.5" />
-              <span>Call Client</span>
-            </button>
-            <button
               onClick={onClose}
               className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition"
             >

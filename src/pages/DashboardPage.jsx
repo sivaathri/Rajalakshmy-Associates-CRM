@@ -441,13 +441,6 @@ export const DashboardPage = () => {
 
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => startCallingCustomer(c)}
-                      className="p-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition"
-                      title="Call Now"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                    </button>
-                    <button
                       onClick={() => setSelectedCustDetail(c)}
                       className="text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg"
                     >

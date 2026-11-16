@@ -337,15 +337,6 @@ export const CustomerDatabasePage = () => {
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => startCallingCustomer(cust)}
-                          className="flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm transition"
-                          title="Call Customer Now"
-                        >
-                          <PhoneCall className="w-3 h-3" />
-                          <span>Call</span>
-                        </button>
-
-                        <button
                           onClick={() => setSelectedCustomer(cust)}
                           className="flex items-center gap-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition"
                           title="View KYC & Service Details"
