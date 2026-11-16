@@ -458,7 +458,6 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
       {isExpanded && (
         <div className="p-3 border-t border-white/10 bg-black/25 text-center text-[10px] text-white/50 shrink-0">
           Rajalakshmy Associates v1.0
-          <div className="text-gold-400 font-semibold">TN & Puducherry Division</div>
         </div>
       )}
     </>
