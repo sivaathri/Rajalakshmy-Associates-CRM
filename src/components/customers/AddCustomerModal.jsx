@@ -74,6 +74,21 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
     return `CUST-${maxNum + 1}`;
   }, [customers]);
 
+  const [customerId, setCustomerId] = useState(nextCustomerId);
+
+  // Sync when modal opens or nextCustomerId updates
+  React.useEffect(() => {
+    if (isOpen) {
+      setCustomerId(nextCustomerId);
+    }
+  }, [nextCustomerId, isOpen]);
+
+  // Check if current entered customerId is unique
+  const isIdUnique = React.useMemo(() => {
+    if (!customerId || !customerId.trim()) return false;
+    return !customers.some(c => c.id?.toLowerCase() === customerId.trim().toLowerCase());
+  }, [customerId, customers]);
+
   // Dynamic Document Rows state (Sl. No, Category, Doc Name dropdown, Custom Name if Others, File, Actions)
   const [docRows, setDocRows] = useState([
     {
@@ -199,8 +214,14 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
     const digits = mobile.replace(/\D/g, '').slice(-10);
     const formattedMobile = `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
 
+    const finalId = (customerId && customerId.trim()) ? customerId.trim().toUpperCase() : nextCustomerId;
+    if (customers.some(c => c.id?.toLowerCase() === finalId.toLowerCase())) {
+      alert(`Customer ID "${finalId}" is already taken. Please choose a unique ID.`);
+      return;
+    }
+
     addCustomer({
-      id: nextCustomerId,
+      id: finalId,
       name: customerType === 'known' ? name : 'Unknown / Lead',
       mobile: formattedMobile,
       altMobile,
@@ -249,18 +270,33 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Customer ID <span className="text-emerald-700 font-bold">(Auto Unique)</span>
+                Customer ID <span className="text-emerald-700 font-bold">(Unique ID)</span>
               </label>
               <div className="flex items-center gap-1.5">
                 <input
                   type="text"
-                  readOnly
-                  value={nextCustomerId}
-                  className="w-full text-xs font-mono font-bold text-burgundy-900 rounded-xl border border-slate-300 bg-slate-50/80 py-2 px-3 select-all cursor-default shadow-sm"
+                  required
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value.toUpperCase())}
+                  placeholder="e.g. CUST-1051"
+                  className={`w-full text-xs font-mono font-bold rounded-xl border py-2 px-3 shadow-sm transition focus:outline-none ${
+                    isIdUnique
+                      ? 'text-burgundy-900 border-slate-300 bg-white focus:border-burgundy-800'
+                      : 'text-rose-900 border-rose-400 bg-rose-50/50 focus:border-rose-600'
+                  }`}
                 />
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1.5 rounded-lg shrink-0">
-                  Unique
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setCustomerId(nextCustomerId)}
+                  title="Click to reset to Next Auto Unique ID"
+                  className={`text-[10px] font-bold px-2 py-2 rounded-lg border shrink-0 transition ${
+                    isIdUnique
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
+                      : 'text-rose-700 bg-rose-50 border-rose-200 hover:bg-rose-100'
+                  }`}
+                >
+                  {isIdUnique ? '✓ Unique' : '✗ In Use'}
+                </button>
               </div>
             </div>
 
