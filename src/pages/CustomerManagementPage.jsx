@@ -110,9 +110,7 @@ export const CustomerManagementPage = () => {
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             Customer Directory & Profiles
           </h2>
-          <p className="text-xs text-white/80 max-w-xl">
-            Register new customers, upload KYC verification documents, manage customer profiles, and record ongoing multi-service engagement histories.
-          </p>
+          
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -134,10 +132,31 @@ export const CustomerManagementPage = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
-        <div className="relative flex items-center">
-          <Search className="absolute left-3.5 w-4 h-4 text-slate-400" />
+      {/* Total Customers Metric & Search Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        {/* Total Customers Count Stat */}
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-burgundy-50 border border-burgundy-200 text-burgundy-900 shadow-sm">
+            <Users className="w-6 h-6 text-burgundy-800" />
+          </div>
+          <div>
+            <span className="text-[11px] uppercase font-bold text-slate-400 block tracking-wider">
+              Total Customers
+            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-slate-900">
+                {scopedCustomers.length}
+              </span>
+              <span className="text-xs font-semibold text-slate-500">
+                Active Profiles
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative w-full md:max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             placeholder="Search customer name, mobile, business, city..."
@@ -146,7 +165,7 @@ export const CustomerManagementPage = () => {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full rounded-xl border border-slate-300 py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-burgundy-800"
+            className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-4 text-xs bg-[#FAF6EF]/30 focus:bg-white focus:outline-none focus:border-burgundy-800 transition"
           />
         </div>
       </div>
@@ -156,7 +175,15 @@ export const CustomerManagementPage = () => {
         <div className="px-6 py-3.5 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-burgundy-800" />
-            <span>Customer Master Records ({filteredCustomers.length})</span>
+            <span>Customer Master Records</span>
+            <span className="ml-1 px-2 py-0.5 rounded-full bg-burgundy-100 text-burgundy-900 text-[11px] font-bold">
+              Total: {scopedCustomers.length}
+            </span>
+            {searchTerm && (
+              <span className="text-[11px] font-normal text-slate-500">
+                ({filteredCustomers.length} matching)
+              </span>
+            )}
           </div>
           <span className="text-[11px] text-slate-500">
             Page {currentPage} of {totalPages}
