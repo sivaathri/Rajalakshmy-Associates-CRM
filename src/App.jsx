@@ -1,0 +1,178 @@
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { CRMProvider } from './context/CRMContext';
+import { Navbar } from './components/common/Navbar';
+import { Sidebar } from './components/common/Sidebar';
+import { FollowUpReminderModal } from './components/common/FollowUpReminderModal';
+import { ActiveCallModal } from './components/telecalling/ActiveCallModal';
+import { Toast } from './components/common/Toast';
+
+// Pages
+import { LoginPage } from './pages/LoginPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { CustomerDatabasePage } from './pages/CustomerDatabasePage';
+import { TelecallingPage } from './pages/TelecallingPage';
+import { DailyActivitiesPage } from './pages/DailyActivitiesPage';
+import { PerformancePage } from './pages/PerformancePage';
+import { ResignationPage } from './pages/ResignationPage';
+import { AdvanceAmountPage } from './pages/AdvanceAmountPage';
+import { ReportsPage } from './pages/ReportsPage';
+import { SettingsPage } from './pages/SettingsPage';
+
+// Protected Route Guard with Role Verification
+const ProtectedLayout = ({ children, requiredRoute }) => {
+  const { currentUser, canAccessRoute, showToast } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const location = useLocation();
+
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (requiredRoute && !canAccessRoute(requiredRoute)) {
+    showToast(`Access Restricted: "${requiredRoute}" is not available for role ${currentUser.role}`, 'error');
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Derive dynamic page title based on pathname
+  const getPageTitle = (path) => {
+    if (path.startsWith('/dashboard')) return 'Executive Dashboard';
+    if (path.startsWith('/telecalling')) return 'RM Focused Telecalling';
+    if (path.startsWith('/customers/old/known')) return 'Customer Database • Old Known';
+    if (path.startsWith('/customers/old/unknown')) return 'Customer Database • Old Unknown';
+    if (path.startsWith('/customers/new/known')) return 'Customer Database • New Known';
+    if (path.startsWith('/customers/new/unknown')) return 'Customer Database • New Unknown';
+    if (path.startsWith('/daily-activities')) return 'Field Sales Daily Activities';
+    if (path.startsWith('/performance')) return 'Performance & Case Disposition';
+    if (path.startsWith('/resignation')) return 'Resignation Management';
+    if (path.startsWith('/advance')) return 'Employee Advance Amount';
+    if (path.startsWith('/reports')) return 'Intelligence Reports & Leaderboards';
+    if (path.startsWith('/settings')) return 'Operations Settings & Lead Distribution';
+    return 'Rajalakshmy Associates CRM';
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FAF6EF] flex">
+      {/* Collapsible Sidebar */}
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <Navbar
+          pageTitle={getPageTitle(location.pathname)}
+          toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        />
+
+        <main className="flex-1 p-4 md:p-6 w-full">
+          {children}
+        </main>
+      </div>
+
+      {/* Global Modals & Notifications */}
+      <FollowUpReminderModal />
+      <ActiveCallModal />
+      <Toast />
+    </div>
+  );
+};
+
+export function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <CRMProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedLayout requiredRoute="dashboard">
+                  <DashboardPage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/telecalling"
+              element={
+                <ProtectedLayout requiredRoute="telecalling">
+                  <TelecallingPage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/customers/:dbType/:custType"
+              element={
+                <ProtectedLayout requiredRoute="customers">
+                  <CustomerDatabasePage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/daily-activities"
+              element={
+                <ProtectedLayout requiredRoute="daily-activities">
+                  <DailyActivitiesPage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/performance"
+              element={
+                <ProtectedLayout requiredRoute="performance">
+                  <PerformancePage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/resignation"
+              element={
+                <ProtectedLayout requiredRoute="resignation">
+                  <ResignationPage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/advance"
+              element={
+                <ProtectedLayout requiredRoute="advance">
+                  <AdvanceAmountPage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/reports"
+              element={
+                <ProtectedLayout requiredRoute="reports">
+                  <ReportsPage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/settings"
+              element={
+                <ProtectedLayout requiredRoute="settings">
+                  <SettingsPage />
+                </ProtectedLayout>
+              }
+            />
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </CRMProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
+
+export default App;

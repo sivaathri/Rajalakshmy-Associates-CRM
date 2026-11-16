@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #FAF6EF;
+    color: #1F242D;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  h1, h2, h3, .font-corporate {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    letter-spacing: -0.015em;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1ECE1;
+}
+::-webkit-scrollbar-thumb {
+  background: #C9BEAC;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #79091D;
+}
+
+/* Pulse animation for active call */
+@keyframes call-wave {
+  0%, 100% { height: 12px; }
+  50% { height: 36px; }
+}
+
+.animate-call-wave-1 {
+  animation: call-wave 1s ease-in-out infinite 0.1s;
+}
+.animate-call-wave-2 {
+  animation: call-wave 1s ease-in-out infinite 0.25s;
+}
+.animate-call-wave-3 {
+  animation: call-wave 1s ease-in-out infinite 0.4s;
+}
+.animate-call-wave-4 {
+  animation: call-wave 1s ease-in-out infinite 0.15s;
+}
+.animate-call-wave-5 {
+  animation: call-wave 1s ease-in-out infinite 0.3s;
+}
