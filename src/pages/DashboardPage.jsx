@@ -222,7 +222,7 @@ export const DashboardPage = () => {
             className="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-xs font-bold text-burgundy-900 hover:bg-slate-100 transition shadow-sm"
           >
             <PlusCircle className="w-4 h-4 text-burgundy-800" />
-            <span>+ Add Customer</span>
+            <span>Add Customer</span>
           </button>
 
           <button

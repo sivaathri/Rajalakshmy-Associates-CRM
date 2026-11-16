@@ -127,7 +127,7 @@ export const CustomerManagementPage = () => {
             className="flex items-center gap-1.5 rounded-xl bg-gold-500 hover:bg-gold-600 px-4 py-2 text-xs font-bold text-amber-950 shadow-md transition"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Add Customer</span>
+            <span>Add Customer</span>
           </button>
         </div>
       </div>

@@ -147,11 +147,7 @@ export const CustomerDatabasePage = () => {
           <h2 className="text-xl font-bold text-slate-900 mt-1 font-corporate">
             {sectionTitle}
           </h2>
-          <p className="text-xs text-slate-500 max-w-xl">
-            {normalizedType === 'known'
-              ? 'Complete profiles with proprietor names, registered enterprise details, KYC documents, and service histories.'
-              : 'Direct mobile phone leads extracted from field activities and billing sources awaiting business qualification.'}
-          </p>
+         
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -183,40 +179,9 @@ export const CustomerDatabasePage = () => {
             />
           </div>
 
-          {/* State Filter */}
-          <div>
-            <select
-              value={selectedState}
-              onChange={(e) => {
-                setSelectedState(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800 bg-white"
-            >
-              <option value="All">All States (TN & PY)</option>
-              <option value="Tamil Nadu">Tamil Nadu</option>
-              <option value="Puducherry">Puducherry</option>
-            </select>
-          </div>
+         
 
-          {/* Calling Status Filter */}
-          <div>
-            <select
-              value={selectedCallingStatus}
-              onChange={(e) => {
-                setSelectedCallingStatus(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800 bg-white"
-            >
-              <option value="All">All Calling Statuses</option>
-              <option value="OK">OK (Interested)</option>
-              <option value="Not Attend">Not Attend</option>
-              <option value="No Need">No Need</option>
-              <option value="Reminder">Reminder (Follow-up)</option>
-              <option value="Pending">Pending (Not Called)</option>
-            </select>
-          </div>
+          
 
           {/* Source Filter */}
           <div>

@@ -567,7 +567,7 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
                 className="inline-flex items-center gap-1.5 rounded-xl bg-burgundy-900 px-4 py-2 text-xs font-bold text-white hover:bg-burgundy-800 transition shadow-sm"
               >
                 <Plus className="w-4 h-4 text-gold-400" />
-                <span>+ Add Row</span>
+                <span>Add Row</span>
               </button>
               <span className="text-xs font-semibold text-slate-500">
                 {docRows.length} {docRows.length === 1 ? 'Row' : 'Rows'} Configured
