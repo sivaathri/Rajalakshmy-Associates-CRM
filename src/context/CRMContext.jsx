@@ -21,6 +21,34 @@ const STORAGE_KEYS = {
   ADVANCES: 'rajalakshmy_advances_v1'
 };
 
+// Helper to guarantee strictly unique CUST- IDs across all records
+export const ensureUniqueCustomerIds = (customerList) => {
+  const seenIds = new Set();
+  let maxNum = 1000;
+
+  // First pass: find maximum numeric ID among valid unique CUST- numbers
+  (customerList || []).forEach(c => {
+    if (c.id && typeof c.id === 'string' && c.id.startsWith('CUST-')) {
+      const num = parseInt(c.id.replace('CUST-', ''), 10);
+      if (!isNaN(num) && num > maxNum) {
+        maxNum = num;
+      }
+    }
+  });
+
+  // Second pass: assign new unique ID to any record with missing or duplicate ID
+  return (customerList || []).map(c => {
+    if (!c.id || seenIds.has(c.id)) {
+      maxNum += 1;
+      const assignedId = `CUST-${maxNum}`;
+      seenIds.add(assignedId);
+      return { ...c, id: assignedId };
+    }
+    seenIds.add(c.id);
+    return c;
+  });
+};
+
 export const CRMProvider = ({ children }) => {
   const { currentUser, showToast } = useAuth();
 
@@ -32,7 +60,7 @@ export const CRMProvider = ({ children }) => {
         const parsed = JSON.parse(saved);
         const c1033 = parsed.find(c => c.id === 'CUST-1033');
         if (c1033 && (!c1033.submittedBy || c1033.name !== 'Annapoorna Caterers & Bakers')) {
-          return parsed.map(c => {
+          const updated = parsed.map(c => {
             const initialMatch = INITIAL_CUSTOMERS.find(ic => ic.id === c.id);
             if (initialMatch && initialMatch.submittedBy) {
               return {
@@ -47,12 +75,13 @@ export const CRMProvider = ({ children }) => {
             }
             return c;
           });
+          return ensureUniqueCustomerIds(updated);
         }
-        return parsed;
+        return ensureUniqueCustomerIds(parsed);
       }
-      return INITIAL_CUSTOMERS;
+      return ensureUniqueCustomerIds(INITIAL_CUSTOMERS);
     } catch {
-      return INITIAL_CUSTOMERS;
+      return ensureUniqueCustomerIds(INITIAL_CUSTOMERS);
     }
   });
 
@@ -169,7 +198,20 @@ export const CRMProvider = ({ children }) => {
   // CUSTOMER MANAGEMENT
   // ----------------------------------------------------
   const addCustomer = (customerData) => {
-    const newId = `CUST-${1000 + customers.length + 1}`;
+    let newId = customerData.id;
+    if (!newId || customers.some(c => c.id === newId)) {
+      let maxNum = 1000;
+      customers.forEach(c => {
+        if (c.id && typeof c.id === 'string' && c.id.startsWith('CUST-')) {
+          const num = parseInt(c.id.replace('CUST-', ''), 10);
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+          }
+        }
+      });
+      newId = `CUST-${maxNum + 1}`;
+    }
+
     const newCustomer = {
       id: newId,
       name: customerData.name || (customerData.customerType === 'unknown' ? 'Unknown / Lead' : 'Customer'),
@@ -452,8 +494,32 @@ export const CRMProvider = ({ children }) => {
         invalid: invalidCount
       },
       commitImport: () => {
-        newCustomersToAdd.forEach(cust => {
-          addCustomer(cust);
+        setCustomers(prev => {
+          let currentList = [...prev];
+          let maxNum = 1000;
+          currentList.forEach(c => {
+            if (c.id && typeof c.id === 'string' && c.id.startsWith('CUST-')) {
+              const num = parseInt(c.id.replace('CUST-', ''), 10);
+              if (!isNaN(num) && num > maxNum) maxNum = num;
+            }
+          });
+
+          const importedCustomers = newCustomersToAdd.map(cust => {
+            maxNum += 1;
+            return {
+              ...cust,
+              id: `CUST-${maxNum}`,
+              callingStatus: 'Pending',
+              lastCallDate: '',
+              reminderDate: '',
+              reminderRemark: '',
+              createdAt: new Date().toISOString().split('T')[0],
+              documents: cust.documents || [],
+              services: cust.services || []
+            };
+          });
+
+          return [...importedCustomers, ...currentList];
         });
         showToast(`Successfully imported ${newCustomersToAdd.length} records into New Database (Skipped ${duplicateCount} duplicates)`, 'success');
       }

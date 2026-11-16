@@ -47,7 +47,7 @@ const getDefaultDocNameForIndex = (index) => {
 };
 
 export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', defaultType = 'known' }) => {
-  const { addCustomer } = useCRM();
+  const { addCustomer, customers } = useCRM();
   const { currentUser } = useAuth();
 
   const [customerType, setCustomerType] = useState(defaultType); // 'known' | 'unknown'
@@ -59,6 +59,20 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
   const [address, setAddress] = useState('');
   const [state, setState] = useState('Tamil Nadu');
   const [city, setCity] = useState('Chennai');
+
+  // Compute next guaranteed unique customer ID
+  const nextCustomerId = React.useMemo(() => {
+    let maxNum = 1000;
+    (customers || []).forEach(c => {
+      if (c.id && typeof c.id === 'string' && c.id.startsWith('CUST-')) {
+        const num = parseInt(c.id.replace('CUST-', ''), 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
+      }
+    });
+    return `CUST-${maxNum + 1}`;
+  }, [customers]);
 
   // Dynamic Document Rows state (Sl. No, Category, Doc Name dropdown, Custom Name if Others, File, Actions)
   const [docRows, setDocRows] = useState([
@@ -186,6 +200,7 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
     const formattedMobile = `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
 
     addCustomer({
+      id: nextCustomerId,
       name: customerType === 'known' ? name : 'Unknown / Lead',
       mobile: formattedMobile,
       altMobile,
@@ -232,6 +247,23 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
           {/* Core Info Fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Customer ID <span className="text-emerald-700 font-bold">(Auto Unique)</span>
+              </label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  readOnly
+                  value={nextCustomerId}
+                  className="w-full text-xs font-mono font-bold text-burgundy-900 rounded-xl border border-slate-300 bg-slate-50/80 py-2 px-3 select-all cursor-default shadow-sm"
+                />
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1.5 rounded-lg shrink-0">
+                  Unique
+                </span>
+              </div>
+            </div>
+
             {customerType === 'known' ? (
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
