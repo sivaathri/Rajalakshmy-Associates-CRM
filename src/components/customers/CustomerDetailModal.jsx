@@ -49,16 +49,34 @@ export const CustomerDetailModal = ({ customer, onClose }) => {
 
   const handleDocUpload = (e) => {
     e.preventDefault();
+    if (docCategory === 'Other' && !docFileName.trim()) {
+      alert('Please enter the document name for "Other" category');
+      return;
+    }
+
     if (!docFileName.trim() && !docFileObj) {
       alert('Please specify a document name or pick a file');
       return;
     }
 
-    const name = docFileObj ? docFileObj.name : `${docFileName}.pdf`;
+    const defaultNames = {
+      'KYC 1': 'Aadhaar_ID_Proof.pdf',
+      'KYC 2': 'PAN_Card_Proof.pdf',
+      'KYC 3': 'GST_Business_License.pdf',
+      'Other': `${docFileName.trim() || 'Document'}.pdf`
+    };
+
+    const name = docFileObj 
+      ? docFileObj.name 
+      : (docFileName.trim() ? `${docFileName.trim()}.pdf` : defaultNames[docCategory]);
     const size = docFileObj ? `${(docFileObj.size / (1024 * 1024)).toFixed(1)} MB` : '1.4 MB';
 
+    const categoryLabel = docCategory === 'Other' && docFileName.trim()
+      ? `Other: ${docFileName.trim()}`
+      : docCategory;
+
     addCustomerDocument(customer.id, {
-      category: docCategory,
+      category: categoryLabel,
       name,
       size
     });
@@ -276,26 +294,35 @@ export const CustomerDetailModal = ({ customer, onClose }) => {
                       onChange={(e) => setDocCategory(e.target.value)}
                       className="w-full text-xs rounded-lg border border-slate-300 py-1.5 px-2 bg-white"
                     >
-                      <option value="KYC 1">KYC 1 (Aadhaar / Passport / Voter ID)</option>
+                      <option value="KYC 1">KYC 1 (Aadhaar / ID)</option>
                       <option value="KYC 2">KYC 2 (PAN Card Proof)</option>
-                      <option value="KYC 3">KYC 3 (GST / Business License / Registration)</option>
-                      <option value="Other Documents">Other Documents (ITR / Bank Statements)</option>
+                      <option value="KYC 3">KYC 3 (GST / Business License)</option>
+                      <option value="Other">Other</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">Document Label / Title</label>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      {docCategory === 'Other' ? (
+                        <span className="text-amber-700 font-bold">Document Name *</span>
+                      ) : (
+                        'Document Label (Optional)'
+                      )}
+                    </label>
                     <input
                       type="text"
-                      placeholder="e.g. GST_Certificate_2026.pdf"
+                      placeholder={docCategory === 'Other' ? 'Enter document name (e.g. Bank Statement, ITR)' : 'Auto-assigned if empty'}
                       value={docFileName}
                       onChange={(e) => setDocFileName(e.target.value)}
-                      className="w-full text-xs rounded-lg border border-slate-300 py-1.5 px-2 bg-white"
+                      className={`w-full text-xs rounded-lg border py-1.5 px-2 bg-white ${
+                        docCategory === 'Other' ? 'border-amber-400 bg-amber-50/30' : 'border-slate-300'
+                      }`}
                     />
                   </div>
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-600 mb-1">Choose File</label>
                     <input
                       type="file"
+                      accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
                       onChange={(e) => setDocFileObj(e.target.files[0])}
                       className="w-full text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[11px] file:bg-burgundy-900 file:text-white"
                     />
