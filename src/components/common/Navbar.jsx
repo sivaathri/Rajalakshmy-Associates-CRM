@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useCRM } from '../../context/CRMContext';
 import {
@@ -27,10 +27,52 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Calculate pending follow-ups for currentUser
+  const roleSwitcherRef = useRef(null);
+  const profileRef = useRef(null);
+  const searchRef = useRef(null);
+
+  // Close dropdowns when clicking outside or pressing Escape
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (roleSwitcherRef.current && !roleSwitcherRef.current.contains(e.target)) {
+        setRoleSwitcherOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setIsSearching(false);
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setRoleSwitcherOpen(false);
+        setProfileOpen(false);
+        setIsSearching(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  // Calculate pending follow-ups scoped for currentUser
   const pendingFollowUps = customers.filter(c => {
     if (currentUser?.role === 'RM') {
       return c.callingStatus === 'Reminder' && c.assignedTo === currentUser.id;
+    }
+    if (currentUser?.role === 'Sales Manager') {
+      return (
+        c.callingStatus === 'Reminder' &&
+        (c.submittedBy === currentUser.id ||
+          c.referenceFrom?.includes(currentUser.name) ||
+          c.assignedTo === currentUser.id)
+      );
     }
     return c.callingStatus === 'Reminder';
   });
@@ -77,7 +119,7 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
       </div>
 
       {/* Middle: Universal Search (Desktop / Tablet) */}
-      <div className="relative hidden md:block w-64 lg:w-96">
+      <div className="relative hidden md:block w-64 lg:w-96" ref={searchRef}>
         <div className="relative flex items-center">
           <Search className="absolute left-3 w-4 h-4 text-slate-400" />
           <input
@@ -145,9 +187,12 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
         </button>
 
         {/* Quick Role Switcher Pill */}
-        <div className="relative">
+        <div className="relative" ref={roleSwitcherRef}>
           <button
-            onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
+            onClick={() => {
+              setRoleSwitcherOpen(prev => !prev);
+              setProfileOpen(false);
+            }}
             className="flex items-center gap-1 rounded-xl border border-gold-300 bg-gold-50/70 px-2 sm:px-2.5 py-1.5 text-xs font-medium text-amber-950 hover:bg-gold-100 transition shadow-sm"
             title="Switch Prototype Role"
           >
@@ -158,7 +203,7 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
           </button>
 
           {roleSwitcherOpen && (
-            <div className="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 bg-white py-1.5 shadow-2xl z-50">
+            <div className="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 bg-white py-1.5 shadow-2xl z-50 animate-fade-in">
               <div className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                 Switch Role Prototype
               </div>
@@ -186,9 +231,12 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
         </div>
 
         {/* User Profile */}
-        <div className="relative">
+        <div className="relative" ref={profileRef}>
           <button
-            onClick={() => setProfileOpen(!profileOpen)}
+            onClick={() => {
+              setProfileOpen(prev => !prev);
+              setRoleSwitcherOpen(false);
+            }}
             className="flex items-center gap-1.5 rounded-xl p-1 hover:bg-slate-100 transition"
           >
             <img
