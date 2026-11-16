@@ -3,7 +3,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useCRM } from '../../context/CRMContext';
 import {
   Bell,
-  Search,
   ChevronDown,
   User,
   LogOut,
@@ -18,18 +17,13 @@ import { useNavigate } from 'react-router-dom';
 
 export const Navbar = ({ pageTitle, toggleSidebar }) => {
   const { currentUser, logout, loginAsRole, setShowFollowUpModal } = useAuth();
-  const { customers, startCallingCustomer } = useCRM();
+  const { customers } = useCRM();
   const [profileOpen, setProfileOpen] = useState(false);
   const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const navigate = useNavigate();
 
   const roleSwitcherRef = useRef(null);
   const profileRef = useRef(null);
-  const searchRef = useRef(null);
 
   // Close dropdowns when clicking outside or pressing Escape
   useEffect(() => {
@@ -40,16 +34,12 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setProfileOpen(false);
       }
-      if (searchRef.current && !searchRef.current.contains(e.target)) {
-        setIsSearching(false);
-      }
     };
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         setRoleSwitcherOpen(false);
         setProfileOpen(false);
-        setIsSearching(false);
       }
     };
 
@@ -77,23 +67,6 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
     return c.callingStatus === 'Reminder';
   });
 
-  const handleSearch = (e) => {
-    const q = e.target.value;
-    setSearchQuery(q);
-    if (!q.trim()) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
-    setIsSearching(true);
-    const filtered = customers.filter(c =>
-      c.name.toLowerCase().includes(q.toLowerCase()) ||
-      c.mobile.includes(q) ||
-      (c.business && c.business.toLowerCase().includes(q.toLowerCase()))
-    ).slice(0, 6);
-    setSearchResults(filtered);
-  };
-
   const rolesList = ['Admin', 'Manager', 'Ops', 'RM', 'Sales Manager'];
 
   return (
@@ -118,59 +91,8 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
         </div>
       </div>
 
-      {/* Middle: Universal Search (Desktop / Tablet) */}
-      <div className="relative hidden md:block w-64 lg:w-96" ref={searchRef}>
-        <div className="relative flex items-center">
-          <Search className="absolute left-3 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search customer name, mobile, business..."
-            value={searchQuery}
-            onChange={handleSearch}
-            className="w-full rounded-xl border border-slate-200 bg-[#FAF6EF]/60 py-1.5 pl-9 pr-4 text-xs md:text-sm text-slate-800 placeholder-slate-400 transition focus:border-burgundy-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-burgundy-800"
-          />
-        </div>
-
-        {/* Search Results Dropdown */}
-        {isSearching && searchResults.length > 0 && (
-          <div className="absolute left-0 mt-2 w-full rounded-xl border border-slate-200 bg-white py-2 shadow-2xl z-50">
-            <div className="px-3 py-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Found {searchResults.length} Contact(s)
-            </div>
-            {searchResults.map(c => (
-              <div
-                key={c.id}
-                onClick={() => {
-                  setIsSearching(false);
-                  setSearchQuery('');
-                  startCallingCustomer(c);
-                }}
-                className="flex items-center justify-between px-3 py-2 text-xs hover:bg-[#FAF6EF] cursor-pointer transition border-b border-slate-50 last:border-0"
-              >
-                <div>
-                  <div className="font-semibold text-slate-800">{c.name}</div>
-                  <div className="text-[11px] text-slate-500">{c.mobile} • {c.business || c.city}</div>
-                </div>
-                <span className="text-[10px] uppercase font-bold text-burgundy-800 bg-burgundy-50 px-2 py-0.5 rounded-full border border-burgundy-100">
-                  {c.databaseType} / {c.customerType}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Right Controls */}
       <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0">
-        {/* Mobile Search Toggle */}
-        <button
-          onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-          className="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 md:hidden"
-          title="Search contacts"
-        >
-          <Search className="w-4 h-4" />
-        </button>
-
         {/* Pending Follow-ups Quick Button */}
         <button
           onClick={() => setShowFollowUpModal(true)}
@@ -300,58 +222,6 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
           )}
         </div>
       </div>
-
-      {/* Mobile Floating Search Drawer */}
-      {mobileSearchOpen && (
-        <div className="absolute top-16 left-0 right-0 bg-white border-b border-slate-200 p-3 shadow-lg z-50 md:hidden animate-fade-in">
-          <div className="relative flex items-center">
-            <Search className="absolute left-3 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search customer name, phone, business..."
-              value={searchQuery}
-              onChange={handleSearch}
-              autoFocus
-              className="w-full rounded-xl border border-slate-300 py-2 pl-9 pr-9 text-xs focus:outline-none focus:border-burgundy-800"
-            />
-            <button
-              onClick={() => {
-                setMobileSearchOpen(false);
-                setSearchQuery('');
-                setIsSearching(false);
-              }}
-              className="absolute right-3 text-slate-400 hover:text-slate-600"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {isSearching && searchResults.length > 0 && (
-            <div className="mt-2 divide-y divide-slate-100 max-h-56 overflow-y-auto">
-              {searchResults.map(c => (
-                <div
-                  key={c.id}
-                  onClick={() => {
-                    setMobileSearchOpen(false);
-                    setIsSearching(false);
-                    setSearchQuery('');
-                    startCallingCustomer(c);
-                  }}
-                  className="py-2 flex items-center justify-between text-xs"
-                >
-                  <div>
-                    <div className="font-bold text-slate-900">{c.name}</div>
-                    <div className="text-[11px] text-slate-500">{c.mobile} • {c.business || c.city}</div>
-                  </div>
-                  <span className="text-[10px] font-bold bg-burgundy-50 text-burgundy-800 px-2 py-0.5 rounded-full">
-                    {c.databaseType}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </header>
   );
 };
