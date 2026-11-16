@@ -100,7 +100,7 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
             <div>
               <h3 className="text-base font-bold">Add Customer Record</h3>
               <p className="text-xs text-gold-200">
-                Register customer to {databaseType.toUpperCase()} Database
+                Register customer profile, KYC documents, and service history
               </p>
             </div>
           </div>
@@ -114,69 +114,6 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
-          {/* Database & Type Toggles */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-100">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Database Target
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDatabaseType('new')}
-                  className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition ${
-                    databaseType === 'new'
-                      ? 'bg-burgundy-900 text-white border-burgundy-900'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  New Database
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDatabaseType('old')}
-                  className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition ${
-                    databaseType === 'old'
-                      ? 'bg-burgundy-900 text-white border-burgundy-900'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  Old Database
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Customer Type
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCustomerType('known')}
-                  className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition ${
-                    customerType === 'known'
-                      ? 'bg-gold-500 text-amber-950 border-gold-500'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  Known Contact
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCustomerType('unknown')}
-                  className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition ${
-                    customerType === 'unknown'
-                      ? 'bg-gold-500 text-amber-950 border-gold-500'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  Unknown / Lead
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* Core Info Fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {customerType === 'known' ? (
