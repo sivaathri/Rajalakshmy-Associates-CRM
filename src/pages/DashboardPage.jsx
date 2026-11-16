@@ -170,12 +170,12 @@ export const DashboardPage = () => {
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider">
-            <span>Rajalakshmy Associates CRM Console</span>
-            <span>•</span>
-            <span>{currentUser?.department}</span>
+            <span>Rajalakshmy Associates CRM </span>
+
+
           </div>
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
-            Vanakkam, {currentUser?.name}!
+            {currentUser?.name}!
           </h2>
           <p className="text-xs text-white/80 max-w-xl mt-1">
             Role: <strong className="text-gold-300">{currentUser?.role}</strong> ({currentUser?.title}). You have{' '}
