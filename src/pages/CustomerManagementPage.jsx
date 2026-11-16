@@ -285,9 +285,7 @@ export const CustomerManagementPage = () => {
                 <th className="px-4 py-3">Customer / Enterprise</th>
                 <th className="px-4 py-3">Mobile Contact</th>
                 <th className="px-4 py-3">Location</th>
-                <th className="px-4 py-3">Classification</th>
-                <th className="px-4 py-3">KYC Docs</th>
-                <th className="px-4 py-3">Service History</th>
+               
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -320,44 +318,15 @@ export const CustomerManagementPage = () => {
                       <span className="text-[10px] text-slate-400 block">{c.state}</span>
                     </td>
 
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                          c.customerType === 'known'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : 'bg-amber-50 text-amber-800 border-amber-200'
-                        }`}
-                      >
-                        {c.customerType === 'known' ? 'Known' : 'Unknown'}
-                      </span>
-                      <span className="text-[10px] text-slate-400 uppercase block font-semibold mt-0.5">
-                        {c.databaseType} DB
-                      </span>
-                    </td>
+                  
 
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-                        <FileText className="w-3 h-3 text-slate-500" />
-                        {c.documents?.length || 0} Docs
-                      </span>
-                    </td>
+               
 
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                        <Briefcase className="w-3 h-3 text-indigo-600" />
-                        {c.services?.length || 0} Requests
-                      </span>
-                    </td>
+                  
 
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => startCallingCustomer(c)}
-                          className="p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition"
-                          title="Call Customer"
-                        >
-                          <PhoneCall className="w-3.5 h-3.5" />
-                        </button>
+                       
 
                         <button
                           onClick={() => setSelectedCustomer(c)}

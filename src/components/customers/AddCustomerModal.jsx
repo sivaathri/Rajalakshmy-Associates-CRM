@@ -122,11 +122,11 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
       prev.map(row =>
         row.id === id
           ? {
-              ...row,
-              file,
-              fileName: file.name,
-              fileSize: sizeStr
-            }
+            ...row,
+            file,
+            fileName: file.name,
+            fileSize: sizeStr
+          }
           : row
       )
     );
