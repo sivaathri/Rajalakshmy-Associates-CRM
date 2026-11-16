@@ -16,6 +16,36 @@ import {
   Plus
 } from 'lucide-react';
 
+export const DOCUMENT_NAME_OPTIONS = [
+  'Aadhaar Card',
+  'PAN Card',
+  'Voter ID',
+  'Driving License',
+  'Passport',
+  'GST Registration Certificate',
+  'Udyam / MSME Certificate',
+  'Bank Statement (Last 6 Months)',
+  'ITR / Form 16 (Last 2 Years)',
+  'Trade License',
+  'Rental Agreement / Lease Deed',
+  'Property Tax Receipt / EB Bill',
+  'Partnership Deed / MOA & AOA',
+  'Board Resolution / Authority Letter',
+  'Salary Slips (3 Months)',
+  'Others'
+];
+
+const getDefaultDocNameForIndex = (index) => {
+  const defaults = [
+    'Aadhaar Card',
+    'PAN Card',
+    'GST Registration Certificate',
+    'Bank Statement (Last 6 Months)',
+    'ITR / Form 16 (Last 2 Years)'
+  ];
+  return defaults[index - 1] || 'Others';
+};
+
 export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', defaultType = 'known' }) => {
   const { addCustomer } = useCRM();
   const { currentUser } = useAuth();
@@ -30,12 +60,13 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
   const [state, setState] = useState('Tamil Nadu');
   const [city, setCity] = useState('Chennai');
 
-  // Dynamic Document Rows state (Sl. No, Category, Custom Name, File, Actions)
+  // Dynamic Document Rows state (Sl. No, Category, Doc Name dropdown, Custom Name if Others, File, Actions)
   const [docRows, setDocRows] = useState([
     {
       id: 'row-1',
       category: 'KYC 1',
-      customName: '',
+      docName: 'Aadhaar Card',
+      customDocName: '',
       file: null,
       fileName: '',
       fileSize: ''
@@ -48,12 +79,14 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
   const handleAddRow = () => {
     const nextIndex = docRows.length + 1;
     const nextCategory = `KYC ${nextIndex}`;
+    const nextDocName = getDefaultDocNameForIndex(nextIndex);
     setDocRows(prev => [
       ...prev,
       {
         id: `row-${Date.now()}-${nextIndex}`,
         category: nextCategory,
-        customName: '',
+        docName: nextDocName,
+        customDocName: '',
         file: null,
         fileName: '',
         fileSize: ''
@@ -67,9 +100,15 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
     );
   };
 
-  const handleRowCustomNameChange = (id, newName) => {
+  const handleRowDocNameChange = (id, newDocName) => {
     setDocRows(prev =>
-      prev.map(row => (row.id === id ? { ...row, customName: newName } : row))
+      prev.map(row => (row.id === id ? { ...row, docName: newDocName } : row))
+    );
+  };
+
+  const handleRowCustomDocNameChange = (id, customName) => {
+    setDocRows(prev =>
+      prev.map(row => (row.id === id ? { ...row, customDocName: customName } : row))
     );
   };
 
@@ -115,34 +154,29 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
       return;
     }
 
-    // Validate if any row selected as 'Other' has empty document name
+    // Validate if any row selected as 'Others' has empty document name
     for (let i = 0; i < docRows.length; i++) {
       const r = docRows[i];
-      if (r.category === 'Other' && !r.customName.trim()) {
-        alert(`Please enter the document name for Sl. No ${i + 1} (Other)`);
+      if (r.docName === 'Others' && !r.customDocName.trim()) {
+        alert(`Please enter the document name for Sl No ${i + 1} (Others)`);
         return;
       }
     }
 
     // Process documents from rows
     const processedDocuments = docRows.map((r, idx) => {
-      const categoryLabel = r.category === 'Other' && r.customName.trim()
-        ? `Other: ${r.customName.trim()}`
-        : r.category;
+      const resolvedDocName = r.docName === 'Others'
+        ? r.customDocName.trim()
+        : r.docName;
 
-      const defaultNames = {
-        'KYC 1': 'Aadhaar_ID_Proof.pdf',
-        'KYC 2': 'PAN_Card_Proof.pdf',
-        'KYC 3': 'GST_Business_License.pdf'
-      };
-
-      const name = r.fileName || (r.customName.trim() ? `${r.customName.trim()}.pdf` : (defaultNames[r.category] || `${r.category}_Document.pdf`));
+      const name = r.fileName || `${resolvedDocName.replace(/[^\w.-]/g, '_')}.pdf`;
       const size = r.fileSize || '1.2 MB';
 
       return {
         id: `DOC-${Date.now().toString().slice(-4)}-${idx + 1}`,
-        category: categoryLabel,
+        category: r.category,
         name,
+        docTitle: resolvedDocName,
         size,
         uploadDate: new Date().toISOString().split('T')[0]
       };
@@ -372,36 +406,43 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
                           </span>
                         </td>
 
-                        {/* Document Name: Shows active input if 'Other', or optional title input for KYC */}
+                        {/* Document Name: Choose in a dropdown. If 'Others' is selected, then only show the input to enter doc name */}
                         <td className="py-3 px-3 align-top">
-                          {row.category === 'Other' ? (
-                            <div className="space-y-1">
-                              <input
-                                type="text"
-                                required
-                                placeholder="Enter document name *"
-                                value={row.customName}
-                                onChange={(e) => handleRowCustomNameChange(row.id, e.target.value)}
-                                className="w-full text-xs rounded-lg border border-amber-400 bg-amber-50/60 py-1.5 px-2.5 font-medium text-slate-800 placeholder-amber-700/60 focus:outline-none focus:border-amber-600 focus:bg-white shadow-sm"
-                              />
-                              <span className="text-[10px] text-amber-700 font-bold block">
-                                * Required for Other (e.g. Rental Agreement, Trade License)
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <input
-                                type="text"
-                                placeholder={`Optional label (Auto: ${row.category} Document)`}
-                                value={row.customName}
-                                onChange={(e) => handleRowCustomNameChange(row.id, e.target.value)}
-                                className="w-full text-xs rounded-lg border border-slate-200 py-1.5 px-2.5 bg-slate-50 hover:bg-white focus:bg-white focus:border-burgundy-800 focus:outline-none transition"
-                              />
-                              <span className="text-[10px] text-slate-400 block">
-                                Auto-assigned if left blank
-                              </span>
-                            </div>
-                          )}
+                          <div className="space-y-1.5">
+                            <select
+                              value={row.docName}
+                              onChange={(e) => handleRowDocNameChange(row.id, e.target.value)}
+                              className={`w-full text-xs font-semibold rounded-lg border py-1.5 px-2 bg-white text-slate-800 focus:outline-none shadow-sm ${
+                                row.docName === 'Others'
+                                  ? 'border-amber-400 bg-amber-50/30 focus:border-amber-600'
+                                  : 'border-slate-300 focus:border-burgundy-800'
+                              }`}
+                            >
+                              {DOCUMENT_NAME_OPTIONS.map(opt => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+
+                            {/* Only show input to enter document name if 'Others' is selected in this dropdown */}
+                            {row.docName === 'Others' && (
+                              <div className="space-y-1 animate-fade-in">
+                                <input
+                                  type="text"
+                                  required
+                                  placeholder="Enter document name *"
+                                  value={row.customDocName}
+                                  onChange={(e) => handleRowCustomDocNameChange(row.id, e.target.value)}
+                                  className="w-full text-xs rounded-lg border border-amber-400 bg-amber-50/70 py-1.5 px-2.5 font-medium text-slate-800 placeholder-amber-700/60 focus:outline-none focus:border-amber-600 focus:bg-white shadow-sm"
+                                  autoFocus
+                                />
+                                <span className="text-[10px] text-amber-700 font-bold block">
+                                  * Required: Enter custom document name
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </td>
 
                         {/* Choose / Upload File */}
