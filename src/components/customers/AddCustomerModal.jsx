@@ -29,8 +29,6 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
   const [address, setAddress] = useState('');
   const [state, setState] = useState('Tamil Nadu');
   const [city, setCity] = useState('Chennai');
-  const [source, setSource] = useState('Bills');
-  const [referenceFrom, setReferenceFrom] = useState('');
 
   // Documents list
   const [documents, setDocuments] = useState([]);
@@ -79,8 +77,8 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
       city,
       databaseType,
       customerType,
-      source,
-      referenceFrom,
+      source: 'Direct',
+      referenceFrom: '',
       documents,
       services: []
     });
@@ -210,37 +208,6 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
                 className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
               />
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Database Source
-              </label>
-              <select
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800 bg-white"
-              >
-                <option value="Bills">Bills</option>
-                <option value="Open Source">Open Source</option>
-                <option value="Reference">Reference</option>
-              </select>
-            </div>
-
-            {source === 'Reference' && (
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-amber-900 mb-1">
-                  Reference From / Who? *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Specify person or firm who gave reference"
-                  value={referenceFrom}
-                  onChange={(e) => setReferenceFrom(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-amber-300 py-2 px-3 bg-amber-50/50"
-                />
-              </div>
-            )}
 
             <div className="sm:col-span-2 lg:col-span-3">
               <label className="block text-xs font-semibold text-slate-700 mb-1">
