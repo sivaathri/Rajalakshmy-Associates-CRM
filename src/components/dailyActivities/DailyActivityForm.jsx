@@ -11,7 +11,6 @@ export const DailyActivityForm = () => {
   const [customerName, setCustomerName] = useState('');
   const [mobile, setMobile] = useState('');
   const [business, setBusiness] = useState('');
-  const [state, setState] = useState('Tamil Nadu');
   const [source, setSource] = useState('Bills'); // 'Bills' | 'Open Source' | 'Reference'
   const [referenceFrom, setReferenceFrom] = useState('');
 
@@ -36,7 +35,7 @@ export const DailyActivityForm = () => {
       mobile: formattedMobile,
       business,
       customerType,
-      state,
+      state: 'Tamil Nadu',
       source,
       referenceFrom
     });
@@ -167,21 +166,6 @@ export const DailyActivityForm = () => {
                 className="w-full text-xs rounded-xl border border-slate-300 py-2 pl-9 pr-3 focus:outline-none focus:border-burgundy-800"
               />
             </div>
-          </div>
-
-          {/* State */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              State <span className="text-rose-500">*</span>
-            </label>
-            <select
-              value={state}
-              onChange={(e) => setState(e.target.value)}
-              className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800 bg-white"
-            >
-              <option value="Tamil Nadu">Tamil Nadu</option>
-              <option value="Puducherry">Puducherry</option>
-            </select>
           </div>
 
           {/* Database Source */}
