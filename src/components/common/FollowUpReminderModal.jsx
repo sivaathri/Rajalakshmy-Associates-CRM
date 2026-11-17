@@ -4,10 +4,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useCRM } from '../../context/CRMContext';
 import {
   CalendarCheck,
-  PhoneCall,
   Calendar,
   Clock,
-  CheckCircle,
+  CheckCircle2,
+  PhoneMissed,
+  XCircle,
+  CalendarClock,
   X,
   AlertTriangle,
   ArrowRight
@@ -15,19 +17,20 @@ import {
 import { formatDate } from '../../utils/formatters';
 
 export const FollowUpReminderModal = () => {
-  const { showFollowUpModal, setShowFollowUpModal, currentUser } = useAuth();
-  const { customers, logCall, updateCustomer, startCallingCustomer } = useCRM();
+  const { showFollowUpModal, setShowFollowUpModal, currentUser, showToast } = useAuth();
+  const { customers, logCall, updateCustomer } = useCRM();
 
-  const [reschedulingId, setReschedulingId] = useState(null);
-  const [newDate, setNewDate] = useState('');
-  const [newRemark, setNewRemark] = useState('');
+  // Per-contact selected outcome state
+  const [selectedOutcomes, setSelectedOutcomes] = useState({});
+  const [remarksMap, setRemarksMap] = useState({});
+  const [rescheduleDates, setRescheduleDates] = useState({});
 
   if (!showFollowUpModal) return null;
 
   // Filter pending reminders
   const myReminders = customers.filter(c => {
     if (currentUser?.role === 'RM') {
-      return c.callingStatus === 'Reminder' && c.assignedTo === currentUser.id;
+      return c.callingStatus === 'Reminder' && (c.assignedTo === currentUser.id || c.actionedBy === currentUser.id);
     }
     if (currentUser?.role === 'Sales Manager') {
       return (
@@ -40,26 +43,81 @@ export const FollowUpReminderModal = () => {
     return c.callingStatus === 'Reminder';
   });
 
-  const handleComplete = (customerId) => {
-    logCall({
-      customerId,
-      outcome: 'OK',
-      duration: '2m 15s',
-      remarks: 'Follow-up completed successfully. Customer agreed to move forward.'
+  const handleSelectOutcome = (customerId, outcome) => {
+    setSelectedOutcomes(prev => ({ ...prev, [customerId]: outcome }));
+    const customer = customers.find(c => c.id === customerId);
+    if (outcome === 'Reminder' && customer?.reminderDate) {
+      setRescheduleDates(prev => ({ ...prev, [customerId]: customer.reminderDate }));
+    }
+  };
+
+  const handleCancelOutcome = (customerId) => {
+    setSelectedOutcomes(prev => {
+      const copy = { ...prev };
+      delete copy[customerId];
+      return copy;
     });
   };
 
-  const handleSaveReschedule = (customerId) => {
-    if (!newDate) return;
-    updateCustomer(customerId, {
-      callingStatus: 'Reminder',
-      reminderDate: newDate,
-      reminderRemark: newRemark || 'Rescheduled follow-up call'
-    });
-    setReschedulingId(null);
-    setNewDate('');
-    setNewRemark('');
+  const handleSaveDisposition = (customerId) => {
+    const outcome = selectedOutcomes[customerId];
+    if (!outcome) return;
+
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) return;
+
+    if (outcome === 'Reminder') {
+      const remDate = rescheduleDates[customerId] || '';
+      if (!remDate) {
+        alert('Please select a Follow-up Date for Reminder');
+        return;
+      }
+      const remNote = remarksMap[customerId]?.trim() || customer.reminderRemark || 'Rescheduled follow-up call';
+
+      logCall({
+        customerId,
+        outcome: 'Reminder',
+        duration: 'Manual Call',
+        remarks: remNote,
+        reminderDate: remDate
+      });
+
+      updateCustomer(customerId, {
+        callingStatus: 'Reminder',
+        reminderDate: remDate,
+        reminderRemark: remNote,
+        lastCalledDate: new Date().toISOString().split('T')[0]
+      });
+
+      showToast(`Follow-up rescheduled for ${cName(customer)} to ${remDate}`, 'info');
+    } else {
+      const defaultNotes = {
+        'OK': 'Interested / Converted - Customer confirmed interest in advisory services',
+        'Not Attend': 'Not Attend - Ringing / Busy / Switched Off',
+        'No Need': 'No Need - Not Interested / DND requested'
+      };
+      const note = remarksMap[customerId]?.trim() || defaultNotes[outcome] || `Outcome: ${outcome}`;
+
+      logCall({
+        customerId,
+        outcome,
+        duration: 'Manual Call',
+        remarks: note
+      });
+
+      updateCustomer(customerId, {
+        callingStatus: outcome,
+        lastCalledDate: new Date().toISOString().split('T')[0]
+      });
+
+      showToast(`Follow-up saved: ${cName(customer)} marked as ${outcome}`, 'success');
+    }
+
+    // Reset this contact's state
+    handleCancelOutcome(customerId);
   };
+
+  const cName = (c) => c?.name || 'Customer';
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 animate-fade-in">
@@ -90,7 +148,7 @@ export const FollowUpReminderModal = () => {
         <div className="p-6 max-h-[70vh] overflow-y-auto space-y-4">
           {myReminders.length === 0 ? (
             <div className="text-center py-8">
-              <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
+              <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
               <h3 className="text-base font-bold text-slate-800">All Follow-ups Cleared!</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
                 You have no pending reminders scheduled at this moment. You can proceed directly to your CRM dashboard.
@@ -103,108 +161,198 @@ export const FollowUpReminderModal = () => {
                   <AlertTriangle className="w-4 h-4 text-amber-600" />
                   <span>You have {myReminders.length} pending follow-up call(s) waiting for action.</span>
                 </div>
-                <span className="text-xs text-slate-400">Review & Update</span>
+                <span className="text-xs text-slate-400">Select Outcome Below</span>
               </div>
 
-              <div className="space-y-3">
-                {myReminders.map(c => (
-                  <div
-                    key={c.id}
-                    className="rounded-xl border border-slate-200 bg-[#FAF6EF]/50 p-4 transition hover:border-gold-300 hover:shadow-md"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-burgundy-900">{c.name}</span>
-                          <span className="text-[10px] uppercase font-bold bg-burgundy-50 text-burgundy-800 border border-burgundy-200 px-2 py-0.5 rounded-full">
-                            {c.databaseType} / {c.customerType}
-                          </span>
+              <div className="space-y-4">
+                {myReminders.map(c => {
+                  const activeOutcome = selectedOutcomes[c.id];
+
+                  return (
+                    <div
+                      key={c.id}
+                      className="rounded-2xl border border-slate-200 bg-[#FAF6EF]/60 p-4 transition hover:border-gold-300 hover:shadow-md space-y-3"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-bold text-burgundy-900">{c.name}</span>
+                            <span className="text-[10px] uppercase font-bold bg-burgundy-50 text-burgundy-800 border border-burgundy-200 px-2 py-0.5 rounded-full">
+                              {c.databaseType} / {c.customerType}
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-600 mt-0.5">
+                            <span className="font-semibold text-slate-800 font-mono">{c.mobile}</span> • {c.business || c.city} ({c.state})
+                          </div>
                         </div>
-                        <div className="text-xs text-slate-600 mt-0.5">
-                          <span className="font-semibold text-slate-800">{c.mobile}</span> • {c.business || c.city} ({c.state})
+
+                        {/* Reminder Due Badge */}
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-100/70 border border-amber-300 px-2.5 py-1 rounded-lg self-start sm:self-center">
+                          <Clock className="w-3.5 h-3.5 text-amber-700" />
+                          <span>Scheduled: {formatDate(c.reminderDate) || 'Immediate'}</span>
                         </div>
                       </div>
 
-                      {/* Reminder Due Badge */}
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-100/70 border border-amber-300 px-2.5 py-1 rounded-lg self-start sm:self-center">
-                        <Clock className="w-3.5 h-3.5 text-amber-700" />
-                        <span>Scheduled: {formatDate(c.reminderDate) || 'Immediate'}</span>
+                      {/* Previous Reminder Remark */}
+                      {c.reminderRemark && (
+                        <div className="text-xs text-slate-700 bg-white p-2.5 rounded-lg border border-slate-200 italic">
+                          "{c.reminderRemark}"
+                        </div>
+                      )}
+
+                      {/* 4 Outcome Selection Buttons */}
+                      <div className="pt-2 border-t border-slate-200/70 space-y-2">
+                        <div className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                          <span>Select Follow-up Call Outcome:</span>
+                          {activeOutcome && (
+                            <span className="text-[10px] text-burgundy-900 font-bold bg-burgundy-50 px-2 py-0.5 rounded border border-burgundy-200">
+                              Selected: {activeOutcome}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {/* 1. OK */}
+                          <button
+                            type="button"
+                            onClick={() => handleSelectOutcome(c.id, 'OK')}
+                            className={`p-2.5 rounded-xl border-2 transition flex flex-col items-center text-center ${
+                              activeOutcome === 'OK'
+                                ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold ring-2 ring-emerald-500/20 shadow-sm'
+                                : 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <CheckCircle2 className={`w-4 h-4 mb-1 ${activeOutcome === 'OK' ? 'text-emerald-600' : 'text-slate-400'}`} />
+                            <span className="text-xs font-bold">1. OK</span>
+                            <span className="text-[10px] text-slate-500">Interested / Converted</span>
+                          </button>
+
+                          {/* 2. Not Attend */}
+                          <button
+                            type="button"
+                            onClick={() => handleSelectOutcome(c.id, 'Not Attend')}
+                            className={`p-2.5 rounded-xl border-2 transition flex flex-col items-center text-center ${
+                              activeOutcome === 'Not Attend'
+                                ? 'border-blue-600 bg-blue-50 text-blue-950 font-bold ring-2 ring-blue-500/20 shadow-sm'
+                                : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <PhoneMissed className={`w-4 h-4 mb-1 ${activeOutcome === 'Not Attend' ? 'text-blue-600' : 'text-slate-400'}`} />
+                            <span className="text-xs font-bold">2. Not Attend</span>
+                            <span className="text-[10px] text-slate-500">Ringing / Busy / Off</span>
+                          </button>
+
+                          {/* 3. No Need */}
+                          <button
+                            type="button"
+                            onClick={() => handleSelectOutcome(c.id, 'No Need')}
+                            className={`p-2.5 rounded-xl border-2 transition flex flex-col items-center text-center ${
+                              activeOutcome === 'No Need'
+                                ? 'border-rose-600 bg-rose-50 text-rose-950 font-bold ring-2 ring-rose-500/20 shadow-sm'
+                                : 'border-slate-200 bg-white hover:border-rose-300 hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <XCircle className={`w-4 h-4 mb-1 ${activeOutcome === 'No Need' ? 'text-rose-600' : 'text-slate-400'}`} />
+                            <span className="text-xs font-bold">3. No Need</span>
+                            <span className="text-[10px] text-slate-500">Not Interested / DND</span>
+                          </button>
+
+                          {/* 4. Reminder */}
+                          <button
+                            type="button"
+                            onClick={() => handleSelectOutcome(c.id, 'Reminder')}
+                            className={`p-2.5 rounded-xl border-2 transition flex flex-col items-center text-center ${
+                              activeOutcome === 'Reminder'
+                                ? 'border-amber-600 bg-amber-50 text-amber-950 font-bold ring-2 ring-amber-500/20 shadow-sm'
+                                : 'border-slate-200 bg-white hover:border-amber-300 hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <CalendarClock className={`w-4 h-4 mb-1 ${activeOutcome === 'Reminder' ? 'text-amber-600' : 'text-slate-400'}`} />
+                            <span className="text-xs font-bold">4. Reminder</span>
+                            <span className="text-[10px] text-slate-500">Schedule Follow-up</span>
+                          </button>
+                        </div>
+
+                        {/* Inline Input & Confirmation Bar */}
+                        {activeOutcome && (
+                          <div className="mt-3 p-3 bg-white rounded-xl border border-slate-200 shadow-sm space-y-2 animate-fade-in">
+                            {activeOutcome === 'Reminder' ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                    New Follow-up Date <span className="text-rose-500">*</span>
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={rescheduleDates[c.id] || ''}
+                                    onChange={(e) => setRescheduleDates({ ...rescheduleDates, [c.id]: e.target.value })}
+                                    className="w-full text-xs rounded-lg border border-slate-300 px-2.5 py-1.5 focus:outline-none focus:border-burgundy-800"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                    Reminder Reason / Time Note
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. Call back at 4:30 PM, client reviewing file"
+                                    value={remarksMap[c.id] || ''}
+                                    onChange={(e) => setRemarksMap({ ...remarksMap, [c.id]: e.target.value })}
+                                    className="w-full text-xs rounded-lg border border-slate-300 px-2.5 py-1.5 focus:outline-none focus:border-burgundy-800"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                  Discussion Notes & Remarks (Optional)
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder={
+                                    activeOutcome === 'OK'
+                                      ? 'e.g. Customer agreed to terms, proceeding with documentation'
+                                      : activeOutcome === 'Not Attend'
+                                      ? 'e.g. Ringing no response / busy / switched off'
+                                      : 'e.g. Customer not interested, requested DND'
+                                  }
+                                  value={remarksMap[c.id] || ''}
+                                  onChange={(e) => setRemarksMap({ ...remarksMap, [c.id]: e.target.value })}
+                                  className="w-full text-xs rounded-lg border border-slate-300 px-2.5 py-1.5 focus:outline-none focus:border-burgundy-800"
+                                />
+                              </div>
+                            )}
+
+                            <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                              <button
+                                type="button"
+                                onClick={() => handleCancelOutcome(c.id)}
+                                className="px-3 py-1 text-xs text-slate-500 hover:text-slate-800 font-semibold"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSaveDisposition(c.id)}
+                                className={`px-4 py-1.5 text-xs font-bold text-white rounded-lg shadow-sm transition ${
+                                  activeOutcome === 'OK'
+                                    ? 'bg-emerald-700 hover:bg-emerald-800'
+                                    : activeOutcome === 'Not Attend'
+                                    ? 'bg-blue-700 hover:bg-blue-800'
+                                    : activeOutcome === 'No Need'
+                                    ? 'bg-rose-700 hover:bg-rose-800'
+                                    : 'bg-amber-700 hover:bg-amber-800'
+                                }`}
+                              >
+                                Confirm {activeOutcome}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-
-                    {/* Remark notes */}
-                    {c.reminderRemark && (
-                      <div className="mt-2.5 text-xs text-slate-700 bg-white p-2.5 rounded-lg border border-slate-200 italic">
-                        "{c.reminderRemark}"
-                      </div>
-                    )}
-
-                    {/* Reschedule inline form */}
-                    {reschedulingId === c.id ? (
-                      <div className="mt-3 p-3 bg-amber-50/70 rounded-xl border border-amber-200 space-y-2">
-                        <div className="text-xs font-bold text-amber-900">Reschedule Next Follow-up</div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">New Follow-up Date</label>
-                            <input
-                              type="date"
-                              value={newDate}
-                              onChange={(e) => setNewDate(e.target.value)}
-                              className="w-full text-xs rounded-lg border border-slate-300 px-2 py-1.5 bg-white focus:outline-none focus:border-burgundy-800"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">New Remarks / Reason</label>
-                            <input
-                              type="text"
-                              placeholder="e.g. Call after audit, requested evening callback"
-                              value={newRemark}
-                              onChange={(e) => setNewRemark(e.target.value)}
-                              className="w-full text-xs rounded-lg border border-slate-300 px-2 py-1.5 bg-white focus:outline-none focus:border-burgundy-800"
-                            />
-                          </div>
-                        </div>
-                        <div className="flex justify-end gap-2 pt-1">
-                          <button
-                            onClick={() => setReschedulingId(null)}
-                            className="px-2.5 py-1 text-xs text-slate-600 hover:text-slate-800"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => handleSaveReschedule(c.id)}
-                            className="px-3 py-1 text-xs font-bold bg-amber-700 text-white rounded-lg hover:bg-amber-800 transition"
-                          >
-                            Save Reschedule
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      /* Action Buttons */
-                      <div className="mt-3 flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-200/60">
-                        <button
-                          onClick={() => handleComplete(c.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition"
-                        >
-                          <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                          Mark Completed
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setReschedulingId(c.id);
-                            setNewDate(c.reminderDate || '');
-                            setNewRemark(c.reminderRemark || '');
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-gold-300 text-gold-900 hover:bg-gold-50 transition"
-                        >
-                          <Calendar className="w-3.5 h-3.5 text-gold-700" />
-                          Reschedule
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
@@ -213,7 +361,7 @@ export const FollowUpReminderModal = () => {
         {/* Modal Footer */}
         <div className="flex items-center justify-between bg-slate-50 px-6 py-3 border-t border-slate-200">
           <span className="text-xs text-slate-500">
-            You can access follow-ups anytime from the top navigation bar.
+            Open pending follow-ups anytime from the top navigation bar.
           </span>
           <button
             onClick={() => setShowFollowUpModal(false)}
