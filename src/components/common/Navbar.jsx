@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export const Navbar = ({ pageTitle, toggleSidebar }) => {
+export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
   const { currentUser, logout, loginAsRole, setShowFollowUpModal } = useAuth();
   const { customers } = useCRM();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -71,8 +71,20 @@ export const Navbar = ({ pageTitle, toggleSidebar }) => {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#E8E1D5] bg-white/95 px-3 sm:px-4 md:px-6 backdrop-blur shadow-sm">
-      {/* Left: Page Title */}
-      <div className="flex items-center min-w-0">
+      {/* Left: Hamburger / Close Toggle & Page Title */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <button
+          onClick={toggleSidebar}
+          className="rounded-lg p-1.5 sm:p-2 text-slate-700 hover:bg-slate-100 hover:text-burgundy-900 transition shrink-0"
+          title={isSidebarOpen ? 'Close Menu (X)' : 'Open Menu'}
+        >
+          {isSidebarOpen ? (
+            <X className="w-5 h-5 text-burgundy-900" />
+          ) : (
+            <Menu className="w-5 h-5 text-slate-700" />
+          )}
+        </button>
+
         <div className="min-w-0">
           <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-burgundy-900 font-corporate truncate max-w-[140px] xs:max-w-[200px] sm:max-w-xs md:max-w-none">
             {pageTitle || 'Rajalakshmy Associates CRM'}

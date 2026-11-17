@@ -136,9 +136,9 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
             <button
               onClick={() => setIsOpen(false)}
               className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-white/80 hover:bg-white/20 transition"
-              title="Collapse Sidebar"
+              title="Close Sidebar (X)"
             >
-              <Menu className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </button>
           )
         )}
