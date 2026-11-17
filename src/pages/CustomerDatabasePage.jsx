@@ -43,7 +43,7 @@ export const CustomerDatabasePage = () => {
   const normalizedType = custType.toLowerCase(); // 'known' or 'unknown'
 
   // Titles
-  const sectionTitle = `${normalizedDb === 'old' ? 'Old Database' : 'New Database'} – ${normalizedType === 'known' ? 'Known Customers' : 'Unknown Leads'}`;
+  const sectionTitle = `${normalizedDb === 'old' ? 'Old Database' : 'New Database'} – ${normalizedType === 'known' ? 'Known Numbers' : 'Unknown Numbers'}`;
 
   // Filter dataset
   const filteredCustomers = useMemo(() => {
@@ -110,22 +110,22 @@ export const CustomerDatabasePage = () => {
   }, [filteredCustomers, currentPage]);
 
   const handleExport = () => {
-    const exportData = filteredCustomers.map(c => ({
-      "Customer ID": c.id,
-      "Name": c.name,
+    const exportData = filteredCustomers.map((c, idx) => ({
+      "Sl No": idx + 1,
       "Mobile Number": c.mobile,
-      "Business": c.business,
+      "Contact Name": c.name || '-',
+      "Business": c.business || '-',
       "State": c.state,
       "City": c.city,
       "Database Type": c.databaseType,
-      "Customer Type": c.customerType,
+      "Type": c.customerType,
       "Source": c.source,
-      "Assigned RM": c.assignedName,
+      "Assigned RM": c.assignedName || '-',
       "Calling Status": c.callingStatus,
-      "Last Call Date": c.lastCallDate,
-      "Reminder Date": c.reminderDate
+      "Last Call Date": c.lastCallDate || '-',
+      "Reminder Date": c.reminderDate || '-'
     }));
-    exportToCSV(exportData, `${normalizedDb}_${normalizedType}_customers.csv`);
+    exportToCSV(exportData, `${normalizedDb}_${normalizedType}_database_records.csv`);
   };
 
   return (
@@ -169,7 +169,7 @@ export const CustomerDatabasePage = () => {
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by customer name, mobile, business..."
+              placeholder="Search by contact name, mobile number, business..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -224,10 +224,9 @@ export const CustomerDatabasePage = () => {
             <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
               <tr>
                 <th className="px-4 py-3 text-center w-16">Sl No</th>
-                <th className="px-4 py-3">Customer ID</th>
                 {normalizedType === 'known' ? (
                   <>
-                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3">Contact Name</th>
                     <th className="px-4 py-3">Mobile Contact</th>
                     <th className="px-4 py-3">Business</th>
                   </>
@@ -244,8 +243,8 @@ export const CustomerDatabasePage = () => {
             <tbody className="divide-y divide-slate-100">
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={normalizedType === 'known' ? 7 : 5} className="text-center py-12 text-slate-400">
-                    No customer records found matching the active filter criteria.
+                  <td colSpan={normalizedType === 'known' ? 6 : 4} className="text-center py-12 text-slate-400">
+                    No database records found matching the active filter criteria.
                   </td>
                 </tr>
               ) : (
@@ -257,10 +256,6 @@ export const CustomerDatabasePage = () => {
                         <span className="inline-flex items-center justify-center h-6 w-6 rounded-md bg-burgundy-50 border border-burgundy-200 text-burgundy-900 font-bold text-xs">
                           {slNo}
                         </span>
-                      </td>
-
-                      <td className="px-4 py-3 font-mono font-bold text-burgundy-900">
-                        {cust.id}
                       </td>
 
                     {normalizedType === 'known' ? (

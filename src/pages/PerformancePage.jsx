@@ -77,21 +77,11 @@ export const PerformancePage = () => {
       {/* Top Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider flex-wrap">
-            <Award className="w-4 h-4" />
-            <span>Business Performance & Case Disposition</span>
-            <span>•</span>
-            <span>{currentUser?.name} ({currentUser?.id} - {currentUser?.role})</span>
-            <span className="bg-gold-500/20 text-gold-300 border border-gold-400/40 text-[10px] px-2.5 py-0.5 rounded-full font-extrabold">
-              Personal Cases Only
-            </span>
-          </div>
+         
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             Personal Case Disposition & Approval Console
           </h2>
-          <p className="text-xs text-white/80 max-w-xl">
-            Displaying loan and financial advisory cases filed exclusively by {currentUser?.name}. Tracking approval status and sanction disbursals.
-          </p>
+         
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">

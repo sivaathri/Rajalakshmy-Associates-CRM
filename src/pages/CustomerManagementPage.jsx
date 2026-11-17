@@ -36,9 +36,11 @@ export const CustomerManagementPage = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   // Scoped customers for Customer Directory
-  // Note: Customer menu is strictly separated from Database. New Database prospect records (from Sales Manager daily activities) appear only in Database -> New Database, and do not show in Customers.
+  // Note: Customer menu is strictly separated from Database. Only actual verified/converted clients with client profiles, KYC documents, or active services appear in Customer Management Directory. Raw database telecalling leads remain exclusively in the Database menu.
   const scopedCustomers = useMemo(() => {
-    const verifiedCustomersOnly = customers.filter(c => c.databaseType !== 'new');
+    const verifiedCustomersOnly = customers.filter(
+      c => c.isCustomer || (c.documents && c.documents.length > 0) || (c.services && c.services.length > 0) || c.callingStatus === 'OK'
+    );
 
     if (isSalesManager) {
       return verifiedCustomersOnly.filter(
