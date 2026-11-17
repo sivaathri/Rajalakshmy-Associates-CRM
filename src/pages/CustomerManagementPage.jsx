@@ -295,6 +295,7 @@ export const CustomerManagementPage = () => {
       <AddCustomerModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
+        defaultDatabase="old"
       />
 
       {/* Customer Detail & Service History Modal */}
