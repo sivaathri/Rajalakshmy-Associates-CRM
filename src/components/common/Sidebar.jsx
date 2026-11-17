@@ -41,10 +41,9 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
 
   const isSalesManager = currentUser?.role === 'Sales Manager';
 
-  // Compute pending counts (scoped to user if Sales Manager)
+  // Compute pending counts (strictly scoped to logged-in user)
   const pendingCasesCount = performanceCases.filter(c => {
-    if (isSalesManager) return (c.submittedBy === currentUser?.id || c.submittedByName === currentUser?.name) && c.status === 'Pending Approval';
-    return c.status === 'Pending Approval';
+    return (c.submittedBy === currentUser?.id || c.submittedByName === currentUser?.name) && c.status === 'Pending Approval';
   }).length;
 
   const pendingAdvanceCount = advanceAmounts.filter(a => {

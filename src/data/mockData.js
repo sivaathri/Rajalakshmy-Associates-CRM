@@ -1748,6 +1748,34 @@ export const INITIAL_PERFORMANCE_CASES = [
     approvedBy: "",
     approvalDate: "",
     rejectionRemarks: ""
+  },
+  {
+    id: "CASE-309",
+    customerName: "Kannan Granites & Exports",
+    mobile: "+91 98401 11001",
+    caseAmount: 7500000,
+    caseDate: "2026-11-10",
+    details: "Export credit syndication and heavy machinery term loan facility.",
+    submittedBy: "EMP001",
+    submittedByName: "Rajesh Kannan",
+    status: "Approved",
+    approvedBy: "Board of Directors",
+    approvalDate: "2026-11-12",
+    rejectionRemarks: ""
+  },
+  {
+    id: "CASE-310",
+    customerName: "Swaminathan Textiles Ltd",
+    mobile: "+91 98402 22002",
+    caseAmount: 4000000,
+    caseDate: "2026-11-13",
+    details: "Working capital loan for textile mill spinning unit modernization.",
+    submittedBy: "EMP002",
+    submittedByName: "Priya Swaminathan",
+    status: "Approved",
+    approvedBy: "Rajesh Kannan (Admin)",
+    approvalDate: "2026-11-14",
+    rejectionRemarks: ""
   }
 ];
 

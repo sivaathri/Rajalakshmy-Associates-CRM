@@ -23,47 +23,31 @@ export const PerformancePage = () => {
   const { performanceCases, approvePerformanceCase } = useCRM();
   const { currentUser } = useAuth();
 
-  const isSalesManager = currentUser?.role === 'Sales Manager';
-
   const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Pending Approval' | 'Approved' | 'Rejected'
-  const [empFilter, setEmpFilter] = useState(isSalesManager ? (currentUser?.id || 'EMP005') : 'All');
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [rejectingCase, setRejectingCase] = useState(null);
 
   // Check if current user has permission to approve/reject
   const canApprove = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
 
-  // Base cases scoped by role (Sales Manager only sees their own created/submitted cases)
+  // Base cases strictly scoped to logged-in user
   const baseCases = useMemo(() => {
-    if (isSalesManager) {
-      return performanceCases.filter(
-        c => c.submittedBy === currentUser?.id || c.submittedByName === currentUser?.name
-      );
-    }
-    return performanceCases;
-  }, [performanceCases, isSalesManager, currentUser]);
+    return performanceCases.filter(
+      c => c.submittedBy === currentUser?.id || c.submittedByName === currentUser?.name
+    );
+  }, [performanceCases, currentUser]);
 
-  // Filter dataset
+  // Filter dataset by status
   const filteredCases = useMemo(() => {
     return baseCases.filter(c => {
-      // Role scope: regular RM or Sales Exec can view their own, or all if Admin/Manager
-      if (!isSalesManager && !canApprove && empFilter === 'MyOnly' && c.submittedBy !== currentUser?.id) {
-        return false;
-      }
-
-      if (!isSalesManager && empFilter !== 'All' && empFilter !== 'MyOnly' && c.submittedBy !== empFilter) {
-        return false;
-      }
-
       if (statusFilter !== 'All' && c.status !== statusFilter) {
         return false;
       }
-
       return true;
     });
-  }, [baseCases, isSalesManager, statusFilter, empFilter, canApprove, currentUser]);
+  }, [baseCases, statusFilter]);
 
-  // Aggregate Metrics (Scoped to user if Sales Manager)
+  // Aggregate Metrics (Scoped to logged-in user)
   const totalVolume = baseCases.reduce((sum, c) => sum + (c.caseAmount || 0), 0);
   const approvedCases = baseCases.filter(c => c.status === 'Approved');
   const approvedVolume = approvedCases.reduce((sum, c) => sum + (c.caseAmount || 0), 0);
@@ -97,20 +81,16 @@ export const PerformancePage = () => {
             <Award className="w-4 h-4" />
             <span>Business Performance & Case Disposition</span>
             <span>•</span>
-            <span>{currentUser?.name} ({currentUser?.role})</span>
-            {isSalesManager && (
-              <span className="bg-gold-500/20 text-gold-300 border border-gold-400/40 text-[10px] px-2 py-0.5 rounded-full font-extrabold">
-                Personal Cases Only
-              </span>
-            )}
+            <span>{currentUser?.name} ({currentUser?.id} - {currentUser?.role})</span>
+            <span className="bg-gold-500/20 text-gold-300 border border-gold-400/40 text-[10px] px-2.5 py-0.5 rounded-full font-extrabold">
+              Personal Cases Only
+            </span>
           </div>
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
-            Case Disposition & Approval Console
+            Personal Case Disposition & Approval Console
           </h2>
           <p className="text-xs text-white/80 max-w-xl">
-            {isSalesManager
-              ? `Displaying loan and financial advisory cases filed exclusively by ${currentUser?.name}. Tracking approval status from executive management.`
-              : 'Log financial advisory cases, debt syndication, and loan sanctions. Admin and Managers review submissions with one-click approval workflows.'}
+            Displaying loan and financial advisory cases filed exclusively by {currentUser?.name}. Tracking approval status and sanction disbursals.
           </p>
         </div>
 
@@ -132,7 +112,7 @@ export const PerformancePage = () => {
             <span className="text-xs font-semibold text-slate-500">Total Cases Sourced</span>
             <Award className="w-4 h-4 text-purple-700" />
           </div>
-          <div className="text-2xl font-black text-slate-900">{performanceCases.length}</div>
+          <div className="text-2xl font-black text-slate-900">{baseCases.length}</div>
           <span className="text-[10px] text-slate-500 block mt-0.5">Value: {formatCurrency(totalVolume)}</span>
         </div>
 
@@ -199,9 +179,15 @@ export const PerformancePage = () => {
 
       {/* Cases Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="px-6 py-3.5 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <span>Personal Case Dispositions ({filteredCases.length})</span>
+          <span className="text-[11px] text-burgundy-900 font-semibold bg-burgundy-50 px-2.5 py-0.5 rounded-full border border-burgundy-200">
+            Filed By: {currentUser?.name} ({currentUser?.id} • {currentUser?.role})
+          </span>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700 min-w-[760px]">
-            <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
+            <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
               <tr>
                 <th className="px-4 py-3">Case ID</th>
                 <th className="px-4 py-3">Customer / Enterprise</th>
@@ -210,14 +196,18 @@ export const PerformancePage = () => {
                 <th className="px-4 py-3">Case Date</th>
                 <th className="px-4 py-3">Submitted By</th>
                 <th className="px-4 py-3">Approval Status</th>
-                <th className="px-4 py-3 text-right">Admin / Manager Review</th>
+                <th className="px-4 py-3 text-right">Review Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredCases.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-400">
-                    No performance cases found matching the criteria.
+                  <td colSpan={8} className="text-center py-12 text-slate-500">
+                    <AlertCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <div className="text-sm font-semibold text-slate-700">No Personal Performance Cases Found</div>
+                    <div className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                      Only cases submitted by you ({currentUser?.name}) are displayed here. Use "+ Submit Case Disposition" to record a new case.
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -241,38 +231,29 @@ export const PerformancePage = () => {
                       <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(item.status)}`}>
                         {item.status}
                       </span>
-                      {item.status === 'Approved' && (
+                      {item.status === 'Approved' && item.approvedBy && (
                         <div className="text-[10px] text-emerald-800 font-semibold mt-1">
                           By: {item.approvedBy} on {formatDate(item.approvalDate)}
                         </div>
                       )}
-                      {item.status === 'Rejected' && (
+                      {item.status === 'Rejected' && item.rejectionRemarks && (
                         <div className="text-[10px] text-rose-700 italic mt-1 max-w-xs">
                           "{item.rejectionRemarks}"
                         </div>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {canApprove && item.status === 'Pending Approval' ? (
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => approvePerformanceCase(item.id)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
-                          >
-                            <CheckCircle className="w-3.5 h-3.5" />
-                            <span>Approve</span>
-                          </button>
-                          <button
-                            onClick={() => setRejectingCase(item)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-rose-600 hover:bg-rose-700 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>Reject</span>
-                          </button>
-                        </div>
+                      {item.status === 'Pending Approval' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                          <Clock className="w-3 h-3 text-amber-600" /> Pending HR Review
+                        </span>
+                      ) : item.status === 'Approved' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          <CheckCircle className="w-3 h-3 text-emerald-600" /> Approved
+                        </span>
                       ) : (
-                        <span className="text-[11px] text-slate-400 font-medium">
-                          {item.status !== 'Pending Approval' ? 'Review Finalized' : 'Awaiting Review'}
+                        <span className="inline-flex items-center gap-1 text-[11px] text-rose-700 font-semibold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                          <XCircle className="w-3 h-3 text-rose-600" /> Rejected
                         </span>
                       )}
                     </td>
