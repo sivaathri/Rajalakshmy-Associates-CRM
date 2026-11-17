@@ -65,14 +65,15 @@ export const TelecallingPage = () => {
   const [selectedDb, setSelectedDb] = useState(null); // 'old' | 'new' | null
   const [selectedType, setSelectedType] = useState(null); // 'known' | 'unknown' | null
 
-  // Base accessible contacts for current user
+  // Base accessible contacts for current user:
+  // Shows Fresh numbers (Pending & unassigned/open) to all RMs.
+  // When an RM takes action on a number, that number follows that RM and is hidden from other RMs.
   const baseCustomers = useMemo(() => {
     return customers.filter(c => {
       if (currentUser?.role === 'RM') {
-        // RM has full visibility to all New Database records (including ones submitted by Sales Manager from daily activities)
-        if (c.databaseType === 'new') return true;
-        // In Old Database, RM sees records assigned to them
-        return c.assignedTo === currentUser.id;
+        const isFresh = c.callingStatus === 'Pending' && (!c.assignedTo || c.assignedTo === currentUser.id);
+        const isMine = c.assignedTo === currentUser.id || c.actionedBy === currentUser.id;
+        return isFresh || isMine;
       }
       return true;
     });
@@ -518,11 +519,20 @@ export const TelecallingPage = () => {
                 <div className="rounded-2xl border border-gold-300 bg-gradient-to-br from-white via-[#FAF6EF]/50 to-gold-50/30 p-6 shadow-sm">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-xl font-bold text-slate-900">{currentFocusedContact.name}</h3>
                         <span className="text-[10px] font-bold uppercase tracking-wider bg-burgundy-50 text-burgundy-900 border border-burgundy-200 px-2 py-0.5 rounded-full">
                           {currentFocusedContact.databaseType} / {currentFocusedContact.customerType}
                         </span>
+                        {(!currentFocusedContact.assignedTo || currentFocusedContact.callingStatus === 'Pending') ? (
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-0.5 rounded-full shadow-sm animate-pulse">
+                            ★ Fresh Number (Available to Action)
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-gold-100 text-amber-950 border border-gold-300 px-2.5 py-0.5 rounded-full">
+                            ✓ Followed by You ({currentFocusedContact.callingStatus})
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm font-semibold text-gold-700 mt-1">
                         {currentFocusedContact.business || 'Commercial Enterprise'}
@@ -838,17 +848,17 @@ export const TelecallingPage = () => {
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                All Assigned ({assignedCustomers.length})
+                All Numbers ({assignedCustomers.length})
               </button>
               <button
                 onClick={() => setQueueFilter('pending')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 ${
                   queueFilter === 'pending'
-                    ? 'bg-burgundy-900 text-white border-burgundy-900'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    ? 'bg-emerald-700 text-white border-emerald-700'
+                    : 'bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50'
                 }`}
               >
-                Pending Calls ({assignedCustomers.filter(c => c.callingStatus === 'Pending').length})
+                <span>Fresh Numbers ({assignedCustomers.filter(c => c.callingStatus === 'Pending').length})</span>
               </button>
               <button
                 onClick={() => setQueueFilter('reminders')}
@@ -858,7 +868,7 @@ export const TelecallingPage = () => {
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                Due Reminders ({assignedCustomers.filter(c => c.callingStatus === 'Reminder').length})
+                My Due Reminders ({assignedCustomers.filter(c => c.callingStatus === 'Reminder').length})
               </button>
             </div>
 

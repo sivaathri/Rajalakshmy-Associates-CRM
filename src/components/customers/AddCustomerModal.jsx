@@ -414,13 +414,10 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
-                  Attach Verification Documents (KYC 1, 2, 3, Other)
+                  Attach Verification Documents
                 </label>
-                <p className="text-[11px] text-slate-500">
-                  Manage document rows: select category, enter title if Other, and attach verification files
-                </p>
+               
               </div>
-              <span className="text-[11px] text-slate-400">PDF, JPG, PNG up to 10MB</span>
             </div>
 
             {/* Document Rows Table */}

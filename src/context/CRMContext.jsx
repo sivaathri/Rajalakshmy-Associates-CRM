@@ -228,8 +228,8 @@ export const CRMProvider = ({ children }) => {
       customerType: customerData.customerType || 'known',
       source: customerData.source || 'Bills',
       referenceFrom: customerData.referenceFrom || '',
-      assignedTo: customerData.assignedTo || (currentUser?.id || 'EMP004'),
-      assignedName: customerData.assignedName || (currentUser?.name || 'Ananya Subramanian'),
+      assignedTo: customerData.assignedTo !== undefined ? customerData.assignedTo : (isSalesMgr ? '' : (currentUser?.id || '')),
+      assignedName: customerData.assignedName !== undefined ? customerData.assignedName : (isSalesMgr ? '' : (currentUser?.name || '')),
       submittedBy: customerData.submittedBy || currentUser?.id || 'EMP005',
       submittedByName: customerData.submittedByName || currentUser?.name || 'Murugan Velu',
       callingStatus: 'Pending',
@@ -358,10 +358,14 @@ export const CRMProvider = ({ children }) => {
 
     setCalls(prev => [newCall, ...prev]);
 
-    // Update customer's status
+    // Update customer's status AND claim/assign number to the user who took action so it follows them
     const customerUpdates = {
       callingStatus: outcome,
-      lastCallDate: callDate
+      lastCallDate: callDate,
+      assignedTo: currentUser?.id || 'EMP004',
+      assignedName: currentUser?.name || 'Ananya Subramanian',
+      actionedBy: currentUser?.id || 'EMP004',
+      actionedByName: currentUser?.name || 'Ananya Subramanian'
     };
 
     if (outcome === 'Reminder') {
@@ -374,7 +378,7 @@ export const CRMProvider = ({ children }) => {
     }
 
     setCustomers(prev => prev.map(c => c.id === customerId ? { ...c, ...customerUpdates } : c));
-    showToast(`Call logged: ${outcome} for ${customer.name}`, 'success');
+    showToast(`Response saved! Number now follows you (${currentUser?.name || 'RM'})`, 'success');
   };
 
   // ----------------------------------------------------
@@ -407,7 +411,7 @@ export const CRMProvider = ({ children }) => {
 
     setActivities(prev => [newActivity, ...prev]);
 
-    // Also auto-add to New Database
+    // Also auto-add to New Database as fresh unassigned number
     addCustomer({
       name: newActivity.customerName,
       mobile: newActivity.mobile,
@@ -417,8 +421,11 @@ export const CRMProvider = ({ children }) => {
       customerType: activity.customerType,
       source: activity.source,
       referenceFrom: activity.source === 'Reference' ? activity.referenceFrom : '',
-      assignedTo: currentUser?.role === 'RM' ? currentUser.id : 'EMP004',
-      assignedName: currentUser?.role === 'RM' ? currentUser.name : 'Ananya Subramanian'
+      submittedBy: newActivity.submittedBy,
+      submittedByName: newActivity.submittedByName,
+      assignedTo: '', // Fresh unassigned lead open to all RMs
+      assignedName: '',
+      callingStatus: 'Pending'
     });
 
     showToast(`Activity saved & classified into ${classification}`, 'success');

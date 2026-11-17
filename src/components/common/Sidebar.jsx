@@ -63,11 +63,15 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         : customerOnlyList.length);
 
   // Database sub-menu counts
-  // RM has visibility to all New Database entries added by Sales Manager from daily activities
+  // RM sees fresh un-actioned numbers + numbers actioned by/assigned to themselves
   const databaseScopedCustomers = isSalesManager
     ? customers.filter(c => c.submittedBy === currentUser?.id || c.referenceFrom?.includes(currentUser?.name) || c.assignedTo === currentUser?.id)
     : (currentUser?.role === 'RM'
-        ? customers.filter(c => c.databaseType === 'new' || c.assignedTo === currentUser?.id)
+        ? customers.filter(c => {
+            const isFresh = c.callingStatus === 'Pending' && (!c.assignedTo || c.assignedTo === currentUser.id);
+            const isMine = c.assignedTo === currentUser.id || c.actionedBy === currentUser.id;
+            return isFresh || isMine;
+          })
         : customers);
 
   const oldKnownCount = databaseScopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
