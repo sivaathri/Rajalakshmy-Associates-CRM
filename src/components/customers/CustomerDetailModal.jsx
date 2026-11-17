@@ -119,7 +119,10 @@ export const CustomerDetailModal = ({ customer, onClose }) => {
                 </span>
               </div>
               <div className="text-xs text-white/70">
-                Customer ID: <span className="font-mono text-gold-300 font-semibold">{customer.id}</span> • Assigned to: <span className="text-white font-medium">{customer.assignedName}</span>
+                {(customer.isCustomer || (customer.documents && customer.documents.length > 0) || (customer.services && customer.services.length > 0)) ? (
+                  <>Customer ID: <span className="font-mono text-gold-300 font-semibold">{customer.id}</span> • </>
+                ) : null}
+                Assigned to: <span className="text-white font-medium">{customer.assignedName || 'General Pool'}</span>
               </div>
             </div>
           </div>

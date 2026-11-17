@@ -42,10 +42,10 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
     if (path.startsWith('/dashboard')) return 'Executive Dashboard';
     if (path.startsWith('/telecalling')) return 'RM Focused Telecalling';
     if (path === '/customers') return 'Customer Management Directory';
-    if (path.startsWith('/customers/old/known')) return 'Database • Old Known';
-    if (path.startsWith('/customers/old/unknown')) return 'Database • Old Unknown';
-    if (path.startsWith('/customers/new/known')) return 'Database • New Known';
-    if (path.startsWith('/customers/new/unknown')) return 'Database • New Unknown';
+    if (path.startsWith('/customers/old/known') || path.startsWith('/database/old/known')) return 'Database • Old Known Numbers';
+    if (path.startsWith('/customers/old/unknown') || path.startsWith('/database/old/unknown')) return 'Database • Old Unknown Numbers';
+    if (path.startsWith('/customers/new/known') || path.startsWith('/database/new/known')) return 'Database • New Known Numbers';
+    if (path.startsWith('/customers/new/unknown') || path.startsWith('/database/new/unknown')) return 'Database • New Unknown Numbers';
     if (path.startsWith('/daily-activities')) return 'Field Sales Daily Activities';
     if (path.startsWith('/performance')) return 'Performance & Case Disposition';
     if (path.startsWith('/attendance')) return 'Daily Attendance & In-Punch';
@@ -118,6 +118,15 @@ export function App() {
 
             <Route
               path="/customers/:dbType/:custType"
+              element={
+                <ProtectedLayout requiredRoute="customers">
+                  <CustomerDatabasePage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/database/:dbType/:custType"
               element={
                 <ProtectedLayout requiredRoute="customers">
                   <CustomerDatabasePage />

@@ -60,8 +60,10 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
     a => a.employeeId === currentUser?.id && a.date === todayFormatted
   );
 
-  // Customer menu badge count (excludes New Database because Customer menu is separated)
-  const customerOnlyList = customers.filter(c => c.databaseType !== 'new');
+  // Customer menu badge count (strictly verified customers, completely separated from raw database numbers)
+  const customerOnlyList = customers.filter(
+    c => c.isCustomer || (c.documents && c.documents.length > 0) || (c.services && c.services.length > 0) || c.callingStatus === 'OK'
+  );
   const scopedCustomerMenuCount = isSalesManager
     ? customerOnlyList.filter(c => c.submittedBy === currentUser?.id || c.referenceFrom?.includes(currentUser?.name) || c.assignedTo === currentUser?.id).length
     : (currentUser?.role === 'RM'
