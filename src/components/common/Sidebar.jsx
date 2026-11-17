@@ -54,16 +54,26 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
     return r.status === 'Pending Approval';
   }).length;
 
-  const scopedCustomers = isSalesManager
+  // Customer menu badge count (excludes New Database because Customer menu is separated)
+  const customerOnlyList = customers.filter(c => c.databaseType !== 'new');
+  const scopedCustomerMenuCount = isSalesManager
+    ? customerOnlyList.filter(c => c.submittedBy === currentUser?.id || c.referenceFrom?.includes(currentUser?.name) || c.assignedTo === currentUser?.id).length
+    : (currentUser?.role === 'RM'
+        ? customerOnlyList.filter(c => c.assignedTo === currentUser?.id).length
+        : customerOnlyList.length);
+
+  // Database sub-menu counts
+  // RM has visibility to all New Database entries added by Sales Manager from daily activities
+  const databaseScopedCustomers = isSalesManager
     ? customers.filter(c => c.submittedBy === currentUser?.id || c.referenceFrom?.includes(currentUser?.name) || c.assignedTo === currentUser?.id)
     : (currentUser?.role === 'RM'
         ? customers.filter(c => c.databaseType === 'new' || c.assignedTo === currentUser?.id)
         : customers);
 
-  const oldKnownCount = scopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
-  const oldUnknownCount = scopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;
-  const newKnownCount = scopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'known').length;
-  const newUnknownCount = scopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown').length;
+  const oldKnownCount = databaseScopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
+  const oldUnknownCount = databaseScopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;
+  const newKnownCount = databaseScopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'known').length;
+  const newUnknownCount = databaseScopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown').length;
 
   const NavContent = ({ isExpanded = true, isMobile = false }) => (
     <>
@@ -194,7 +204,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
             </div>
             {isExpanded && (
               <span className="text-[10px] bg-white/15 text-gold-200 font-semibold px-1.5 py-0.5 rounded-full">
-                {scopedCustomers.length}
+                {scopedCustomerMenuCount}
               </span>
             )}
           </NavLink>
