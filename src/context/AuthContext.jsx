@@ -85,6 +85,8 @@ export const AuthProvider = ({ children }) => {
     switch (route) {
       case 'dashboard':
       case 'attendance':
+      case 'enquiry':
+      case 'enquiries':
         return true;
       case 'resignation':
         return ['Admin', 'Manager', 'Ops', 'RM', 'Sales Manager'].includes(role);

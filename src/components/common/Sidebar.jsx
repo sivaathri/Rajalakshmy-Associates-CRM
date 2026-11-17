@@ -20,13 +20,14 @@ import {
   ChevronLeft,
   Clock,
   Menu,
+  Globe,
   X
 } from 'lucide-react';
 import { formatDateDDMMYYYY } from '../../utils/formatters';
 
 export const Sidebar = ({ isOpen, setIsOpen }) => {
   const { currentUser, canAccessRoute } = useAuth();
-  const { customers, performanceCases, advanceAmounts, resignations, attendance = [] } = useCRM();
+  const { customers, performanceCases, advanceAmounts, resignations, attendance = [], enquiries = [] } = useCRM();
   const location = useLocation();
 
   // Collapsible sub-menus
@@ -54,6 +55,9 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
   const pendingResignationCount = resignations.filter(r => {
     return r.employeeId === currentUser?.id && r.status === 'Pending Approval';
   }).length;
+
+  // New unread website enquiries from https://rajalakshmyassociates.com/
+  const newEnquiriesCount = enquiries.filter(e => e.status === 'New').length;
 
   // Check if current user has punched in for today (format: DD-MM-YYYY)
   const todayFormatted = formatDateDDMMYYYY(new Date());
@@ -351,6 +355,31 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
               </div>
             )}
           </div>
+        )}
+
+        {/* 5. Website Enquiries Menu (Live from https://rajalakshmyassociates.com/) */}
+        {canAccessRoute('enquiry') && (
+          <NavLink
+            to="/enquiry"
+            onClick={() => isMobile && setIsOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition ${
+                isActive
+                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            <div className="flex items-center gap-3">
+              <Globe className="w-4 h-4 shrink-0 text-cyan-400" />
+              {isExpanded && <span>Enquiry</span>}
+            </div>
+            {isExpanded && newEnquiriesCount > 0 && (
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-bold text-white shadow-sm animate-pulse">
+                {newEnquiriesCount}
+              </span>
+            )}
+          </NavLink>
         )}
 
         {/* 6. Daily Activities */}

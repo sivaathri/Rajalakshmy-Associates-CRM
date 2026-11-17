@@ -7,7 +7,8 @@ import {
   INITIAL_RESIGNATIONS,
   INITIAL_ADVANCE_AMOUNTS,
   INITIAL_ATTENDANCE,
-  INITIAL_EMPLOYEES
+  INITIAL_EMPLOYEES,
+  INITIAL_WEBSITE_ENQUIRIES
 } from '../data/mockData';
 import { useAuth } from './AuthContext';
 import { formatDateDDMMYYYY } from '../utils/formatters';
@@ -21,7 +22,8 @@ const STORAGE_KEYS = {
   PERFORMANCE: 'rajalakshmy_performance_v1',
   RESIGNATIONS: 'rajalakshmy_resignations_v1',
   ADVANCES: 'rajalakshmy_advances_v1',
-  ATTENDANCE: 'rajalakshmy_attendance_v1'
+  ATTENDANCE: 'rajalakshmy_attendance_v1',
+  ENQUIRIES: 'rajalakshmy_enquiries_v1'
 };
 
 // Helper to guarantee strictly unique RA-CUST- IDs across all records
@@ -184,6 +186,16 @@ export const CRMProvider = ({ children }) => {
     }
   });
 
+  // Inbound Website Enquiries from https://rajalakshmyassociates.com/
+  const [enquiries, setEnquiries] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.ENQUIRIES);
+      return saved ? JSON.parse(saved) : INITIAL_WEBSITE_ENQUIRIES;
+    } catch {
+      return INITIAL_WEBSITE_ENQUIRIES;
+    }
+  });
+
   // Active call state for RM telecalling
   const [activeCallContact, setActiveCallContact] = useState(null);
   const [isCallingModalOpen, setIsCallingModalOpen] = useState(false);
@@ -217,6 +229,10 @@ export const CRMProvider = ({ children }) => {
     localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendance));
   }, [attendance]);
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.ENQUIRIES, JSON.stringify(enquiries));
+  }, [enquiries]);
+
   // Reset to initial mock data
   const resetToFactoryDefaults = () => {
     setCustomers(INITIAL_CUSTOMERS);
@@ -225,6 +241,7 @@ export const CRMProvider = ({ children }) => {
     setPerformanceCases(INITIAL_PERFORMANCE_CASES);
     setResignations(INITIAL_RESIGNATIONS);
     setAdvanceAmounts(INITIAL_ADVANCE_AMOUNTS);
+    setEnquiries(INITIAL_WEBSITE_ENQUIRIES);
     showToast('Reset all database tables to initial corporate mock data', 'info');
   };
 
@@ -735,6 +752,71 @@ export const CRMProvider = ({ children }) => {
     return { success: true, record: newRecord };
   };
 
+  // ----------------------------------------------------
+  // WEBSITE INBOUND ENQUIRIES (https://rajalakshmyassociates.com/)
+  // ----------------------------------------------------
+  const addEnquiry = (data) => {
+    const now = new Date();
+    const formattedDate = formatDateDDMMYYYY(now);
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const newEnquiry = {
+      id: `ENQ-${Date.now().toString().slice(-4)}`,
+      name: data.name || 'Website Visitor',
+      mobile: data.mobile || '',
+      email: data.email || '',
+      service: data.service || 'Financial Advisory',
+      sourceWebsite: 'https://rajalakshmyassociates.com/',
+      sourcePage: data.sourcePage || 'Contact Us Form',
+      message: data.message || '',
+      submittedAt: `${formattedDate} ${timeStr}`,
+      status: 'New',
+      assignedTo: data.assignedTo || 'EMP004',
+      assignedName: data.assignedName || 'Ananya Subramanian',
+      notes: data.notes || ''
+    };
+
+    setEnquiries(prev => [newEnquiry, ...prev]);
+    showToast(`New Website Enquiry captured from ${newEnquiry.name}`, 'success');
+    return newEnquiry;
+  };
+
+  const updateEnquiryStatus = (id, status, notes) => {
+    setEnquiries(prev => prev.map(e => e.id === id ? {
+      ...e,
+      status,
+      notes: notes !== undefined ? notes : e.notes
+    } : e));
+    showToast(`Enquiry marked as ${status}`, 'info');
+  };
+
+  const convertEnquiryToLead = (enquiryId, databaseType = 'new', customerType = 'known') => {
+    const found = enquiries.find(e => e.id === enquiryId);
+    if (!found) return;
+
+    // Check if phone number already exists in database
+    const cleanFound = found.mobile ? found.mobile.replace(/\D/g, '') : '';
+    const alreadyExists = customers.some(c => c.mobile && c.mobile.replace(/\D/g, '') === cleanFound);
+    if (alreadyExists) {
+      showToast(`Contact number ${found.mobile} already exists in Database`, 'info');
+      updateEnquiryStatus(enquiryId, 'Converted', 'Number already in Database');
+      return;
+    }
+
+    addCustomer({
+      name: found.name,
+      mobile: found.mobile,
+      business: found.service,
+      customerType,
+      databaseType,
+      source: 'Website Enquiry',
+      referenceFrom: 'https://rajalakshmyassociates.com/ Contact Us'
+    });
+
+    updateEnquiryStatus(enquiryId, 'Converted', `Converted to ${databaseType} Database on ${formatDateDDMMYYYY(new Date())}`);
+    showToast(`Enquiry moved to ${databaseType === 'new' ? 'New' : 'Old'} Database!`, 'success');
+  };
+
   // Quick initiate call
   const startCallingCustomer = (customer) => {
     setActiveCallContact(customer);
@@ -751,6 +833,7 @@ export const CRMProvider = ({ children }) => {
         resignations,
         advanceAmounts,
         attendance,
+        enquiries,
         employees: INITIAL_EMPLOYEES,
         // Actions
         addCustomer,
@@ -771,6 +854,9 @@ export const CRMProvider = ({ children }) => {
         submitAdvance,
         updateAdvanceStatus,
         punchIn,
+        addEnquiry,
+        updateEnquiryStatus,
+        convertEnquiryToLead,
         resetToFactoryDefaults,
         // Calling state
         activeCallContact,

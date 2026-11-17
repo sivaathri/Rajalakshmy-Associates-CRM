@@ -2057,3 +2057,83 @@ export const INITIAL_ATTENDANCE = [
     punchMode: "Mobile In-Punch"
   }
 ];
+
+// --- INBOUND WEBSITE CONTACT FORM ENQUIRIES ---
+// Captured automatically from website contact form: https://rajalakshmyassociates.com/
+export const INITIAL_WEBSITE_ENQUIRIES = [
+  {
+    id: "ENQ-801",
+    name: "Suresh Balachander",
+    mobile: "+91 98401 55667",
+    email: "suresh.b@chennaitechs.com",
+    service: "MSME Business Loan",
+    sourceWebsite: "https://rajalakshmyassociates.com/",
+    sourcePage: "Contact Us / Loans Enquiry",
+    message: "Need ₹35 Lakhs Machinery Term Loan for auto-component expansion in Ambattur Industrial Estate.",
+    submittedAt: "17-11-2026 11:30 AM",
+    status: "New", // 'New' | 'Contacted' | 'Follow-up' | 'Converted' | 'Closed'
+    assignedTo: "EMP004",
+    assignedName: "Ananya Subramanian",
+    notes: ""
+  },
+  {
+    id: "ENQ-802",
+    name: "Kavitha Ranganathan",
+    mobile: "+91 98402 77889",
+    email: "kavitha.r@gmail.com",
+    service: "Mortgage / Loan Against Property",
+    sourceWebsite: "https://rajalakshmyassociates.com/",
+    sourcePage: "Contact Us Form",
+    message: "Looking for LAP ₹50 Lakhs on commercial building in T. Nagar, Chennai. Please call back.",
+    submittedAt: "17-11-2026 09:15 AM",
+    status: "New",
+    assignedTo: "EMP004",
+    assignedName: "Ananya Subramanian",
+    notes: ""
+  },
+  {
+    id: "ENQ-803",
+    name: "Muthuvel Karuppiah",
+    mobile: "+91 98403 99112",
+    email: "muthuvel.transport@yahoo.com",
+    service: "Commercial Vehicle Finance",
+    sourceWebsite: "https://rajalakshmyassociates.com/",
+    sourcePage: "Contact Us / Transport Loans",
+    message: "Require 4 container trailers financing for Tuticorin port logistics contract.",
+    submittedAt: "16-11-2026 04:45 PM",
+    status: "Contacted",
+    assignedTo: "EMP004",
+    assignedName: "Ananya Subramanian",
+    notes: "Spoke on 17 Nov. Quotation requested."
+  },
+  {
+    id: "ENQ-804",
+    name: "Dharani Sundararajan",
+    mobile: "+91 98404 11223",
+    email: "dharani.clinic@outlook.com",
+    service: "Doctor / Healthcare Equipment Loan",
+    sourceWebsite: "https://rajalakshmyassociates.com/",
+    sourcePage: "Contact Us Form",
+    message: "Ultrasound scanner and lab analyzer financing ₹20L for Coimbatore polyclinic.",
+    submittedAt: "15-11-2026 02:20 PM",
+    status: "Follow-up",
+    assignedTo: "EMP004",
+    assignedName: "Ananya Subramanian",
+    notes: "Follow-up scheduled with branch manager on Wednesday."
+  },
+  {
+    id: "ENQ-805",
+    name: "Karthik Vijayaraghavan",
+    mobile: "+91 98405 33445",
+    email: "karthik.v@sriharitex.in",
+    service: "Working Capital / CC Limit",
+    sourceWebsite: "https://rajalakshmyassociates.com/",
+    sourcePage: "Contact Us Form",
+    message: "Cotton spinning mill cash credit limit enhancement from ₹1 Crore to ₹2 Crore.",
+    submittedAt: "14-11-2026 10:05 AM",
+    status: "Converted",
+    assignedTo: "EMP004",
+    assignedName: "Ananya Subramanian",
+    notes: "Converted to Performance Case file CASE-307."
+  }
+];
