@@ -180,11 +180,6 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
               <PhoneCall className="w-4 h-4 shrink-0 text-emerald-400" />
               {isExpanded && <span>RM Telecalling</span>}
             </div>
-            {isExpanded && (
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.5 rounded-full border border-emerald-500/30">
-                Live
-              </span>
-            )}
           </NavLink>
         )}
 
