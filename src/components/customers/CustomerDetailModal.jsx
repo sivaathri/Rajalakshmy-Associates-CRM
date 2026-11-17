@@ -16,8 +16,6 @@ import {
   Clock,
   CheckCircle,
   Briefcase,
-  History,
-  PhoneCall,
   Upload
 } from 'lucide-react';
 import { formatDate, getStatusBadgeClass } from '../../utils/formatters';
@@ -170,17 +168,6 @@ export const CustomerDetailModal = ({ customer, onClose }) => {
           >
             <Briefcase className="w-4 h-4" />
             Service History ({customer.services?.length || 0})
-          </button>
-          <button
-            onClick={() => setActiveTab('calls')}
-            className={`py-3 px-4 border-b-2 transition flex items-center gap-2 ${
-              activeTab === 'calls'
-                ? 'border-burgundy-800 text-burgundy-900 bg-white'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <History className="w-4 h-4" />
-            Calling History ({customerCalls.length})
           </button>
         </div>
 
@@ -499,44 +486,6 @@ export const CustomerDetailModal = ({ customer, onClose }) => {
                   </div>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* TAB 4: CALLING HISTORY */}
-          {activeTab === 'calls' && (
-            <div className="space-y-4">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Customer Call Record History ({customerCalls.length})
-              </div>
-              {customerCalls.length === 0 ? (
-                <div className="text-center py-8 text-xs text-slate-400 italic bg-slate-50 rounded-xl border border-slate-100">
-                  No telecalls have been conducted with this contact yet.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {customerCalls.map(c => (
-                    <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm hover:border-slate-300">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-900">{c.callDate} at {c.callTime}</span>
-                          <span className="text-[11px] text-slate-500">by {c.employeeName}</span>
-                        </div>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(c.outcome)}`}>
-                          {c.outcome} ({c.duration})
-                        </span>
-                      </div>
-                      <div className="mt-2 text-xs text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        "{c.remarks}"
-                      </div>
-                      {c.reminderDate && (
-                        <div className="mt-1 text-[11px] font-semibold text-amber-800">
-                          Follow-up Scheduled for: {formatDate(c.reminderDate)}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
         </div>
