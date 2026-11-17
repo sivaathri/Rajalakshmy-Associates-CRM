@@ -20,7 +20,9 @@ import {
   Layers,
   History,
   TrendingUp,
-  FileText
+  FileText,
+  Database,
+  UserCheck
 } from 'lucide-react';
 import {
   PieChart,
@@ -57,15 +59,37 @@ export const TelecallingPage = () => {
   const [customEndDate, setCustomEndDate] = useState('');
   const [selectedOutcomeFilter, setSelectedOutcomeFilter] = useState('All');
 
-  // Filter assigned contacts for current user (or all if Admin/Manager)
-  const assignedCustomers = useMemo(() => {
+  // 2-Step Telecalling Partition Filter:
+  // Step 1: Select Old Database or New Database
+  // Step 2: Select Known or Unknown
+  const [selectedDb, setSelectedDb] = useState(null); // 'old' | 'new' | null
+  const [selectedType, setSelectedType] = useState(null); // 'known' | 'unknown' | null
+
+  // Base accessible contacts for current user
+  const baseCustomers = useMemo(() => {
     return customers.filter(c => {
       if (currentUser?.role === 'RM') {
+        // RM has full visibility to all New Database records (including ones submitted by Sales Manager from daily activities)
+        if (c.databaseType === 'new') return true;
+        // In Old Database, RM sees records assigned to them
         return c.assignedTo === currentUser.id;
       }
       return true;
     });
   }, [customers, currentUser]);
+
+  const oldTotalCount = baseCustomers.filter(c => c.databaseType === 'old').length;
+  const newTotalCount = baseCustomers.filter(c => c.databaseType === 'new').length;
+  const oldKnownCount = baseCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
+  const oldUnknownCount = baseCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;
+  const newKnownCount = baseCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'known').length;
+  const newUnknownCount = baseCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown').length;
+
+  // Filter assigned contacts matching Step 1 (Database) and Step 2 (Classification)
+  const assignedCustomers = useMemo(() => {
+    if (!selectedDb || !selectedType) return [];
+    return baseCustomers.filter(c => c.databaseType === selectedDb && c.customerType === selectedType);
+  }, [baseCustomers, selectedDb, selectedType]);
 
   // Queue filtered items
   const displayQueue = useMemo(() => {
@@ -210,8 +234,12 @@ export const TelecallingPage = () => {
 
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
-            <span className="text-[10px] text-white/60 block uppercase font-bold">Assigned Contacts</span>
-            <span className="text-sm font-extrabold text-gold-300">{assignedCustomers.length}</span>
+            <span className="text-[10px] text-white/60 block uppercase font-bold">
+              {selectedDb && selectedType ? 'Queue Numbers' : 'Total Leads'}
+            </span>
+            <span className="text-sm font-extrabold text-gold-300">
+              {selectedDb && selectedType ? displayQueue.length : baseCustomers.length}
+            </span>
           </div>
           <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
             <span className="text-[10px] text-white/60 block uppercase font-bold">Today's Calls</span>
@@ -220,6 +248,172 @@ export const TelecallingPage = () => {
           <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
             <span className="text-[10px] text-white/60 block uppercase font-bold">Pending Reminders</span>
             <span className="text-sm font-extrabold text-amber-300">{outcomeCounts.Reminder}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2-Step Database & Classification Selector Card */}
+      <div className="rounded-2xl border-2 border-burgundy-100 bg-white p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-burgundy-900 bg-burgundy-50 border border-burgundy-200 px-2.5 py-0.5 rounded-full">
+                Step-by-Step Calling Setup
+              </span>
+              {selectedDb && selectedType && (
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                  ✓ Numbers Loaded ({displayQueue.length})
+                </span>
+              )}
+            </div>
+            <h3 className="text-base font-bold text-slate-900 font-corporate mt-1">
+              1. Select Database &nbsp;➔&nbsp; 2. Select Classification &nbsp;➔&nbsp; 3. View Customer Numbers
+            </h3>
+          </div>
+
+          {selectedDb && (
+            <button
+              onClick={() => {
+                setSelectedDb(null);
+                setSelectedType(null);
+                setFocusedIndex(0);
+              }}
+              className="text-xs font-semibold text-burgundy-900 hover:text-burgundy-700 underline self-start sm:self-auto"
+            >
+              Reset / Change Selection
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* STEP 1: Select Old or New Database */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-burgundy-900 text-white text-[11px] font-bold">1</span>
+                <span>Select Database</span>
+                <span className="text-rose-500">*</span>
+              </label>
+              {selectedDb && (
+                <span className="text-[11px] font-bold text-emerald-700">
+                  Selected: {selectedDb === 'old' ? 'Old Database' : 'New Database'}
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDb('old');
+                  setFocusedIndex(0);
+                }}
+                className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between ${
+                  selectedDb === 'old'
+                    ? 'border-burgundy-900 bg-burgundy-50/90 text-burgundy-950 ring-2 ring-burgundy-900/20 shadow-sm'
+                    : 'border-slate-200 hover:border-burgundy-300 hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Database className={`w-4 h-4 shrink-0 ${selectedDb === 'old' ? 'text-burgundy-900' : 'text-slate-400'}`} />
+                  <span className="text-xs font-extrabold">Old Database</span>
+                </div>
+                <div className="text-[10px] text-slate-500 mt-1">Tamil Nadu Master Base</div>
+                <span className="mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 inline-block self-start">
+                  {oldTotalCount} Assigned Leads
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDb('new');
+                  setFocusedIndex(0);
+                }}
+                className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between ${
+                  selectedDb === 'new'
+                    ? 'border-burgundy-900 bg-burgundy-50/90 text-burgundy-950 ring-2 ring-burgundy-900/20 shadow-sm'
+                    : 'border-slate-200 hover:border-burgundy-300 hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Layers className={`w-4 h-4 shrink-0 ${selectedDb === 'new' ? 'text-burgundy-900' : 'text-slate-400'}`} />
+                  <span className="text-xs font-extrabold">New Database</span>
+                </div>
+                <div className="text-[10px] text-slate-500 mt-1">Field Sales & Inquiries</div>
+                <span className="mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 inline-block self-start">
+                  {newTotalCount} Available Leads
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* STEP 2: Select Known or Unknown */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${
+                  selectedDb ? 'bg-gold-500 text-amber-950' : 'bg-slate-300 text-slate-600'
+                }`}>2</span>
+                <span>Select Classification</span>
+                <span className="text-rose-500">*</span>
+              </label>
+              {!selectedDb ? (
+                <span className="text-[10px] text-slate-400 font-semibold">(Pick Step 1 first)</span>
+              ) : selectedType ? (
+                <span className="text-[11px] font-bold text-emerald-700">
+                  Selected: {selectedType === 'known' ? 'Known' : 'Unknown'}
+                </span>
+              ) : null}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                disabled={!selectedDb}
+                onClick={() => {
+                  setSelectedType('known');
+                  setFocusedIndex(0);
+                }}
+                className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between disabled:opacity-40 disabled:cursor-not-allowed ${
+                  selectedType === 'known'
+                    ? 'border-gold-600 bg-gold-50/90 text-amber-950 ring-2 ring-gold-600/20 shadow-sm'
+                    : 'border-slate-200 hover:border-gold-400 hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <User className={`w-4 h-4 shrink-0 ${selectedType === 'known' ? 'text-amber-800' : 'text-slate-400'}`} />
+                  <span className="text-xs font-extrabold">Known Customers</span>
+                </div>
+                <div className="text-[10px] text-slate-500 mt-1">Verified Enterprise Profiles</div>
+                <span className="mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 inline-block self-start">
+                  {selectedDb ? (selectedDb === 'old' ? oldKnownCount : newKnownCount) : '—'} Numbers
+                </span>
+              </button>
+
+              <button
+                type="button"
+                disabled={!selectedDb}
+                onClick={() => {
+                  setSelectedType('unknown');
+                  setFocusedIndex(0);
+                }}
+                className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between disabled:opacity-40 disabled:cursor-not-allowed ${
+                  selectedType === 'unknown'
+                    ? 'border-gold-600 bg-gold-50/90 text-amber-950 ring-2 ring-gold-600/20 shadow-sm'
+                    : 'border-slate-200 hover:border-gold-400 hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <UserCheck className={`w-4 h-4 shrink-0 ${selectedType === 'unknown' ? 'text-amber-800' : 'text-slate-400'}`} />
+                  <span className="text-xs font-extrabold">Unknown Leads</span>
+                </div>
+                <div className="text-[10px] text-slate-500 mt-1">Field Direct Mobile Contacts</div>
+                <span className="mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 inline-block self-start">
+                  {selectedDb ? (selectedDb === 'old' ? oldUnknownCount : newUnknownCount) : '—'} Numbers
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -235,7 +429,7 @@ export const TelecallingPage = () => {
           }`}
         >
           <FileText className="w-4 h-4 text-burgundy-800" />
-          <span>Focused Telecalling Mode</span>
+          <span>Focused Telecalling Mode {selectedDb && selectedType && `(${displayQueue.length})`}</span>
         </button>
 
         <button
@@ -263,6 +457,25 @@ export const TelecallingPage = () => {
         </button>
       </div>
 
+      {/* If neither or only one is selected and on focused/queue tab, show selection guidance */}
+      {(!selectedDb || !selectedType) && activeTab !== 'history' ? (
+        <div className="rounded-2xl border-2 border-dashed border-burgundy-200 bg-white p-12 text-center shadow-sm">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-burgundy-50 text-burgundy-900 border border-burgundy-200 mb-4 shadow-sm">
+            <PhoneCall className="w-8 h-8 text-burgundy-900" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800 font-corporate">
+            {!selectedDb
+              ? "Step 1: Select Old Database or New Database Above"
+              : "Step 2: Select Known Customers or Unknown Leads Above"}
+          </h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto mt-1.5 leading-relaxed">
+            {!selectedDb
+              ? "Choose whether you want to telecall leads from the Old Database or the New Database to proceed."
+              : `You selected ${selectedDb === 'old' ? 'Old Database' : 'New Database'}. Now choose Known Customers or Unknown Leads above to display the customer phone numbers.`}
+          </p>
+        </div>
+      ) : (
+        <>
       {/* ---------------------------------------------------- */}
       {/* TAB 1: FOCUSED CALLING VIEW (ONE CONTACT AT A TIME) */}
       {/* ---------------------------------------------------- */}
@@ -718,6 +931,8 @@ export const TelecallingPage = () => {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* ---------------------------------------------------- */}
