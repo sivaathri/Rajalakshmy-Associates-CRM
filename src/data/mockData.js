@@ -1835,3 +1835,173 @@ export const INITIAL_ADVANCE_AMOUNTS = [
     reviewDate: "2026-11-13"
   }
 ];
+
+// --- EMPLOYEE DAILY ATTENDANCE RECORDS (PUNCH IN ONLY) ---
+// Date format strictly: DD-MM-YYYY
+export const INITIAL_ATTENDANCE = [
+  // Today's Punches (17-11-2026)
+  {
+    id: "ATT-101",
+    employeeId: "EMP001",
+    employeeName: "Rajesh Kannan",
+    role: "Admin",
+    date: "17-11-2026",
+    inTime: "08:55:14 AM",
+    status: "Present",
+    punchMode: "Terminal In-Punch"
+  },
+  {
+    id: "ATT-102",
+    employeeId: "EMP002",
+    employeeName: "Priya Swaminathan",
+    role: "Manager",
+    date: "17-11-2026",
+    inTime: "09:02:40 AM",
+    status: "Present",
+    punchMode: "Terminal In-Punch"
+  },
+  {
+    id: "ATT-103",
+    employeeId: "EMP005",
+    employeeName: "Murugan Velu",
+    role: "Sales Manager",
+    date: "17-11-2026",
+    inTime: "09:10:22 AM",
+    status: "Present",
+    punchMode: "Mobile In-Punch"
+  },
+  {
+    id: "ATT-104",
+    employeeId: "EMP006",
+    employeeName: "Suresh Kumar",
+    role: "RM",
+    date: "17-11-2026",
+    inTime: "09:14:50 AM",
+    status: "Present",
+    punchMode: "Terminal In-Punch"
+  },
+  {
+    id: "ATT-105",
+    employeeId: "EMP008",
+    employeeName: "Vigneshwaran R",
+    role: "Sales Executive",
+    date: "17-11-2026",
+    inTime: "09:25:10 AM",
+    status: "Present",
+    punchMode: "Mobile In-Punch"
+  },
+
+  // Yesterday's Punches (16-11-2026)
+  {
+    id: "ATT-091",
+    employeeId: "EMP004",
+    employeeName: "Ananya Subramanian",
+    role: "RM",
+    date: "16-11-2026",
+    inTime: "09:12:05 AM",
+    status: "Present",
+    punchMode: "Terminal In-Punch"
+  },
+  {
+    id: "ATT-092",
+    employeeId: "EMP001",
+    employeeName: "Rajesh Kannan",
+    role: "Admin",
+    date: "16-11-2026",
+    inTime: "08:50:30 AM",
+    status: "Present",
+    punchMode: "Terminal In-Punch"
+  },
+  {
+    id: "ATT-093",
+    employeeId: "EMP002",
+    employeeName: "Priya Swaminathan",
+    role: "Manager",
+    date: "16-11-2026",
+    inTime: "09:05:15 AM",
+    status: "Present",
+    punchMode: "Terminal In-Punch"
+  },
+  {
+    id: "ATT-094",
+    employeeId: "EMP003",
+    employeeName: "Karthik Narayanan",
+    role: "Ops",
+    date: "16-11-2026",
+    inTime: "09:08:44 AM",
+    status: "Present",
+    punchMode: "Terminal In-Punch"
+  },
+  {
+    id: "ATT-095",
+    employeeId: "EMP005",
+    employeeName: "Murugan Velu",
+    role: "Sales Manager",
+    date: "16-11-2026",
+    inTime: "09:15:30 AM",
+    status: "Present",
+    punchMode: "Mobile In-Punch"
+  },
+  {
+    id: "ATT-096",
+    employeeId: "EMP006",
+    employeeName: "Suresh Kumar",
+    role: "RM",
+    date: "16-11-2026",
+    inTime: "09:18:22 AM",
+    status: "Present",
+    punchMode: "Terminal In-Punch"
+  },
+  {
+    id: "ATT-097",
+    employeeId: "EMP007",
+    employeeName: "Divya Meenakshi",
+    role: "RM",
+    date: "16-11-2026",
+    inTime: "09:20:10 AM",
+    status: "Present",
+    punchMode: "Terminal In-Punch"
+  },
+
+  // Past Punches (15-11-2026)
+  {
+    id: "ATT-081",
+    employeeId: "EMP004",
+    employeeName: "Ananya Subramanian",
+    role: "RM",
+    date: "15-11-2026",
+    inTime: "09:10:45 AM",
+    status: "Present",
+    punchMode: "Terminal In-Punch"
+  },
+  {
+    id: "ATT-082",
+    employeeId: "EMP001",
+    employeeName: "Rajesh Kannan",
+    role: "Admin",
+    date: "15-11-2026",
+    inTime: "08:58:12 AM",
+    status: "Present",
+    punchMode: "Terminal In-Punch"
+  },
+  {
+    id: "ATT-083",
+    employeeId: "EMP005",
+    employeeName: "Murugan Velu",
+    role: "Sales Manager",
+    date: "15-11-2026",
+    inTime: "09:14:02 AM",
+    status: "Present",
+    punchMode: "Mobile In-Punch"
+  },
+  {
+    id: "ATT-084",
+    employeeId: "EMP008",
+    employeeName: "Vigneshwaran R",
+    role: "Sales Executive",
+    date: "15-11-2026",
+    inTime: "09:22:15 AM",
+    status: "Present",
+    punchMode: "Mobile In-Punch"
+  }
+];
