@@ -19,6 +19,7 @@ import {
   Building2,
   ChevronLeft,
   Clock,
+  Menu,
   X
 } from 'lucide-react';
 import { formatDateDDMMYYYY } from '../../utils/formatters';
@@ -90,19 +91,19 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
   const NavContent = ({ isExpanded = true, isMobile = false }) => (
     <>
       {/* Brand Header */}
-      <div className="flex h-16 shrink-0 items-center justify-between px-3 border-b border-white/10 bg-[#4c0210]/40">
-        <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-lg ring-1 ring-gold-400">
-            <img
-              src="/logo.png"
-              alt="Rajalakshmy Associates"
-              className="h-full w-full object-contain"
-              onError={(e) => {
-                e.target.style.display = 'none';
-              }}
-            />
-          </div>
-          {isExpanded && (
+      <div className={`flex h-16 shrink-0 items-center ${isExpanded ? 'justify-between px-3' : 'justify-center px-1'} border-b border-white/10 bg-[#4c0210]/40`}>
+        {isExpanded ? (
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-lg ring-1 ring-gold-400">
+              <img
+                src="/logo.png"
+                alt="Rajalakshmy Associates"
+                className="h-full w-full object-contain"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+            </div>
             <div className="truncate">
               <span className="block text-sm font-extrabold tracking-wide text-white uppercase font-corporate leading-tight">
                 Rajalakshmy
@@ -111,24 +112,35 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
                 Associates CRM
               </span>
             </div>
-          )}
-        </div>
-
-        {isMobile ? (
-          <button
-            onClick={() => setIsOpen(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white/80 hover:bg-white/20 transition"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          </div>
         ) : (
           <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-white/80 hover:bg-white/20 transition"
-            title={isOpen ? 'Collapse Sidebar' : 'Expand Sidebar'}
+            onClick={() => setIsOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/80 hover:bg-white/20 transition"
+            title="Expand Sidebar"
           >
-            {isOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            <Menu className="w-5 h-5 text-gold-300" />
           </button>
+        )}
+
+        {isExpanded && (
+          isMobile ? (
+            <button
+              onClick={() => setIsOpen(false)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white/80 hover:bg-white/20 transition"
+              title="Close Menu"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsOpen(false)}
+              className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10 text-white/80 hover:bg-white/20 transition"
+              title="Collapse Sidebar"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+          )
         )}
       </div>
 
