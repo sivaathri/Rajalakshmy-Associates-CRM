@@ -56,7 +56,9 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
 
   const scopedCustomers = isSalesManager
     ? customers.filter(c => c.submittedBy === currentUser?.id || c.referenceFrom?.includes(currentUser?.name) || c.assignedTo === currentUser?.id)
-    : customers;
+    : (currentUser?.role === 'RM'
+        ? customers.filter(c => c.databaseType === 'new' || c.assignedTo === currentUser?.id)
+        : customers);
 
   const oldKnownCount = scopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
   const oldUnknownCount = scopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;

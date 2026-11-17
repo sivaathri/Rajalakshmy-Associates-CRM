@@ -509,6 +509,8 @@ export const CRMProvider = ({ children }) => {
             return {
               ...cust,
               id: `CUST-${maxNum}`,
+              submittedBy: currentUser?.id || 'EMP005',
+              submittedByName: currentUser?.name || 'Murugan Velu',
               callingStatus: 'Pending',
               lastCallDate: '',
               reminderDate: '',

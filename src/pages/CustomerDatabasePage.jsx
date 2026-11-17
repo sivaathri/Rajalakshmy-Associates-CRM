@@ -53,9 +53,16 @@ export const CustomerDatabasePage = () => {
         return false;
       }
 
-      // 2. Role restriction: RM only sees assigned customers
-      if (currentUser?.role === 'RM' && c.assignedTo !== currentUser.id) {
-        return false;
+      // 2. Role restriction:
+      // In New Database: RM has full visibility to all prospect records added by Sales Manager from daily activities
+      // In Old Database: RM sees records assigned to them
+      if (currentUser?.role === 'RM') {
+        if (normalizedDb === 'new') {
+          return true;
+        }
+        if (c.assignedTo !== currentUser.id) {
+          return false;
+        }
       }
 
       // Role restriction: Sales Manager only sees their own created/submitted or assigned records

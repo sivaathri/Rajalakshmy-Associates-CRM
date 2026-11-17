@@ -46,7 +46,7 @@ export const CustomerManagementPage = () => {
       );
     }
     if (currentUser?.role === 'RM') {
-      return customers.filter(c => c.assignedTo === currentUser?.id);
+      return customers.filter(c => c.assignedTo === currentUser?.id || c.databaseType === 'new');
     }
     return customers;
   }, [customers, isSalesManager, currentUser]);
