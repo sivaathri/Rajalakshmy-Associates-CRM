@@ -212,6 +212,9 @@ export const CRMProvider = ({ children }) => {
       newId = `CUST-${maxNum + 1}`;
     }
 
+    const isSalesMgr = currentUser?.role === 'Sales Manager' || customerData.submittedBy === 'EMP005';
+    const resolvedDatabaseType = isSalesMgr ? 'new' : (customerData.databaseType || 'new');
+
     const newCustomer = {
       id: newId,
       name: customerData.name || (customerData.customerType === 'unknown' ? 'Unknown / Lead' : 'Customer'),
@@ -221,7 +224,7 @@ export const CRMProvider = ({ children }) => {
       state: customerData.state || 'Tamil Nadu',
       city: customerData.city || 'Chennai',
       address: customerData.address || '',
-      databaseType: customerData.databaseType || 'new',
+      databaseType: resolvedDatabaseType,
       customerType: customerData.customerType || 'known',
       source: customerData.source || 'Bills',
       referenceFrom: customerData.referenceFrom || '',
@@ -239,7 +242,12 @@ export const CRMProvider = ({ children }) => {
     };
 
     setCustomers(prev => [newCustomer, ...prev]);
-    showToast(`Added customer: ${newCustomer.name} (${newCustomer.id})`, 'success');
+    showToast(
+      resolvedDatabaseType === 'new'
+        ? `Added to New Database: ${newCustomer.name} (${newCustomer.id})`
+        : `Added customer: ${newCustomer.name} (${newCustomer.id})`,
+      'success'
+    );
     return newCustomer;
   };
 

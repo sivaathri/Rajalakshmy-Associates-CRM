@@ -35,10 +35,13 @@ export const CustomerManagementPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
-  // Scoped customers for role
+  // Scoped customers for Customer Directory
+  // Note: Customer menu is strictly separated from Database. New Database prospect records (from Sales Manager daily activities) appear only in Database -> New Database, and do not show in Customers.
   const scopedCustomers = useMemo(() => {
+    const verifiedCustomersOnly = customers.filter(c => c.databaseType !== 'new');
+
     if (isSalesManager) {
-      return customers.filter(
+      return verifiedCustomersOnly.filter(
         c =>
           c.submittedBy === currentUser?.id ||
           c.referenceFrom?.includes(currentUser?.name) ||
@@ -46,9 +49,9 @@ export const CustomerManagementPage = () => {
       );
     }
     if (currentUser?.role === 'RM') {
-      return customers.filter(c => c.assignedTo === currentUser?.id || c.databaseType === 'new');
+      return verifiedCustomersOnly.filter(c => c.assignedTo === currentUser?.id);
     }
-    return customers;
+    return verifiedCustomersOnly;
   }, [customers, isSalesManager, currentUser]);
 
   // Filtered dataset
