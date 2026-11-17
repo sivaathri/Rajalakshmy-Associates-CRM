@@ -227,9 +227,7 @@ export const TelecallingPage = () => {
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             Relationship Manager Calling Module
           </h2>
-          <p className="text-xs text-white/80 max-w-xl">
-            Dial customer numbers directly from your personal mobile phone, record 4-stage call outcomes, schedule follow-up reminders, and log telecalling feedback.
-          </p>
+         
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
