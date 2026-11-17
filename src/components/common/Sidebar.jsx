@@ -48,8 +48,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
   }).length;
 
   const pendingAdvanceCount = advanceAmounts.filter(a => {
-    if (isSalesManager) return a.employeeId === currentUser?.id && a.status === 'Pending Approval';
-    return a.status === 'Pending Approval';
+    return a.employeeId === currentUser?.id && a.status === 'Pending Approval';
   }).length;
 
   const pendingResignationCount = resignations.filter(r => {

@@ -30,15 +30,12 @@ export const AdvanceAmountPage = () => {
     setShowModal(false);
   };
 
-  const isSalesManager = currentUser?.role === 'Sales Manager';
-
-  const displayedAdvances = isSalesManager
-    ? advanceAmounts.filter(a => a.employeeId === currentUser?.id)
-    : advanceAmounts;
+  // Strictly show only the logged-in user's personal advance requests
+  const displayedAdvances = advanceAmounts.filter(a => a.employeeId === currentUser?.id);
 
   const totalAdvanceApproved = displayedAdvances
     .filter(a => a.status === 'Approved')
-    .reduce((sum, a) => sum + (a.requestedAmount || 0), 0);
+    .reduce((sum, a) => sum + (Number(a.requestedAmount) || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -75,13 +72,11 @@ export const AdvanceAmountPage = () => {
 
       {/* Advance Requests Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="px-6 py-3 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800 flex items-center justify-between">
-          <span>Advance Requisitions ({displayedAdvances.length})</span>
-          {isSalesManager && (
-            <span className="text-[11px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-              Personal Requests: {currentUser?.name}
-            </span>
-          )}
+        <div className="px-6 py-3.5 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <span>Personal Advance Requests ({displayedAdvances.length})</span>
+          <span className="text-[11px] text-burgundy-900 font-semibold bg-burgundy-50 px-2.5 py-0.5 rounded-full border border-burgundy-200">
+            Logged In: {currentUser?.name} ({currentUser?.id} • {currentUser?.role})
+          </span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
@@ -93,54 +88,59 @@ export const AdvanceAmountPage = () => {
                 <th className="px-4 py-3">Request Date</th>
                 <th className="px-4 py-3">Reason</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Review Action</th>
+                <th className="px-4 py-3 text-right">Review Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {displayedAdvances.map(a => (
-                <tr key={a.id} className="hover:bg-[#FAF6EF]/60 transition">
-                  <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{a.id}</td>
-                  <td className="px-4 py-3">
-                    <span className="font-bold text-slate-900">{a.employeeName}</span>
-                    <span className="text-[10px] text-slate-400 font-mono block">{a.employeeId}</span>
-                  </td>
-                  <td className="px-4 py-3 font-extrabold text-slate-900 text-sm">
-                    {formatCurrency(a.requestedAmount)}
-                  </td>
-                  <td className="px-4 py-3">{formatDate(a.requestDate)}</td>
-                  <td className="px-4 py-3 text-slate-600 max-w-xs">{a.reason}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(a.status)}`}>
-                      {a.status}
-                    </span>
-                    {a.reviewedBy && (
-                      <span className="text-[10px] text-slate-400 block mt-0.5">By {a.reviewedBy}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {canReview && a.status === 'Pending Approval' ? (
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => updateAdvanceStatus(a.id, 'Approved')}
-                          className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => updateAdvanceStatus(a.id, 'Rejected')}
-                          className="px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-[11px] text-slate-400">
-                        {a.status !== 'Pending Approval' ? 'Processed' : 'Awaiting Review'}
-                      </span>
-                    )}
+              {displayedAdvances.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
+                    <CreditCard className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <div className="text-sm font-semibold text-slate-700">No Personal Advance Requests Found</div>
+                    <div className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                      Only your personal salary advance requests are displayed here. You currently have no advance requisitions submitted.
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                displayedAdvances.map(a => (
+                  <tr key={a.id} className="hover:bg-[#FAF6EF]/60 transition">
+                    <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{a.id}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-bold text-slate-900">{a.employeeName}</span>
+                      <span className="text-[10px] text-slate-400 font-mono block">{a.employeeId}</span>
+                    </td>
+                    <td className="px-4 py-3 font-extrabold text-slate-900 text-sm">
+                      {formatCurrency(a.requestedAmount)}
+                    </td>
+                    <td className="px-4 py-3">{formatDate(a.requestDate)}</td>
+                    <td className="px-4 py-3 text-slate-600 max-w-xs">{a.reason}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(a.status)}`}>
+                        {a.status}
+                      </span>
+                      {a.reviewedBy && (
+                        <span className="text-[10px] text-slate-400 block mt-0.5">By {a.reviewedBy}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {a.status === 'Pending Approval' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                          <Clock className="w-3 h-3 text-amber-600" /> Pending HR Review
+                        </span>
+                      ) : a.status === 'Approved' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          <CheckCircle className="w-3 h-3 text-emerald-600" /> Disbursed / Approved
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-rose-700 font-semibold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                          <XCircle className="w-3 h-3 text-rose-600" /> Rejected
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -1816,17 +1816,28 @@ export const INITIAL_ADVANCE_AMOUNTS = [
   },
   {
     id: "ADV-602",
-    employeeId: "EMP010",
-    employeeName: "Aravind Balaji",
+    employeeId: "EMP001",
+    employeeName: "Rajesh Kannan",
+    requestedAmount: 50000,
+    requestDate: "2026-11-08",
+    reason: "Executive conference travel and registration advance.",
+    status: "Approved",
+    reviewedBy: "Board of Directors",
+    reviewDate: "2026-11-09"
+  },
+  {
+    id: "ADV-603",
+    employeeId: "EMP002",
+    employeeName: "Priya Swaminathan",
     requestedAmount: 20000,
     requestDate: "2026-11-14",
     reason: "Medical emergency hospital expense for parent.",
     status: "Approved",
-    reviewedBy: "Priya Swaminathan (Manager)",
+    reviewedBy: "Rajesh Kannan (Admin)",
     reviewDate: "2026-11-15"
   },
   {
-    id: "ADV-603",
+    id: "ADV-604",
     employeeId: "EMP008",
     employeeName: "Vigneshwaran R",
     requestedAmount: 15000,
@@ -1835,17 +1846,6 @@ export const INITIAL_ADVANCE_AMOUNTS = [
     status: "Pending Approval",
     reviewedBy: "",
     reviewDate: ""
-  },
-  {
-    id: "ADV-604",
-    employeeId: "EMP014",
-    employeeName: "Manikandan P",
-    requestedAmount: 50000,
-    requestDate: "2026-11-05",
-    reason: "Personal family function advance.",
-    status: "Rejected",
-    reviewedBy: "Priya Swaminathan (Manager)",
-    reviewDate: "2026-11-06"
   },
   {
     id: "ADV-605",
