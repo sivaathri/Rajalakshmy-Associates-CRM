@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -19,7 +19,8 @@ import {
   Calendar,
   Layers,
   History,
-  TrendingUp
+  TrendingUp,
+  FileText
 } from 'lucide-react';
 import {
   PieChart,
@@ -36,7 +37,7 @@ import {
 import { formatDate, formatDateTime, getStatusBadgeClass, exportToCSV } from '../utils/formatters';
 
 export const TelecallingPage = () => {
-  const { customers, calls, startCallingCustomer } = useCRM();
+  const { customers, calls, logCall } = useCRM();
   const { currentUser } = useAuth();
 
   // State
@@ -44,6 +45,11 @@ export const TelecallingPage = () => {
   const [queueFilter, setQueueFilter] = useState('all'); // 'all' | 'pending' | 'reminders' | 'completed'
   const [searchQueue, setSearchQueue] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(0);
+
+  // Manual Response Entry State for Focused Mode
+  const [outcome, setOutcome] = useState('OK');
+  const [remarks, setRemarks] = useState('');
+  const [reminderDate, setReminderDate] = useState('');
 
   // Calling Reports Filter
   const [reportDateRange, setReportDateRange] = useState('this-month'); // 'today' | 'range' | 'this-month'
@@ -81,6 +87,40 @@ export const TelecallingPage = () => {
 
   // Current focused contact
   const currentFocusedContact = displayQueue[focusedIndex] || displayQueue[0] || null;
+
+  // Sync manual response form with current selected contact
+  useEffect(() => {
+    if (currentFocusedContact) {
+      setOutcome(
+        ['OK', 'Not Attend', 'No Need', 'Reminder'].includes(currentFocusedContact.callingStatus)
+          ? currentFocusedContact.callingStatus
+          : 'OK'
+      );
+      setRemarks(currentFocusedContact.reminderRemark || '');
+      setReminderDate(currentFocusedContact.reminderDate || '');
+    }
+  }, [currentFocusedContact?.id]);
+
+  const handleSaveResponse = (andNext = false) => {
+    if (!currentFocusedContact) return;
+
+    if (outcome === 'Reminder' && !reminderDate) {
+      alert('Please select a Follow-up Date for Reminder');
+      return;
+    }
+
+    logCall({
+      customerId: currentFocusedContact.id,
+      outcome,
+      duration: 'Manual Call',
+      remarks: remarks.trim() || `Customer call response: ${outcome}`,
+      reminderDate: outcome === 'Reminder' ? reminderDate : ''
+    });
+
+    if (andNext && focusedIndex < displayQueue.length - 1) {
+      setFocusedIndex(prev => prev + 1);
+    }
+  };
 
   // Filtered Call History for Reports
   const filteredCalls = useMemo(() => {
@@ -164,7 +204,7 @@ export const TelecallingPage = () => {
             Relationship Manager Calling Module
           </h2>
           <p className="text-xs text-white/80 max-w-xl">
-            Execute manual calls with live duration timers, register 4-stage call outcomes, schedule follow-up reminders, and generate calling audits.
+            Dial customer numbers directly from your personal mobile phone, record 4-stage call outcomes, schedule follow-up reminders, and log telecalling feedback.
           </p>
         </div>
 
@@ -194,8 +234,8 @@ export const TelecallingPage = () => {
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <PhoneCall className="w-4 h-4 text-emerald-600" />
-          <span>Focused Calling Mode</span>
+          <FileText className="w-4 h-4 text-burgundy-800" />
+          <span>Focused Telecalling Mode</span>
         </button>
 
         <button
@@ -281,18 +321,177 @@ export const TelecallingPage = () => {
                       </div>
                     </div>
 
-                    {/* Massive Call Action Trigger */}
+                    {/* Customer Mobile Number to Dial Manually */}
                     <div className="text-left sm:text-right">
-                      <div className="text-xs text-slate-400 font-semibold mb-1">Direct Calling Contact:</div>
-                      <div className="text-lg font-mono font-bold text-slate-900 tracking-wider">
-                        {currentFocusedContact.mobile}
+                      <div className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">
+                        Mobile Number to Dial:
                       </div>
+                      <div className="inline-block bg-burgundy-50 border border-burgundy-200 px-4 py-2 rounded-xl shadow-sm">
+                        <span className="text-xl font-mono font-extrabold text-burgundy-900 tracking-wider">
+                          {currentFocusedContact.mobile}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        Dial from personal mobile, then enter response below
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Enter Manual Response & Disposition Form */}
+                <div className="rounded-2xl border-2 border-burgundy-100 bg-white p-5 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-burgundy-800" />
+                      <h4 className="text-sm font-bold text-slate-900 font-corporate">
+                        Enter Telecalling Response & Feedback
+                      </h4>
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-400">
+                      Personal Mobile Calling Workflow
+                    </span>
+                  </div>
+
+                  {/* Outcome Selection Buttons */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      Select Call Outcome <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {/* OK */}
                       <button
-                        onClick={() => startCallingCustomer(currentFocusedContact)}
-                        className="mt-2 inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-900/10 transition transform hover:-translate-y-0.5"
+                        type="button"
+                        onClick={() => setOutcome('OK')}
+                        className={`p-3 rounded-xl border-2 transition flex flex-col items-center justify-center text-center ${
+                          outcome === 'OK'
+                            ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold ring-2 ring-emerald-500/20 shadow-sm'
+                            : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50 text-slate-700'
+                        }`}
                       >
-                        <PhoneCall className="w-4 h-4 text-white animate-bounce" />
-                        <span>Initiate Call Session</span>
+                        <CheckCircle2 className={`w-5 h-5 mb-1 ${outcome === 'OK' ? 'text-emerald-600' : 'text-slate-400'}`} />
+                        <span className="text-xs font-bold">1. OK</span>
+                        <span className="text-[10px] text-slate-500">Interested / Converted</span>
+                      </button>
+
+                      {/* Not Attend */}
+                      <button
+                        type="button"
+                        onClick={() => setOutcome('Not Attend')}
+                        className={`p-3 rounded-xl border-2 transition flex flex-col items-center justify-center text-center ${
+                          outcome === 'Not Attend'
+                            ? 'border-blue-600 bg-blue-50 text-blue-950 font-bold ring-2 ring-blue-500/20 shadow-sm'
+                            : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50 text-slate-700'
+                        }`}
+                      >
+                        <PhoneMissed className={`w-5 h-5 mb-1 ${outcome === 'Not Attend' ? 'text-blue-600' : 'text-slate-400'}`} />
+                        <span className="text-xs font-bold">2. Not Attend</span>
+                        <span className="text-[10px] text-slate-500">Ringing / Busy / Off</span>
+                      </button>
+
+                      {/* No Need */}
+                      <button
+                        type="button"
+                        onClick={() => setOutcome('No Need')}
+                        className={`p-3 rounded-xl border-2 transition flex flex-col items-center justify-center text-center ${
+                          outcome === 'No Need'
+                            ? 'border-rose-600 bg-rose-50 text-rose-950 font-bold ring-2 ring-rose-500/20 shadow-sm'
+                            : 'border-slate-200 hover:border-rose-300 hover:bg-slate-50 text-slate-700'
+                        }`}
+                      >
+                        <XCircle className={`w-5 h-5 mb-1 ${outcome === 'No Need' ? 'text-rose-600' : 'text-slate-400'}`} />
+                        <span className="text-xs font-bold">3. No Need</span>
+                        <span className="text-[10px] text-slate-500">Not Interested / DND</span>
+                      </button>
+
+                      {/* Reminder */}
+                      <button
+                        type="button"
+                        onClick={() => setOutcome('Reminder')}
+                        className={`p-3 rounded-xl border-2 transition flex flex-col items-center justify-center text-center ${
+                          outcome === 'Reminder'
+                            ? 'border-amber-600 bg-amber-50 text-amber-950 font-bold ring-2 ring-amber-500/20 shadow-sm'
+                            : 'border-slate-200 hover:border-amber-300 hover:bg-slate-50 text-slate-700'
+                        }`}
+                      >
+                        <CalendarClock className={`w-5 h-5 mb-1 ${outcome === 'Reminder' ? 'text-amber-600' : 'text-slate-400'}`} />
+                        <span className="text-xs font-bold">4. Reminder</span>
+                        <span className="text-[10px] text-slate-500">Schedule Follow-up</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Conditional Reminder Section */}
+                  {outcome === 'Reminder' && (
+                    <div className="rounded-xl border border-amber-300 bg-amber-50/80 p-3.5 space-y-2.5 animate-fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+                        <CalendarClock className="w-4 h-4 text-amber-700" />
+                        <span>Schedule Follow-up Reminder</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Follow-up Date <span className="text-rose-500">*</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={reminderDate}
+                            onChange={(e) => setReminderDate(e.target.value)}
+                            className="w-full text-xs rounded-lg border border-slate-300 px-3 py-2 bg-white focus:outline-none focus:border-burgundy-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Reminder Reason / Time
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Call back at 4:30 PM, discusses with director"
+                            value={remarks}
+                            onChange={(e) => setRemarks(e.target.value)}
+                            className="w-full text-xs rounded-lg border border-slate-300 px-3 py-2 bg-white focus:outline-none focus:border-burgundy-800"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Discussion Remarks */}
+                  {outcome !== 'Reminder' && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Call Discussion Remarks & Notes
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder="Enter client discussion summary, requirements, loan amount, next steps..."
+                        value={remarks}
+                        onChange={(e) => setRemarks(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:outline-none focus:border-burgundy-800"
+                      />
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                    <span className="text-[11px] text-slate-400">
+                      Current Status: <span className="font-bold text-slate-700">{currentFocusedContact.callingStatus || 'Pending'}</span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveResponse(false)}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-4 py-2 text-xs font-bold text-slate-700 transition"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Save Response</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSaveResponse(true)}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 px-5 py-2 text-xs font-bold text-white shadow-md transition"
+                      >
+                        <span>Save & Next Lead</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -338,7 +537,7 @@ export const TelecallingPage = () => {
                   </h4>
                   {calls.filter(c => c.customerId === currentFocusedContact.id).length === 0 ? (
                     <div className="text-center py-6 text-xs text-slate-400 italic bg-slate-50 rounded-xl border border-slate-200">
-                      No previous calls logged for this customer. Click "Initiate Call Session" above to start calling.
+                      No previous calls logged for this customer. Enter response above after dialing on personal mobile.
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -500,11 +699,16 @@ export const TelecallingPage = () => {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
-                        onClick={() => startCallingCustomer(item)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1 text-xs font-bold text-white shadow-sm transition"
+                        onClick={() => {
+                          const idx = displayQueue.findIndex(q => q.id === item.id);
+                          if (idx !== -1) setFocusedIndex(idx);
+                          setActiveTab('focused');
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
+                        title="View mobile number & enter response"
                       >
-                        <PhoneCall className="w-3 h-3" />
-                        <span>Call</span>
+                        <FileText className="w-3.5 h-3.5 text-gold-300" />
+                        <span>Enter Response</span>
                       </button>
                     </td>
                   </tr>

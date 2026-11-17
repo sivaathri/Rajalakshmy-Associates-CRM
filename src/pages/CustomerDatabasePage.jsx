@@ -24,7 +24,7 @@ import { CustomerDetailModal } from '../components/customers/CustomerDetailModal
 
 export const CustomerDatabasePage = () => {
   const { dbType = 'old', custType = 'known' } = useParams();
-  const { customers, startCallingCustomer } = useCRM();
+  const { customers } = useCRM();
   const { currentUser } = useAuth();
 
   // Filters & State

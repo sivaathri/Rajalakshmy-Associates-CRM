@@ -37,7 +37,7 @@ import { CaseSubmissionModal } from '../components/performance/CaseSubmissionMod
 import { CustomerDetailModal } from '../components/customers/CustomerDetailModal';
 
 export const DashboardPage = () => {
-  const { customers, calls, activities, performanceCases, startCallingCustomer } = useCRM();
+  const { customers, calls, activities, performanceCases } = useCRM();
   const { currentUser, setShowFollowUpModal } = useAuth();
 
   const isSalesManager = currentUser?.role === 'Sales Manager';

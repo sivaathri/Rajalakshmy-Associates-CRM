@@ -21,7 +21,7 @@ import { AddCustomerModal } from '../components/customers/AddCustomerModal';
 import { CustomerDetailModal } from '../components/customers/CustomerDetailModal';
 
 export const CustomerManagementPage = () => {
-  const { customers, startCallingCustomer } = useCRM();
+  const { customers } = useCRM();
   const { currentUser } = useAuth();
 
   const isSalesManager = currentUser?.role === 'Sales Manager';

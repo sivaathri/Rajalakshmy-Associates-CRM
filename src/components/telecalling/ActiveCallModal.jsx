@@ -3,8 +3,7 @@ import { createPortal } from 'react-dom';
 import { useCRM } from '../../context/CRMContext';
 import { useAuth } from '../../context/AuthContext';
 import {
-  PhoneCall,
-  PhoneOff,
+  FileText,
   User,
   Building,
   MapPin,
@@ -14,9 +13,7 @@ import {
   PhoneMissed,
   XCircle,
   CalendarClock,
-  FileText,
-  X,
-  ShieldCheck
+  X
 } from 'lucide-react';
 
 export const ActiveCallModal = () => {
@@ -30,39 +27,25 @@ export const ActiveCallModal = () => {
   } = useCRM();
   const { currentUser } = useAuth();
 
-  const [callStatus, setCallStatus] = useState('calling'); // 'calling' | 'connected' | 'ended'
-  const [seconds, setSeconds] = useState(0);
-  const [selectedOutcome, setSelectedOutcome] = useState(null);
+  const [selectedOutcome, setSelectedOutcome] = useState('OK');
   const [remarks, setRemarks] = useState('');
   const [reminderDate, setReminderDate] = useState('');
 
-  // Call timer simulation
   useEffect(() => {
-    let interval = null;
-    if (isCallingModalOpen) {
-      setSeconds(0);
-      setCallStatus('connected');
-      setSelectedOutcome(null);
-      setRemarks('');
-      setReminderDate('');
-      interval = setInterval(() => {
-        setSeconds(prev => prev + 1);
-      }, 1000);
+    if (isCallingModalOpen && activeCallContact) {
+      setSelectedOutcome(
+        ['OK', 'Not Attend', 'No Need', 'Reminder'].includes(activeCallContact.callingStatus)
+          ? activeCallContact.callingStatus
+          : 'OK'
+      );
+      setRemarks(activeCallContact.reminderRemark || '');
+      setReminderDate(activeCallContact.reminderDate || '');
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
   }, [isCallingModalOpen, activeCallContact]);
 
   if (!isCallingModalOpen || !activeCallContact) return null;
 
-  const formatTimer = (totalSec) => {
-    const mins = Math.floor(totalSec / 60);
-    const secs = totalSec % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleEndAndSubmit = () => {
+  const handleSaveResponse = () => {
     if (!selectedOutcome) {
       alert('Please select a Call Outcome (OK, Not Attend, No Need, or Reminder)');
       return;
@@ -73,13 +56,11 @@ export const ActiveCallModal = () => {
       return;
     }
 
-    const durationText = `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-
     logCall({
       customerId: activeCallContact.id,
       outcome: selectedOutcome,
-      duration: durationText,
-      remarks: remarks || `Customer call outcome: ${selectedOutcome}`,
+      duration: 'Manual Call',
+      remarks: remarks.trim() || `Customer call response: ${selectedOutcome}`,
       reminderDate: selectedOutcome === 'Reminder' ? reminderDate : ''
     });
 
@@ -93,19 +74,18 @@ export const ActiveCallModal = () => {
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
       <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-burgundy-200 overflow-hidden">
-        {/* Calling Top Header with Waveform and Timer */}
+        {/* Top Header */}
         <div className="bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 px-6 py-4 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg animate-pulse">
-                <PhoneCall className="w-5 h-5" />
+              <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-gold-600/30 border border-gold-300/40 text-white shadow-lg">
+                <FileText className="w-5 h-5 text-gold-300" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs uppercase tracking-wider font-bold text-gold-300">
-                    Active Telecall Session
+                    Manual Call Response Entry
                   </span>
-                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
                 </div>
                 <h3 className="text-lg font-bold text-white leading-tight">
                   {activeCallContact.name}
@@ -113,39 +93,22 @@ export const ActiveCallModal = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Call Waveform */}
-              <div className="hidden sm:flex items-center gap-1 h-8">
-                <span className="w-1 bg-gold-400 rounded-full animate-call-wave-1"></span>
-                <span className="w-1 bg-gold-300 rounded-full animate-call-wave-2"></span>
-                <span className="w-1 bg-gold-400 rounded-full animate-call-wave-3"></span>
-                <span className="w-1 bg-gold-300 rounded-full animate-call-wave-4"></span>
-                <span className="w-1 bg-gold-400 rounded-full animate-call-wave-5"></span>
-              </div>
-
-              {/* Duration Timer */}
-              <div className="flex items-center gap-1.5 rounded-xl bg-black/30 px-3 py-1.5 font-mono text-sm font-bold text-white border border-white/10">
-                <Clock className="w-4 h-4 text-gold-300" />
-                <span>{formatTimer(seconds)}</span>
-              </div>
-
-              <button
-                onClick={() => {
-                  setIsCallingModalOpen(false);
-                  setActiveCallContact(null);
-                }}
-                className="rounded-lg p-1 text-white/70 hover:bg-white/10 hover:text-white transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setIsCallingModalOpen(false);
+                setActiveCallContact(null);
+              }}
+              className="rounded-lg p-1 text-white/70 hover:bg-white/10 hover:text-white transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Quick Contact Details Banner */}
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs bg-black/20 p-2.5 rounded-xl border border-white/10">
             <div>
-              <span className="text-white/60 block text-[10px]">Mobile Number:</span>
-              <span className="font-bold text-gold-300 text-sm tracking-wider">
+              <span className="text-white/60 block text-[10px]">Mobile to Dial:</span>
+              <span className="font-bold text-gold-300 text-sm font-mono tracking-wider">
                 {activeCallContact.mobile}
               </span>
             </div>
@@ -199,7 +162,7 @@ export const ActiveCallModal = () => {
               >
                 <PhoneMissed className={`w-6 h-6 mb-1 ${selectedOutcome === 'Not Attend' ? 'text-blue-600' : 'text-slate-400'}`} />
                 <span className="text-sm font-bold">2. Not Attend</span>
-                <span className="text-[10px] text-slate-500 mt-0.5">Ringing / Busy / Switched off</span>
+                <span className="text-[10px] text-slate-500 mt-0.5">Ringing / Busy / Off</span>
               </button>
 
               {/* No Need */}
@@ -318,7 +281,7 @@ export const ActiveCallModal = () => {
         {/* Modal Action Bar */}
         <div className="flex items-center justify-between bg-slate-50 px-6 py-4 border-t border-slate-200">
           <div className="text-xs text-slate-500">
-            Caller ID: <span className="font-semibold text-slate-800">{currentUser?.name}</span> ({currentUser?.id})
+            Relationship Manager: <span className="font-semibold text-slate-800">{currentUser?.name}</span> ({currentUser?.id})
           </div>
 
           <div className="flex items-center gap-2">
@@ -330,15 +293,15 @@ export const ActiveCallModal = () => {
               }}
               className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800"
             >
-              Cancel Call
+              Cancel
             </button>
             <button
               type="button"
-              onClick={handleEndAndSubmit}
+              onClick={handleSaveResponse}
               className="flex items-center gap-2 rounded-xl bg-burgundy-900 px-5 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-burgundy-800 transition"
             >
-              <PhoneOff className="w-4 h-4 text-rose-400" />
-              <span>End & Save Call Log</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Save Response</span>
             </button>
           </div>
         </div>
