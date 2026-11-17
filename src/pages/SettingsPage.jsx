@@ -3,6 +3,7 @@ import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import {
   Settings,
+  User,
   Users,
   Share2,
   RefreshCw,
@@ -188,11 +189,9 @@ export const SettingsPage = () => {
                 <tr key={emp.id} className="hover:bg-[#FAF6EF]/60 transition">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <img
-                        src={emp.avatar}
-                        alt={emp.name}
-                        className="w-8 h-8 rounded-full object-cover border border-gold-300 shrink-0"
-                      />
+                      <div className="w-8 h-8 rounded-lg bg-burgundy-900 text-gold-300 font-bold flex items-center justify-center border border-gold-300 shrink-0">
+                        <User className="w-4 h-4 text-gold-300" />
+                      </div>
                       <div>
                         <span className="font-bold text-slate-900 block">{emp.name}</span>
                         <span className="text-[10px] font-mono text-slate-400 block">{emp.id}</span>

@@ -6,9 +6,11 @@ import {
   INITIAL_PERFORMANCE_CASES,
   INITIAL_RESIGNATIONS,
   INITIAL_ADVANCE_AMOUNTS,
+  INITIAL_ATTENDANCE,
   INITIAL_EMPLOYEES
 } from '../data/mockData';
 import { useAuth } from './AuthContext';
+import { formatDateDDMMYYYY } from '../utils/formatters';
 
 const CRMContext = createContext();
 
@@ -18,7 +20,8 @@ const STORAGE_KEYS = {
   ACTIVITIES: 'rajalakshmy_activities_v1',
   PERFORMANCE: 'rajalakshmy_performance_v1',
   RESIGNATIONS: 'rajalakshmy_resignations_v1',
-  ADVANCES: 'rajalakshmy_advances_v1'
+  ADVANCES: 'rajalakshmy_advances_v1',
+  ATTENDANCE: 'rajalakshmy_attendance_v1'
 };
 
 // Helper to guarantee strictly unique CUST- IDs across all records
@@ -154,6 +157,16 @@ export const CRMProvider = ({ children }) => {
     }
   });
 
+  // Daily Employee Attendance Records (Punch In Only)
+  const [attendance, setAttendance] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
+      return saved ? JSON.parse(saved) : INITIAL_ATTENDANCE;
+    } catch {
+      return INITIAL_ATTENDANCE;
+    }
+  });
+
   // Active call state for RM telecalling
   const [activeCallContact, setActiveCallContact] = useState(null);
   const [isCallingModalOpen, setIsCallingModalOpen] = useState(false);
@@ -182,6 +195,10 @@ export const CRMProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.ADVANCES, JSON.stringify(advanceAmounts));
   }, [advanceAmounts]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendance));
+  }, [attendance]);
 
   // Reset to initial mock data
   const resetToFactoryDefaults = () => {
@@ -658,6 +675,45 @@ export const CRMProvider = ({ children }) => {
     showToast(`Advance request ${status}`, 'info');
   };
 
+  // Punch In Action (Punch Only for In Time)
+  // Date format strictly: DD-MM-YYYY
+  const punchIn = () => {
+    if (!currentUser) return { success: false, message: 'Please log in to punch attendance' };
+
+    const todayDate = formatDateDDMMYYYY(new Date()); // e.g. "17-11-2026"
+    const nowTime = new Date().toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+
+    // Check if user already punched in today
+    const existing = attendance.find(
+      a => a.employeeId === currentUser.id && a.date === todayDate
+    );
+
+    if (existing) {
+      showToast(`Already Punched In today at ${existing.inTime}`, 'info');
+      return { success: false, alreadyPunched: true, record: existing };
+    }
+
+    const newRecord = {
+      id: `ATT-${Date.now().toString().slice(-6)}`,
+      employeeId: currentUser.id,
+      employeeName: currentUser.name,
+      role: currentUser.role,
+      date: todayDate, // Format strictly DD-MM-YYYY
+      inTime: nowTime,
+      status: 'Present',
+      punchMode: 'Direct Web In-Punch'
+    };
+
+    setAttendance(prev => [newRecord, ...prev]);
+    showToast(`Punch In Successful at ${nowTime} (${todayDate})`, 'success');
+    return { success: true, record: newRecord };
+  };
+
   // Quick initiate call
   const startCallingCustomer = (customer) => {
     setActiveCallContact(customer);
@@ -673,6 +729,7 @@ export const CRMProvider = ({ children }) => {
         performanceCases,
         resignations,
         advanceAmounts,
+        attendance,
         employees: INITIAL_EMPLOYEES,
         // Actions
         addCustomer,
@@ -692,6 +749,7 @@ export const CRMProvider = ({ children }) => {
         updateResignationStatus,
         submitAdvance,
         updateAdvanceStatus,
+        punchIn,
         resetToFactoryDefaults,
         // Calling state
         activeCallContact,

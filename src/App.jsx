@@ -18,6 +18,7 @@ import { DailyActivitiesPage } from './pages/DailyActivitiesPage';
 import { PerformancePage } from './pages/PerformancePage';
 import { ResignationPage } from './pages/ResignationPage';
 import { AdvanceAmountPage } from './pages/AdvanceAmountPage';
+import { AttendancePage } from './pages/AttendancePage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -47,6 +48,7 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
     if (path.startsWith('/customers/new/unknown')) return 'Database • New Unknown';
     if (path.startsWith('/daily-activities')) return 'Field Sales Daily Activities';
     if (path.startsWith('/performance')) return 'Performance & Case Disposition';
+    if (path.startsWith('/attendance')) return 'Daily Attendance & In-Punch';
     if (path.startsWith('/resignation')) return 'Resignation Management';
     if (path.startsWith('/advance')) return 'Employee Advance Amount';
     if (path.startsWith('/reports')) return 'Intelligence Reports & Leaderboards';
@@ -137,6 +139,15 @@ export function App() {
               element={
                 <ProtectedLayout requiredRoute="performance">
                   <PerformancePage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/attendance"
+              element={
+                <ProtectedLayout requiredRoute="attendance">
+                  <AttendancePage />
                 </ProtectedLayout>
               }
             />

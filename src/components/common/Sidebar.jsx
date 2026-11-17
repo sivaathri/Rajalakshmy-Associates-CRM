@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCRM } from '../../context/CRMContext';
 import {
   LayoutDashboard,
+  User,
   UserX,
   CreditCard,
   Award,
@@ -17,12 +18,14 @@ import {
   Database,
   Building2,
   ChevronLeft,
+  Clock,
   X
 } from 'lucide-react';
+import { formatDateDDMMYYYY } from '../../utils/formatters';
 
 export const Sidebar = ({ isOpen, setIsOpen }) => {
   const { currentUser, canAccessRoute } = useAuth();
-  const { customers, performanceCases, advanceAmounts, resignations } = useCRM();
+  const { customers, performanceCases, advanceAmounts, resignations, attendance = [] } = useCRM();
   const location = useLocation();
 
   // Collapsible sub-menus
@@ -53,6 +56,12 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
     if (isSalesManager) return r.employeeId === currentUser?.id && r.status === 'Pending Approval';
     return r.status === 'Pending Approval';
   }).length;
+
+  // Check if current user has punched in for today (format: DD-MM-YYYY)
+  const todayFormatted = formatDateDDMMYYYY(new Date());
+  const userTodayPunched = (attendance || []).some(
+    a => a.employeeId === currentUser?.id && a.date === todayFormatted
+  );
 
   // Customer menu badge count (excludes New Database because Customer menu is separated)
   const customerOnlyList = customers.filter(c => c.databaseType !== 'new');
@@ -128,11 +137,9 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
       {isExpanded && (
         <div className="px-4 py-3 bg-black/15 border-b border-white/5 shrink-0">
           <div className="flex items-center gap-2.5">
-            <img
-              src={currentUser?.avatar}
-              alt={currentUser?.name}
-              className="w-9 h-9 rounded-full object-cover border border-gold-400 shrink-0"
-            />
+            <div className="w-9 h-9 rounded-xl bg-burgundy-950 border border-gold-400/60 text-gold-300 font-bold flex items-center justify-center shrink-0 shadow-sm">
+              <User className="w-4 h-4 text-gold-300" />
+            </div>
             <div className="truncate">
               <div className="text-xs font-bold text-white truncate">{currentUser?.name}</div>
               <div className="text-[11px] font-semibold text-gold-300 truncate">
@@ -178,7 +185,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
           >
             <div className="flex items-center gap-3 truncate">
               <PhoneCall className="w-4 h-4 shrink-0 text-emerald-400" />
-              {isExpanded && <span>RM Telecalling</span>}
+              {isExpanded && <span>Telecalling</span>}
             </div>
           </NavLink>
         )}
@@ -373,6 +380,35 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
             {isExpanded && pendingCasesCount > 0 && (
               <span className="text-[10px] bg-amber-400 text-amber-950 font-bold px-1.5 py-0.5 rounded-full">
                 {pendingCasesCount}
+              </span>
+            )}
+          </NavLink>
+        )}
+
+        {/* 5. Attendance Menu (Available to All Roles - Punch In Only) */}
+        {canAccessRoute('attendance') && (
+          <NavLink
+            to="/attendance"
+            onClick={() => isMobile && setIsOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition ${
+                isActive
+                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            <div className="flex items-center gap-3 truncate">
+              <Clock className="w-4 h-4 shrink-0 text-emerald-400" />
+              {isExpanded && <span>Attendance</span>}
+            </div>
+            {isExpanded && (
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                userTodayPunched
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                  : 'bg-amber-400 text-amber-950 font-extrabold'
+              }`}>
+                {userTodayPunched ? 'Punched' : 'Punch In'}
               </span>
             )}
           </NavLink>
