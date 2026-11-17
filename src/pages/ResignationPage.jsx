@@ -14,11 +14,9 @@ export const ResignationPage = () => {
   const [reason, setReason] = useState('');
 
   const canReview = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
-  const isSalesManager = currentUser?.role === 'Sales Manager';
 
-  const displayedResignations = isSalesManager
-    ? resignations.filter(r => r.employeeId === currentUser?.id)
-    : resignations;
+  // Strictly show only the logged-in user's personal resignation details
+  const displayedResignations = resignations.filter(r => r.employeeId === currentUser?.id);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -63,13 +61,11 @@ export const ResignationPage = () => {
 
       {/* Resignation Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="px-6 py-3 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800 flex items-center justify-between">
-          <span>Resignation Records ({displayedResignations.length})</span>
-          {isSalesManager && (
-            <span className="text-[11px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-              Personal Record: {currentUser?.name}
-            </span>
-          )}
+        <div className="px-6 py-3.5 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <span>Personal Resignation Records ({displayedResignations.length})</span>
+          <span className="text-[11px] text-burgundy-900 font-semibold bg-burgundy-50 px-2.5 py-0.5 rounded-full border border-burgundy-200">
+            Logged In: {currentUser?.name} ({currentUser?.id} • {currentUser?.role})
+          </span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
@@ -82,56 +78,61 @@ export const ResignationPage = () => {
                 <th className="px-4 py-3">Last Working Date</th>
                 <th className="px-4 py-3">Reason</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Review Action</th>
+                <th className="px-4 py-3 text-right">Review Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {displayedResignations.map(r => (
-                <tr key={r.id} className="hover:bg-[#FAF6EF]/60 transition">
-                  <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{r.id}</td>
-                  <td className="px-4 py-3">
-                    <span className="font-bold text-slate-900">{r.employeeName}</span>
-                    <span className="text-[10px] text-slate-400 font-mono block">{r.employeeId}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="font-semibold text-slate-800">{r.role}</span>
-                    <span className="text-[10px] text-slate-500 block">{r.department}</span>
-                  </td>
-                  <td className="px-4 py-3 font-medium">{formatDate(r.resignationDate)}</td>
-                  <td className="px-4 py-3 font-medium">{formatDate(r.lastWorkingDate)}</td>
-                  <td className="px-4 py-3 text-slate-600 max-w-xs">{r.reason}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(r.status)}`}>
-                      {r.status}
-                    </span>
-                    {r.reviewedBy && (
-                      <span className="text-[10px] text-slate-400 block mt-0.5">By {r.reviewedBy}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {canReview && r.status === 'Pending Approval' ? (
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => updateResignationStatus(r.id, 'Approved')}
-                          className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => updateResignationStatus(r.id, 'Rejected')}
-                          className="px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-[11px] text-slate-400">
-                        {r.status !== 'Pending Approval' ? 'Completed' : 'Review Pending'}
-                      </span>
-                    )}
+              {displayedResignations.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
+                    <AlertCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <div className="text-sm font-semibold text-slate-700">No Personal Resignation Records Found</div>
+                    <div className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                      Only your personal resignation details are displayed here. You currently have no separation requests submitted.
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                displayedResignations.map(r => (
+                  <tr key={r.id} className="hover:bg-[#FAF6EF]/60 transition">
+                    <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{r.id}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-bold text-slate-900">{r.employeeName}</span>
+                      <span className="text-[10px] text-slate-400 font-mono block">{r.employeeId}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-semibold text-slate-800">{r.role}</span>
+                      <span className="text-[10px] text-slate-500 block">{r.department}</span>
+                    </td>
+                    <td className="px-4 py-3 font-medium">{formatDate(r.resignationDate)}</td>
+                    <td className="px-4 py-3 font-medium">{formatDate(r.lastWorkingDate)}</td>
+                    <td className="px-4 py-3 text-slate-600 max-w-xs">{r.reason}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(r.status)}`}>
+                        {r.status}
+                      </span>
+                      {r.reviewedBy && (
+                        <span className="text-[10px] text-slate-400 block mt-0.5">By {r.reviewedBy}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {r.status === 'Pending Approval' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                          <Clock className="w-3 h-3 text-amber-600" /> Pending HR Review
+                        </span>
+                      ) : r.status === 'Approved' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          <CheckCircle className="w-3 h-3 text-emerald-600" /> Approved
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-rose-700 font-semibold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                          <XCircle className="w-3 h-3 text-rose-600" /> Rejected
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

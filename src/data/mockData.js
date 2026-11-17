@@ -12,7 +12,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98401 11001",
     location: "Chennai Head Office",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP002",
@@ -24,7 +24,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98402 22002",
     location: "Chennai Head Office",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP003",
@@ -36,7 +36,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98403 33003",
     location: "Chennai Central",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP004",
@@ -48,7 +48,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98404 44004",
     location: "Chennai Branch",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP005",
@@ -60,7 +60,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98405 55005",
     location: "Coimbatore Hub",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP006",
@@ -72,7 +72,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98406 66006",
     location: "Chennai South",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP007",
@@ -84,7 +84,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98407 77007",
     location: "Madurai Branch",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP008",
@@ -96,7 +96,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98408 88008",
     location: "Coimbatore",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP009",
@@ -108,7 +108,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98409 99009",
     location: "Tiruchirappalli",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP010",
@@ -120,7 +120,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98410 10010",
     location: "Salem",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP011",
@@ -132,7 +132,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98411 11011",
     location: "Chennai Head Office",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP012",
@@ -144,7 +144,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98412 12012",
     location: "Tirunelveli",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP013",
@@ -156,7 +156,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98413 13013",
     location: "Puducherry",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP014",
@@ -168,7 +168,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98414 14014",
     location: "Vellore",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP015",
@@ -180,7 +180,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98415 15015",
     location: "Chennai Head Office",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP016",
@@ -192,7 +192,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98416 16016",
     location: "Erode",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP017",
@@ -204,7 +204,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98417 17017",
     location: "Thanjavur",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP018",
@@ -216,7 +216,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98418 18018",
     location: "Dindigul",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP019",
@@ -228,7 +228,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98419 19019",
     location: "Puducherry",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1548142813-c348350df52b?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   },
   {
     id: "EMP020",
@@ -240,7 +240,7 @@ export const INITIAL_EMPLOYEES = [
     mobile: "+91 98420 20020",
     location: "Tiruppur",
     status: "Active",
-    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"
+    avatar: ""
   }
 ];
 
@@ -1754,6 +1754,42 @@ export const INITIAL_PERFORMANCE_CASES = [
 export const INITIAL_RESIGNATIONS = [
   {
     id: "RES-701",
+    employeeId: "EMP005",
+    employeeName: "Murugan Velu",
+    role: "Sales Manager",
+    department: "Field Sales",
+    resignationDate: "2026-11-01",
+    lastWorkingDate: "2026-11-30",
+    reason: "Relocating to hometown for personal family commitments.",
+    status: "Pending Approval",
+    reviewedBy: ""
+  },
+  {
+    id: "RES-702",
+    employeeId: "EMP004",
+    employeeName: "Ananya Subramanian",
+    role: "RM",
+    department: "Telecalling & Client Relations",
+    resignationDate: "2026-10-15",
+    lastWorkingDate: "2026-11-15",
+    reason: "Career transition to banking operations.",
+    status: "Approved",
+    reviewedBy: "Rajesh Kannan (Admin)"
+  },
+  {
+    id: "RES-703",
+    employeeId: "EMP001",
+    employeeName: "Rajesh Kannan",
+    role: "Admin",
+    department: "Executive Management",
+    resignationDate: "2026-09-01",
+    lastWorkingDate: "2026-09-30",
+    reason: "Notice of planned leadership transition.",
+    status: "Approved",
+    reviewedBy: "Board of Directors"
+  },
+  {
+    id: "RES-704",
     employeeId: "EMP020",
     employeeName: "Senthil Nathan",
     role: "Sales Executive",
@@ -1763,18 +1799,6 @@ export const INITIAL_RESIGNATIONS = [
     reason: "Relocating to hometown for family agricultural business.",
     status: "Pending Approval",
     reviewedBy: ""
-  },
-  {
-    id: "RES-702",
-    employeeId: "EMP018",
-    employeeName: "Chandrasekar G",
-    role: "Sales Executive",
-    department: "Field Sales",
-    resignationDate: "2026-10-15",
-    lastWorkingDate: "2026-11-15",
-    reason: "Higher studies admission in MBA Logistics.",
-    status: "Approved",
-    reviewedBy: "Rajesh Kannan (Admin)"
   }
 ];
 

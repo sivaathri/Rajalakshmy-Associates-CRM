@@ -53,8 +53,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
   }).length;
 
   const pendingResignationCount = resignations.filter(r => {
-    if (isSalesManager) return r.employeeId === currentUser?.id && r.status === 'Pending Approval';
-    return r.status === 'Pending Approval';
+    return r.employeeId === currentUser?.id && r.status === 'Pending Approval';
   }).length;
 
   // Check if current user has punched in for today (format: DD-MM-YYYY)
