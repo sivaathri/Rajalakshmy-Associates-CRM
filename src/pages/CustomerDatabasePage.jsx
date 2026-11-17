@@ -238,8 +238,6 @@ export const CustomerDatabasePage = () => {
                     <th className="px-4 py-3">Business Descriptor</th>
                   </>
                 )}
-                <th className="px-4 py-3">State / City</th>
-                <th className="px-4 py-3">Assigned RM</th>
                 <th className="px-4 py-3">Calling Status</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
@@ -247,7 +245,7 @@ export const CustomerDatabasePage = () => {
             <tbody className="divide-y divide-slate-100">
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={normalizedType === 'known' ? 9 : 7} className="text-center py-12 text-slate-400">
+                  <td colSpan={normalizedType === 'known' ? 7 : 5} className="text-center py-12 text-slate-400">
                     No customer records found matching the active filter criteria.
                   </td>
                 </tr>
@@ -288,16 +286,6 @@ export const CustomerDatabasePage = () => {
                         </td>
                       </>
                     )}
-
-                    <td className="px-4 py-3">
-                      <span className="font-semibold text-slate-800">{cust.city || cust.state}</span>
-                      <span className="text-[10px] text-slate-400 block">{cust.state}</span>
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <span className="font-semibold text-slate-800">{cust.assignedName}</span>
-                      <span className="text-[10px] font-mono text-slate-400 block">{cust.assignedTo}</span>
-                    </td>
 
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(cust.callingStatus)}`}>
