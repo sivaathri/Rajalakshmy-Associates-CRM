@@ -44,7 +44,7 @@ export const TelecallingPage = () => {
 
   // State
   const [activeTab, setActiveTab] = useState('focused'); // 'focused' | 'queue' | 'history' | 'analytics'
-  const [queueFilter, setQueueFilter] = useState('all'); // 'all' | 'pending' | 'reminders' | 'completed'
+  const [queueFilter, setQueueFilter] = useState('fresh'); // 'fresh' | 'reminders' | 'completed'
   const [searchQueue, setSearchQueue] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(0);
 
@@ -65,26 +65,53 @@ export const TelecallingPage = () => {
   const [selectedDb, setSelectedDb] = useState(null); // 'old' | 'new' | null
   const [selectedType, setSelectedType] = useState(null); // 'known' | 'unknown' | null
 
+  // Helper: check if a customer is a fresh, un-actioned number
+  const isFreshNumber = (c) => {
+    const isPending = c.callingStatus === 'Pending' && !c.actionedBy;
+    if (currentUser?.role === 'RM') {
+      return isPending && (!c.assignedTo || c.assignedTo === currentUser.id);
+    }
+    return isPending;
+  };
+
   // Base accessible contacts for current user:
-  // Shows Fresh numbers (Pending & unassigned/open) to all RMs.
-  // When an RM takes action on a number, that number follows that RM and is hidden from other RMs.
+  // - Shows fresh un-actioned numbers (accessible to RMs)
+  // - Shows numbers actioned by current user (for their reminders, history)
   const baseCustomers = useMemo(() => {
     return customers.filter(c => {
       if (currentUser?.role === 'RM') {
-        const isFresh = c.callingStatus === 'Pending' && (!c.assignedTo || c.assignedTo === currentUser.id);
-        const isMine = c.assignedTo === currentUser.id || c.actionedBy === currentUser.id;
+        const isFresh = isFreshNumber(c);
+        const isMine = c.actionedBy === currentUser.id || c.assignedTo === currentUser.id;
         return isFresh || isMine;
       }
       return true;
     });
   }, [customers, currentUser]);
 
-  const oldTotalCount = baseCustomers.filter(c => c.databaseType === 'old').length;
-  const newTotalCount = baseCustomers.filter(c => c.databaseType === 'new').length;
-  const oldKnownCount = baseCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
-  const oldUnknownCount = baseCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;
-  const newKnownCount = baseCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'known').length;
-  const newUnknownCount = baseCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown').length;
+  // Fresh number counts for Step 1 and Step 2 selections
+  const oldKnownFreshCount = useMemo(() => 
+    customers.filter(c => c.databaseType === 'old' && c.customerType === 'known' && isFreshNumber(c)).length,
+    [customers, currentUser]
+  );
+  const oldUnknownFreshCount = useMemo(() => 
+    customers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown' && isFreshNumber(c)).length,
+    [customers, currentUser]
+  );
+  const newKnownFreshCount = useMemo(() => 
+    customers.filter(c => c.databaseType === 'new' && c.customerType === 'known' && isFreshNumber(c)).length,
+    [customers, currentUser]
+  );
+  const newUnknownFreshCount = useMemo(() => 
+    customers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown' && isFreshNumber(c)).length,
+    [customers, currentUser]
+  );
+
+  const oldTotalCount = oldKnownFreshCount + oldUnknownFreshCount;
+  const newTotalCount = newKnownFreshCount + newUnknownFreshCount;
+  const oldKnownCount = oldKnownFreshCount;
+  const oldUnknownCount = oldUnknownFreshCount;
+  const newKnownCount = newKnownFreshCount;
+  const newUnknownCount = newUnknownFreshCount;
 
   // Filter assigned contacts matching Step 1 (Database) and Step 2 (Classification)
   const assignedCustomers = useMemo(() => {
@@ -92,12 +119,21 @@ export const TelecallingPage = () => {
     return baseCustomers.filter(c => c.databaseType === selectedDb && c.customerType === selectedType);
   }, [baseCustomers, selectedDb, selectedType]);
 
-  // Queue filtered items
+  // Queue filtered items:
+  // In Focused Telecalling Mode and when queueFilter is 'fresh' (or default):
+  // STRICTLY show ONLY fresh numbers! Actioned numbers do NOT show in Queue Leads.
   const displayQueue = useMemo(() => {
     return assignedCustomers.filter(c => {
-      if (queueFilter === 'pending' && c.callingStatus !== 'Pending') return false;
-      if (queueFilter === 'reminders' && c.callingStatus !== 'Reminder') return false;
-      if (queueFilter === 'completed' && !['OK', 'Not Attend', 'No Need'].includes(c.callingStatus)) return false;
+      if (activeTab === 'focused' || queueFilter === 'fresh' || queueFilter === 'pending' || queueFilter === 'all') {
+        // Queue Leads ONLY shows fresh numbers:
+        if (!isFreshNumber(c)) return false;
+      } else if (queueFilter === 'reminders') {
+        if (c.callingStatus !== 'Reminder') return false;
+        if (currentUser?.role === 'RM' && c.actionedBy !== currentUser.id && c.assignedTo !== currentUser.id) return false;
+      } else if (queueFilter === 'completed') {
+        if (!['OK', 'Not Attend', 'No Need'].includes(c.callingStatus)) return false;
+        if (currentUser?.role === 'RM' && c.actionedBy !== currentUser.id) return false;
+      }
 
       if (searchQueue.trim()) {
         const q = searchQueue.toLowerCase();
@@ -108,7 +144,16 @@ export const TelecallingPage = () => {
       }
       return true;
     });
-  }, [assignedCustomers, queueFilter, searchQueue]);
+  }, [assignedCustomers, activeTab, queueFilter, searchQueue, currentUser]);
+
+  // Auto-clamp focusedIndex if queue shrinks after actioning a number
+  useEffect(() => {
+    if (displayQueue.length === 0) {
+      setFocusedIndex(0);
+    } else if (focusedIndex >= displayQueue.length) {
+      setFocusedIndex(displayQueue.length - 1);
+    }
+  }, [displayQueue.length, focusedIndex]);
 
   // Current focused contact
   const currentFocusedContact = displayQueue[focusedIndex] || displayQueue[0] || null;
@@ -142,9 +187,13 @@ export const TelecallingPage = () => {
       reminderDate: outcome === 'Reminder' ? reminderDate : ''
     });
 
-    if (andNext && focusedIndex < displayQueue.length - 1) {
-      setFocusedIndex(prev => prev + 1);
-    }
+    // Reset remarks for the next lead
+    setRemarks('');
+    setReminderDate('');
+    setOutcome('OK');
+
+    // Note: since this contact is now actioned, it automatically leaves displayQueue.
+    // The next fresh number in line will automatically be at current focusedIndex.
   };
 
   // Filtered Call History for Reports
@@ -234,10 +283,10 @@ export const TelecallingPage = () => {
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
             <span className="text-[10px] text-white/60 block uppercase font-bold">
-              {selectedDb && selectedType ? 'Queue Numbers' : 'Total Leads'}
+              {selectedDb && selectedType ? 'Fresh Queue Numbers' : 'Total Fresh Numbers'}
             </span>
             <span className="text-sm font-extrabold text-gold-300">
-              {selectedDb && selectedType ? displayQueue.length : baseCustomers.length}
+              {selectedDb && selectedType ? displayQueue.length : (oldTotalCount + newTotalCount)}
             </span>
           </div>
           <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
@@ -261,7 +310,7 @@ export const TelecallingPage = () => {
               </span>
               {selectedDb && selectedType && (
                 <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                  ✓ Numbers Loaded ({displayQueue.length})
+                  ✓ Fresh Numbers Loaded ({displayQueue.length})
                 </span>
               )}
             </div>
@@ -319,7 +368,7 @@ export const TelecallingPage = () => {
                 </div>
                 <div className="text-[10px] text-slate-500 mt-1">Tamil Nadu Master Base</div>
                 <span className="mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 inline-block self-start">
-                  {oldTotalCount} Assigned Leads
+                  {oldTotalCount} Fresh Numbers
                 </span>
               </button>
 
@@ -341,7 +390,7 @@ export const TelecallingPage = () => {
                 </div>
                 <div className="text-[10px] text-slate-500 mt-1">Field Sales & Inquiries</div>
                 <span className="mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 inline-block self-start">
-                  {newTotalCount} Available Leads
+                  {newTotalCount} Fresh Numbers
                 </span>
               </button>
             </div>
@@ -386,7 +435,7 @@ export const TelecallingPage = () => {
                 </div>
                 <div className="text-[10px] text-slate-500 mt-1">Verified Enterprise Profiles</div>
                 <span className="mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 inline-block self-start">
-                  {selectedDb ? (selectedDb === 'old' ? oldKnownCount : newKnownCount) : '—'} Numbers
+                  {selectedDb ? (selectedDb === 'old' ? oldKnownCount : newKnownCount) : '—'} Fresh Numbers
                 </span>
               </button>
 
@@ -409,7 +458,7 @@ export const TelecallingPage = () => {
                 </div>
                 <div className="text-[10px] text-slate-500 mt-1">Field Direct Mobile Contacts</div>
                 <span className="mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 inline-block self-start">
-                  {selectedDb ? (selectedDb === 'old' ? oldUnknownCount : newUnknownCount) : '—'} Numbers
+                  {selectedDb ? (selectedDb === 'old' ? oldUnknownCount : newUnknownCount) : '—'} Fresh Numbers
                 </span>
               </button>
             </div>
@@ -778,8 +827,14 @@ export const TelecallingPage = () => {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-16 text-slate-400">
-                No contacts currently in queue. Select a contact from the Queue tab.
+              <div className="text-center py-16 px-4">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 mb-3 shadow-sm">
+                  <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+                </div>
+                <h4 className="text-base font-bold text-slate-800 font-corporate">All Fresh Numbers Actioned!</h4>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                  There are no pending fresh numbers left in this partition. All records you actioned have been saved to your Call Logs.
+                </p>
               </div>
             )}
           </div>
@@ -790,7 +845,9 @@ export const TelecallingPage = () => {
               <h4 className="text-sm font-bold text-slate-900 font-corporate">
                 Queue Leads ({displayQueue.length})
               </h4>
-              <span className="text-[10px] uppercase font-bold text-slate-400">Click to Select</span>
+              <span className="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                Fresh Numbers Only
+              </span>
             </div>
 
             {/* Quick search */}
@@ -807,26 +864,32 @@ export const TelecallingPage = () => {
 
             {/* Queue List items */}
             <div className="space-y-2 max-h-[500px] overflow-y-auto">
-              {displayQueue.map((item, idx) => (
-                <div
-                  key={item.id}
-                  onClick={() => setFocusedIndex(idx)}
-                  className={`p-3 rounded-xl border text-xs cursor-pointer transition ${
-                    idx === focusedIndex
-                      ? 'border-burgundy-800 bg-burgundy-50/60 ring-2 ring-burgundy-800/15'
-                      : 'border-slate-200 hover:bg-[#FAF6EF]/60'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900">{item.name}</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getStatusBadgeClass(item.callingStatus)}`}>
-                      {item.callingStatus || 'Pending'}
-                    </span>
-                  </div>
-                  <div className="font-mono text-slate-600 text-[11px] mt-0.5">{item.mobile}</div>
-                  <div className="text-slate-500 text-[10px] truncate mt-0.5">{item.business || item.city}</div>
+              {displayQueue.length === 0 ? (
+                <div className="text-center py-8 text-xs text-slate-400 italic">
+                  No fresh numbers pending in queue.
                 </div>
-              ))}
+              ) : (
+                displayQueue.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    onClick={() => setFocusedIndex(idx)}
+                    className={`p-3 rounded-xl border text-xs cursor-pointer transition ${
+                      idx === focusedIndex
+                        ? 'border-burgundy-800 bg-burgundy-50/60 ring-2 ring-burgundy-800/15'
+                        : 'border-slate-200 hover:bg-[#FAF6EF]/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900">{item.name}</span>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold border border-emerald-300 bg-emerald-50 text-emerald-800">
+                        ★ Fresh Number
+                      </span>
+                    </div>
+                    <div className="font-mono text-slate-600 text-[11px] mt-0.5">{item.mobile}</div>
+                    <div className="text-slate-500 text-[10px] truncate mt-0.5">{item.business || item.city}</div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -839,36 +902,36 @@ export const TelecallingPage = () => {
         <div className="space-y-4">
           {/* Queue Filter Bar */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={() => setQueueFilter('all')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition ${
-                  queueFilter === 'all'
-                    ? 'bg-burgundy-900 text-white border-burgundy-900'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                All Numbers ({assignedCustomers.length})
-              </button>
-              <button
-                onClick={() => setQueueFilter('pending')}
+                onClick={() => setQueueFilter('fresh')}
                 className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 ${
-                  queueFilter === 'pending'
-                    ? 'bg-emerald-700 text-white border-emerald-700'
+                  queueFilter === 'fresh' || queueFilter === 'all' || queueFilter === 'pending'
+                    ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm'
                     : 'bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50'
                 }`}
               >
-                <span>Fresh Numbers ({assignedCustomers.filter(c => c.callingStatus === 'Pending').length})</span>
+                <span>Fresh Queue Leads ({assignedCustomers.filter(c => isFreshNumber(c)).length})</span>
               </button>
               <button
                 onClick={() => setQueueFilter('reminders')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 ${
                   queueFilter === 'reminders'
-                    ? 'bg-burgundy-900 text-white border-burgundy-900'
+                    ? 'bg-amber-700 text-white border-amber-700 shadow-sm'
+                    : 'bg-white text-amber-800 border-amber-200 hover:bg-amber-50'
+                }`}
+              >
+                <span>My Due Reminders ({assignedCustomers.filter(c => c.callingStatus === 'Reminder' && (c.actionedBy === currentUser?.id || c.assignedTo === currentUser?.id)).length})</span>
+              </button>
+              <button
+                onClick={() => setQueueFilter('completed')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 ${
+                  queueFilter === 'completed'
+                    ? 'bg-burgundy-900 text-white border-burgundy-900 shadow-sm'
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                My Due Reminders ({assignedCustomers.filter(c => c.callingStatus === 'Reminder').length})
+                <span>My Actioned Calls ({assignedCustomers.filter(c => ['OK', 'Not Attend', 'No Need'].includes(c.callingStatus) && c.actionedBy === currentUser?.id).length})</span>
               </button>
             </div>
 
