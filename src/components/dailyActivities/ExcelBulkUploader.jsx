@@ -34,7 +34,7 @@ export const ExcelBulkUploader = () => {
       },
       {
         "Customer Name": "Karpagam Stores",
-        "Mobile Number": "9840122341", // This is duplicate with CUST-1001 Swaminathan!
+        "Mobile Number": "9840122341", // This is duplicate with RA-CUST-1001 Swaminathan!
         "Business": "Provisions",
         "State": "Tamil Nadu",
         "Type": "known",

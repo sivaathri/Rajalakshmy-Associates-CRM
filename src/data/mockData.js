@@ -247,7 +247,7 @@ export const INITIAL_EMPLOYEES = [
 export const INITIAL_CUSTOMERS = [
   // --- OLD DATABASE - KNOWN (13 records) ---
   {
-    id: "CUST-1001",
+    id: "RA-CUST-1001",
     name: "S. Swaminathan",
     mobile: "+91 98401 22341",
     altMobile: "+91 94440 12345",
@@ -276,7 +276,7 @@ export const INITIAL_CUSTOMERS = [
     ]
   },
   {
-    id: "CUST-1002",
+    id: "RA-CUST-1002",
     name: "Thirunavukkarasu M",
     mobile: "+91 98402 33452",
     altMobile: "+91 94441 23456",
@@ -302,7 +302,7 @@ export const INITIAL_CUSTOMERS = [
     ]
   },
   {
-    id: "CUST-1003",
+    id: "RA-CUST-1003",
     name: "Dr. Meena Chandrasekaran",
     mobile: "+91 98403 44563",
     altMobile: "+91 94442 34567",
@@ -329,7 +329,7 @@ export const INITIAL_CUSTOMERS = [
     ]
   },
   {
-    id: "CUST-1004",
+    id: "RA-CUST-1004",
     name: "K. R. Vasanthakumar",
     mobile: "+91 98404 55674",
     altMobile: "",
@@ -351,7 +351,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1005",
+    id: "RA-CUST-1005",
     name: "G. Soundarapandian",
     mobile: "+91 98405 66785",
     altMobile: "+91 94444 56789",
@@ -372,7 +372,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1006",
+    id: "RA-CUST-1006",
     name: "S. Jayalakshmi",
     mobile: "+91 98406 77896",
     altMobile: "",
@@ -394,7 +394,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1007",
+    id: "RA-CUST-1007",
     name: "M. Abdul Hameed",
     mobile: "+91 98407 88907",
     altMobile: "+91 94446 78901",
@@ -414,7 +414,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1008",
+    id: "RA-CUST-1008",
     name: "N. Selvaraj",
     mobile: "+91 98408 99018",
     altMobile: "",
@@ -434,7 +434,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1009",
+    id: "RA-CUST-1009",
     name: "V. Padmavathi",
     mobile: "+91 98409 00129",
     altMobile: "",
@@ -454,7 +454,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1010",
+    id: "RA-CUST-1010",
     name: "R. Dhanasekaran",
     mobile: "+91 98410 11230",
     altMobile: "+91 94449 01234",
@@ -477,7 +477,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1011",
+    id: "RA-CUST-1011",
     name: "P. Muthukrishnan",
     mobile: "+91 98411 22341",
     altMobile: "",
@@ -499,7 +499,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1012",
+    id: "RA-CUST-1012",
     name: "B. Hemavathi",
     mobile: "+91 98412 33452",
     altMobile: "",
@@ -519,7 +519,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1013",
+    id: "RA-CUST-1013",
     name: "S. Karthikeyan",
     mobile: "+91 98413 44563",
     altMobile: "",
@@ -541,7 +541,7 @@ export const INITIAL_CUSTOMERS = [
 
   // --- OLD DATABASE - UNKNOWN (12 records) ---
   {
-    id: "CUST-1014",
+    id: "RA-CUST-1014",
     name: "Unknown / Lead",
     mobile: "+91 98414 55674",
     altMobile: "",
@@ -563,7 +563,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1015",
+    id: "RA-CUST-1015",
     name: "Unknown / Lead",
     mobile: "+91 98415 66785",
     altMobile: "",
@@ -583,7 +583,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1016",
+    id: "RA-CUST-1016",
     name: "Unknown / Lead",
     mobile: "+91 98416 77896",
     altMobile: "",
@@ -603,7 +603,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1017",
+    id: "RA-CUST-1017",
     name: "Unknown / Lead",
     mobile: "+91 98417 88907",
     altMobile: "",
@@ -623,7 +623,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1018",
+    id: "RA-CUST-1018",
     name: "Unknown / Lead",
     mobile: "+91 98418 99018",
     altMobile: "",
@@ -643,7 +643,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1019",
+    id: "RA-CUST-1019",
     name: "Unknown / Lead",
     mobile: "+91 98419 00129",
     altMobile: "",
@@ -663,7 +663,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1020",
+    id: "RA-CUST-1020",
     name: "Unknown / Lead",
     mobile: "+91 98420 11230",
     altMobile: "",
@@ -685,7 +685,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1021",
+    id: "RA-CUST-1021",
     name: "Unknown / Lead",
     mobile: "+91 98421 22341",
     altMobile: "",
@@ -705,7 +705,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1022",
+    id: "RA-CUST-1022",
     name: "Unknown / Lead",
     mobile: "+91 98422 33452",
     altMobile: "",
@@ -725,7 +725,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1023",
+    id: "RA-CUST-1023",
     name: "Unknown / Lead",
     mobile: "+91 98423 44563",
     altMobile: "",
@@ -748,7 +748,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1024",
+    id: "RA-CUST-1024",
     name: "Unknown / Lead",
     mobile: "+91 98424 55674",
     altMobile: "",
@@ -768,7 +768,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1025",
+    id: "RA-CUST-1025",
     name: "Unknown / Lead",
     mobile: "+91 98425 66785",
     altMobile: "",
@@ -790,7 +790,7 @@ export const INITIAL_CUSTOMERS = [
 
   // --- NEW DATABASE - KNOWN (13 records) ---
   {
-    id: "CUST-1026",
+    id: "RA-CUST-1026",
     name: "Anand Natarajan",
     mobile: "+91 98426 77896",
     altMobile: "+91 97890 12345",
@@ -817,7 +817,7 @@ export const INITIAL_CUSTOMERS = [
     ]
   },
   {
-    id: "CUST-1027",
+    id: "RA-CUST-1027",
     name: "Meenakshi Sundaresan",
     mobile: "+91 98427 88907",
     altMobile: "+91 97891 23456",
@@ -838,7 +838,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1028",
+    id: "RA-CUST-1028",
     name: "S. Saravanan",
     mobile: "+91 98428 99018",
     altMobile: "",
@@ -858,7 +858,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1029",
+    id: "RA-CUST-1029",
     name: "Radhika Balakrishnan",
     mobile: "+91 98429 00129",
     altMobile: "+91 97893 45678",
@@ -884,7 +884,7 @@ export const INITIAL_CUSTOMERS = [
     ]
   },
   {
-    id: "CUST-1030",
+    id: "RA-CUST-1030",
     name: "C. Kumaresan",
     mobile: "+91 98430 11230",
     altMobile: "",
@@ -906,7 +906,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1031",
+    id: "RA-CUST-1031",
     name: "Dr. K. Vignesh",
     mobile: "+91 98431 22341",
     altMobile: "",
@@ -927,7 +927,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1032",
+    id: "RA-CUST-1032",
     name: "V. Shanthi",
     mobile: "+91 98432 33452",
     altMobile: "",
@@ -949,7 +949,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1033",
+    id: "RA-CUST-1033",
     name: "Annapoorna Caterers & Bakers",
     mobile: "+91 98453 44563",
     altMobile: "+91 98405 55005",
@@ -974,7 +974,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1034",
+    id: "RA-CUST-1034",
     name: "Kovai Precision Tools & Dies",
     mobile: "+91 98456 77896",
     altMobile: "",
@@ -997,7 +997,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1035",
+    id: "RA-CUST-1035",
     name: "K. Mohanraj",
     mobile: "+91 98435 66785",
     altMobile: "",
@@ -1018,7 +1018,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1036",
+    id: "RA-CUST-1036",
     name: "S. Balamurugan",
     mobile: "+91 98436 77896",
     altMobile: "",
@@ -1038,7 +1038,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1037",
+    id: "RA-CUST-1037",
     name: "Devi Mahalakshmi",
     mobile: "+91 98437 88907",
     altMobile: "",
@@ -1058,7 +1058,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1038",
+    id: "RA-CUST-1038",
     name: "T. Rajendran",
     mobile: "+91 98438 99018",
     altMobile: "",
@@ -1080,7 +1080,7 @@ export const INITIAL_CUSTOMERS = [
 
   // --- NEW DATABASE - UNKNOWN (12 records) ---
   {
-    id: "CUST-1039",
+    id: "RA-CUST-1039",
     name: "Unknown / Lead",
     mobile: "+91 98439 00129",
     altMobile: "",
@@ -1102,7 +1102,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1040",
+    id: "RA-CUST-1040",
     name: "Unknown / Lead",
     mobile: "+91 98440 11230",
     altMobile: "",
@@ -1124,7 +1124,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1041",
+    id: "RA-CUST-1041",
     name: "Unknown / Lead",
     mobile: "+91 98441 22341",
     altMobile: "",
@@ -1144,7 +1144,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1042",
+    id: "RA-CUST-1042",
     name: "Unknown / Lead",
     mobile: "+91 98442 33452",
     altMobile: "",
@@ -1165,7 +1165,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1043",
+    id: "RA-CUST-1043",
     name: "Unknown / Lead",
     mobile: "+91 98443 44563",
     altMobile: "",
@@ -1185,7 +1185,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1044",
+    id: "RA-CUST-1044",
     name: "Unknown / Lead",
     mobile: "+91 98444 55674",
     altMobile: "",
@@ -1207,7 +1207,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1045",
+    id: "RA-CUST-1045",
     name: "Unknown / Lead",
     mobile: "+91 98445 66785",
     altMobile: "",
@@ -1227,7 +1227,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1046",
+    id: "RA-CUST-1046",
     name: "Unknown / Lead",
     mobile: "+91 98446 77896",
     altMobile: "",
@@ -1249,7 +1249,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1047",
+    id: "RA-CUST-1047",
     name: "Unknown / Lead",
     mobile: "+91 98447 88907",
     altMobile: "",
@@ -1269,7 +1269,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1048",
+    id: "RA-CUST-1048",
     name: "Unknown / Lead",
     mobile: "+91 98448 99018",
     altMobile: "",
@@ -1289,7 +1289,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1049",
+    id: "RA-CUST-1049",
     name: "Unknown / Lead",
     mobile: "+91 98449 00129",
     altMobile: "",
@@ -1309,7 +1309,7 @@ export const INITIAL_CUSTOMERS = [
     services: []
   },
   {
-    id: "CUST-1050",
+    id: "RA-CUST-1050",
     name: "Unknown / Lead",
     mobile: "+91 98450 11230",
     altMobile: "",
@@ -1333,7 +1333,7 @@ export const INITIAL_CUSTOMERS = [
 export const INITIAL_CALL_HISTORY = [
   {
     id: "CALL-801",
-    customerId: "CUST-1001",
+    customerId: "RA-CUST-1001",
     customerName: "S. Swaminathan",
     mobile: "+91 98401 22341",
     employeeId: "EMP004",
@@ -1347,7 +1347,7 @@ export const INITIAL_CALL_HISTORY = [
   },
   {
     id: "CALL-802",
-    customerId: "CUST-1002",
+    customerId: "RA-CUST-1002",
     customerName: "Thirunavukkarasu M",
     mobile: "+91 98402 33452",
     employeeId: "EMP004",
@@ -1361,7 +1361,7 @@ export const INITIAL_CALL_HISTORY = [
   },
   {
     id: "CALL-803",
-    customerId: "CUST-1026",
+    customerId: "RA-CUST-1026",
     customerName: "Anand Natarajan",
     mobile: "+91 98426 77896",
     employeeId: "EMP004",
@@ -1375,7 +1375,7 @@ export const INITIAL_CALL_HISTORY = [
   },
   {
     id: "CALL-804",
-    customerId: "CUST-1014",
+    customerId: "RA-CUST-1014",
     customerName: "Unknown / Lead",
     mobile: "+91 98414 55674",
     employeeId: "EMP004",
@@ -1389,7 +1389,7 @@ export const INITIAL_CALL_HISTORY = [
   },
   {
     id: "CALL-805",
-    customerId: "CUST-1039",
+    customerId: "RA-CUST-1039",
     customerName: "Unknown / Lead",
     mobile: "+91 98439 00129",
     employeeId: "EMP004",
@@ -1403,7 +1403,7 @@ export const INITIAL_CALL_HISTORY = [
   },
   {
     id: "CALL-806",
-    customerId: "CUST-1029",
+    customerId: "RA-CUST-1029",
     customerName: "Radhika Balakrishnan",
     mobile: "+91 98429 00129",
     employeeId: "EMP004",
@@ -1417,7 +1417,7 @@ export const INITIAL_CALL_HISTORY = [
   },
   {
     id: "CALL-807",
-    customerId: "CUST-1004",
+    customerId: "RA-CUST-1004",
     customerName: "K. R. Vasanthakumar",
     mobile: "+91 98404 55674",
     employeeId: "EMP006",
@@ -1431,7 +1431,7 @@ export const INITIAL_CALL_HISTORY = [
   },
   {
     id: "CALL-808",
-    customerId: "CUST-1008",
+    customerId: "RA-CUST-1008",
     customerName: "N. Selvaraj",
     mobile: "+91 98408 99018",
     employeeId: "EMP008",
@@ -1445,7 +1445,7 @@ export const INITIAL_CALL_HISTORY = [
   },
   {
     id: "CALL-809",
-    customerId: "CUST-1003",
+    customerId: "RA-CUST-1003",
     customerName: "Dr. Meena Chandrasekaran",
     mobile: "+91 98403 44563",
     employeeId: "EMP013",
@@ -1459,7 +1459,7 @@ export const INITIAL_CALL_HISTORY = [
   },
   {
     id: "CALL-810",
-    customerId: "CUST-1028",
+    customerId: "RA-CUST-1028",
     customerName: "S. Saravanan",
     mobile: "+91 98428 99018",
     employeeId: "EMP008",

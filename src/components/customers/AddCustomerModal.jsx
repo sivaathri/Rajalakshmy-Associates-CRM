@@ -60,18 +60,21 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
   const [state, setState] = useState('Tamil Nadu');
   const [city, setCity] = useState('Chennai');
 
-  // Compute next guaranteed unique customer ID
+  // Compute next guaranteed unique customer ID (format: RA-CUST-XXXX)
   const nextCustomerId = React.useMemo(() => {
     let maxNum = 1000;
     (customers || []).forEach(c => {
-      if (c.id && typeof c.id === 'string' && c.id.startsWith('CUST-')) {
-        const num = parseInt(c.id.replace('CUST-', ''), 10);
-        if (!isNaN(num) && num > maxNum) {
-          maxNum = num;
+      if (c.id && typeof c.id === 'string') {
+        const match = c.id.match(/\d+/);
+        if (match) {
+          const num = parseInt(match[0], 10);
+          if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+          }
         }
       }
     });
-    return `CUST-${maxNum + 1}`;
+    return `RA-CUST-${maxNum + 1}`;
   }, [customers]);
 
   const [customerId, setCustomerId] = useState(nextCustomerId);
@@ -278,7 +281,7 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
                   required
                   value={customerId}
                   onChange={(e) => setCustomerId(e.target.value.toUpperCase())}
-                  placeholder="e.g. CUST-1051"
+                  placeholder="e.g. RA-CUST-1051"
                   className={`w-full text-xs font-mono font-bold rounded-xl border py-2 px-3 shadow-sm transition focus:outline-none ${
                     isIdUnique
                       ? 'text-burgundy-900 border-slate-300 bg-white focus:border-burgundy-800'

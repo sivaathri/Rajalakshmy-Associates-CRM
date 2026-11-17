@@ -24,26 +24,37 @@ const STORAGE_KEYS = {
   ATTENDANCE: 'rajalakshmy_attendance_v1'
 };
 
-// Helper to guarantee strictly unique CUST- IDs across all records
+// Helper to guarantee strictly unique RA-CUST- IDs across all records
 export const ensureUniqueCustomerIds = (customerList) => {
   const seenIds = new Set();
   let maxNum = 1000;
 
-  // First pass: find maximum numeric ID among valid unique CUST- numbers
-  (customerList || []).forEach(c => {
+  // Normalize all IDs to RA-CUST- format (seamlessly upgrades legacy CUST- IDs)
+  const normalizedList = (customerList || []).map(c => {
     if (c.id && typeof c.id === 'string' && c.id.startsWith('CUST-')) {
-      const num = parseInt(c.id.replace('CUST-', ''), 10);
-      if (!isNaN(num) && num > maxNum) {
-        maxNum = num;
+      return { ...c, id: c.id.replace('CUST-', 'RA-CUST-') };
+    }
+    return c;
+  });
+
+  // First pass: find maximum numeric ID among valid unique RA-CUST- numbers
+  normalizedList.forEach(c => {
+    if (c.id && typeof c.id === 'string') {
+      const match = c.id.match(/\d+/);
+      if (match) {
+        const num = parseInt(match[0], 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
       }
     }
   });
 
   // Second pass: assign new unique ID to any record with missing or duplicate ID
-  return (customerList || []).map(c => {
+  return normalizedList.map(c => {
     if (!c.id || seenIds.has(c.id)) {
       maxNum += 1;
-      const assignedId = `CUST-${maxNum}`;
+      const assignedId = `RA-CUST-${maxNum}`;
       seenIds.add(assignedId);
       return { ...c, id: assignedId };
     }
@@ -61,10 +72,10 @@ export const CRMProvider = ({ children }) => {
       const saved = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
       if (saved) {
         const parsed = JSON.parse(saved);
-        const c1033 = parsed.find(c => c.id === 'CUST-1033');
+        const c1033 = parsed.find(c => c.id === 'RA-CUST-1033' || c.id === 'CUST-1033');
         if (c1033 && (!c1033.submittedBy || c1033.name !== 'Annapoorna Caterers & Bakers')) {
           const updated = parsed.map(c => {
-            const initialMatch = INITIAL_CUSTOMERS.find(ic => ic.id === c.id);
+            const initialMatch = INITIAL_CUSTOMERS.find(ic => ic.id === c.id || ic.id === c.id.replace('CUST-', 'RA-CUST-'));
             if (initialMatch && initialMatch.submittedBy) {
               return {
                 ...c,
@@ -91,7 +102,13 @@ export const CRMProvider = ({ children }) => {
   const [calls, setCalls] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.CALLS);
-      return saved ? JSON.parse(saved) : INITIAL_CALL_HISTORY;
+      const list = saved ? JSON.parse(saved) : INITIAL_CALL_HISTORY;
+      return (list || []).map(call => {
+        if (call.customerId && call.customerId.startsWith('CUST-')) {
+          return { ...call, customerId: call.customerId.replace('CUST-', 'RA-CUST-') };
+        }
+        return call;
+      });
     } catch {
       return INITIAL_CALL_HISTORY;
     }
@@ -219,14 +236,15 @@ export const CRMProvider = ({ children }) => {
     if (!newId || customers.some(c => c.id === newId)) {
       let maxNum = 1000;
       customers.forEach(c => {
-        if (c.id && typeof c.id === 'string' && c.id.startsWith('CUST-')) {
-          const num = parseInt(c.id.replace('CUST-', ''), 10);
-          if (!isNaN(num) && num > maxNum) {
-            maxNum = num;
+        if (c.id && typeof c.id === 'string') {
+          const match = c.id.match(/\d+/);
+          if (match) {
+            const num = parseInt(match[0], 10);
+            if (!isNaN(num) && num > maxNum) maxNum = num;
           }
         }
       });
-      newId = `CUST-${maxNum + 1}`;
+      newId = `RA-CUST-${maxNum + 1}`;
     }
 
     const isSalesMgr = currentUser?.role === 'Sales Manager' || customerData.submittedBy === 'EMP005';
@@ -530,9 +548,12 @@ export const CRMProvider = ({ children }) => {
           let currentList = [...prev];
           let maxNum = 1000;
           currentList.forEach(c => {
-            if (c.id && typeof c.id === 'string' && c.id.startsWith('CUST-')) {
-              const num = parseInt(c.id.replace('CUST-', ''), 10);
-              if (!isNaN(num) && num > maxNum) maxNum = num;
+            if (c.id && typeof c.id === 'string') {
+              const match = c.id.match(/\d+/);
+              if (match) {
+                const num = parseInt(match[0], 10);
+                if (!isNaN(num) && num > maxNum) maxNum = num;
+              }
             }
           });
 
@@ -540,7 +561,7 @@ export const CRMProvider = ({ children }) => {
             maxNum += 1;
             return {
               ...cust,
-              id: `CUST-${maxNum}`,
+              id: `RA-CUST-${maxNum}`,
               submittedBy: currentUser?.id || 'EMP005',
               submittedByName: currentUser?.name || 'Murugan Velu',
               callingStatus: 'Pending',
