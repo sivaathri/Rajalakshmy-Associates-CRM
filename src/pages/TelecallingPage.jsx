@@ -22,7 +22,8 @@ import {
   TrendingUp,
   FileText,
   Database,
-  UserCheck
+  UserCheck,
+  MapPin
 } from 'lucide-react';
 import {
   PieChart,
@@ -131,7 +132,7 @@ export const TelecallingPage = () => {
         if (c.callingStatus !== 'Reminder') return false;
         if (currentUser?.role === 'RM' && c.actionedBy !== currentUser.id && c.assignedTo !== currentUser.id) return false;
       } else if (queueFilter === 'completed') {
-        if (!['OK', 'Not Attend', 'No Need'].includes(c.callingStatus)) return false;
+        if (!['OK', 'Not Attend', 'No Need', 'Field Visit'].includes(c.callingStatus)) return false;
         if (currentUser?.role === 'RM' && c.actionedBy !== currentUser.id) return false;
       }
 
@@ -162,7 +163,7 @@ export const TelecallingPage = () => {
   useEffect(() => {
     if (currentFocusedContact) {
       setOutcome(
-        ['OK', 'Not Attend', 'No Need', 'Reminder'].includes(currentFocusedContact.callingStatus)
+        ['OK', 'Not Attend', 'No Need', 'Reminder', 'Field Visit'].includes(currentFocusedContact.callingStatus)
           ? currentFocusedContact.callingStatus
           : 'OK'
       );
@@ -184,7 +185,7 @@ export const TelecallingPage = () => {
       outcome,
       duration: 'Manual Call',
       remarks: remarks.trim() || `Customer call response: ${outcome}`,
-      reminderDate: outcome === 'Reminder' ? reminderDate : ''
+      reminderDate: (outcome === 'Reminder' || outcome === 'Field Visit') ? reminderDate : ''
     });
 
     // Reset remarks for the next lead
@@ -237,14 +238,16 @@ export const TelecallingPage = () => {
     OK: filteredCalls.filter(c => c.outcome === 'OK').length,
     NotAttend: filteredCalls.filter(c => c.outcome === 'Not Attend').length,
     NoNeed: filteredCalls.filter(c => c.outcome === 'No Need').length,
-    Reminder: filteredCalls.filter(c => c.outcome === 'Reminder').length
+    Reminder: filteredCalls.filter(c => c.outcome === 'Reminder').length,
+    FieldVisit: filteredCalls.filter(c => c.outcome === 'Field Visit').length
   };
 
   const outcomePieData = [
     { name: 'OK (Interested)', value: outcomeCounts.OK, color: '#10B981' },
     { name: 'Not Attend', value: outcomeCounts.NotAttend, color: '#3B82F6' },
     { name: 'No Need', value: outcomeCounts.NoNeed, color: '#F43F5E' },
-    { name: 'Reminder', value: outcomeCounts.Reminder, color: '#F59E0B' }
+    { name: 'Reminder', value: outcomeCounts.Reminder, color: '#F59E0B' },
+    { name: 'Field Visit', value: outcomeCounts.FieldVisit, color: '#8B5CF6' }
   ].filter(d => d.value > 0);
 
   const handleExportCalls = () => {
@@ -627,7 +630,7 @@ export const TelecallingPage = () => {
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                       Select Call Outcome <span className="text-rose-500">*</span>
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                       {/* OK */}
                       <button
                         type="button"
@@ -687,6 +690,21 @@ export const TelecallingPage = () => {
                         <span className="text-xs font-bold">4. Reminder</span>
                         <span className="text-[10px] text-slate-500">Schedule Follow-up</span>
                       </button>
+
+                      {/* Field Visit */}
+                      <button
+                        type="button"
+                        onClick={() => setOutcome('Field Visit')}
+                        className={`p-3 rounded-xl border-2 transition flex flex-col items-center justify-center text-center ${
+                          outcome === 'Field Visit'
+                            ? 'border-purple-600 bg-purple-50 text-purple-950 font-bold ring-2 ring-purple-500/20 shadow-sm'
+                            : 'border-slate-200 hover:border-purple-300 hover:bg-slate-50 text-slate-700'
+                        }`}
+                      >
+                        <MapPin className={`w-5 h-5 mb-1 ${outcome === 'Field Visit' ? 'text-purple-600' : 'text-slate-400'}`} />
+                        <span className="text-xs font-bold">5. Field Visit</span>
+                        <span className="text-[10px] text-slate-500">In-Person / Meeting</span>
+                      </button>
                     </div>
                   </div>
 
@@ -725,8 +743,43 @@ export const TelecallingPage = () => {
                     </div>
                   )}
 
+                  {/* Conditional Field Visit Section */}
+                  {outcome === 'Field Visit' && (
+                    <div className="rounded-xl border border-purple-300 bg-purple-50/80 p-3.5 space-y-2.5 animate-fade-in">
+                      <div className="flex items-center gap-2 text-xs font-bold text-purple-900">
+                        <MapPin className="w-4 h-4 text-purple-700" />
+                        <span>Schedule Field Visit & Details</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Planned Visit Date (Optional)
+                          </label>
+                          <input
+                            type="date"
+                            value={reminderDate}
+                            onChange={(e) => setReminderDate(e.target.value)}
+                            className="w-full text-xs rounded-lg border border-slate-300 px-3 py-2 bg-white focus:outline-none focus:border-burgundy-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Meeting Location / Agenda
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Client requested factory visit for machine financing"
+                            value={remarks}
+                            onChange={(e) => setRemarks(e.target.value)}
+                            className="w-full text-xs rounded-lg border border-slate-300 px-3 py-2 bg-white focus:outline-none focus:border-burgundy-800"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Discussion Remarks */}
-                  {outcome !== 'Reminder' && (
+                  {outcome !== 'Reminder' && outcome !== 'Field Visit' && (
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                         Call Discussion Remarks & Notes
@@ -931,7 +984,7 @@ export const TelecallingPage = () => {
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <span>My Actioned Calls ({assignedCustomers.filter(c => ['OK', 'Not Attend', 'No Need'].includes(c.callingStatus) && c.actionedBy === currentUser?.id).length})</span>
+                <span>My Actioned Calls ({assignedCustomers.filter(c => ['OK', 'Not Attend', 'No Need', 'Field Visit'].includes(c.callingStatus) && c.actionedBy === currentUser?.id).length})</span>
               </button>
             </div>
 
@@ -1012,7 +1065,7 @@ export const TelecallingPage = () => {
       {activeTab === 'history' && (
         <div className="space-y-6">
           {/* Calling Report KPI Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Calls (Filtered)</span>
               <span className="text-2xl font-black text-slate-900">{totalCallsLogged}</span>
@@ -1031,7 +1084,13 @@ export const TelecallingPage = () => {
               <span className="text-[10px] text-amber-700 block mt-1">Follow-ups scheduled</span>
             </div>
 
-            <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 shadow-sm">
+            <div className="rounded-xl border border-purple-200 bg-purple-50/60 p-4 shadow-sm">
+              <span className="text-[10px] uppercase font-bold text-purple-800 block">5. Field Visits</span>
+              <span className="text-2xl font-black text-purple-900">{outcomeCounts.FieldVisit}</span>
+              <span className="text-[10px] text-purple-700 block mt-1">Client visits requested</span>
+            </div>
+
+            <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 shadow-sm col-span-2 sm:col-span-1">
               <span className="text-[10px] uppercase font-bold text-blue-800 block">2 & 3. Attend / No Need</span>
               <span className="text-2xl font-black text-blue-900">{outcomeCounts.NotAttend + outcomeCounts.NoNeed}</span>
               <span className="text-[10px] text-blue-700 block mt-1">Not reachable / closed</span>
@@ -1069,17 +1128,20 @@ export const TelecallingPage = () => {
                 </ResponsiveContainer>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-center text-xs mt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center text-xs mt-2">
                 <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-800 font-semibold border border-emerald-100">
                   OK: {outcomeCounts.OK}
                 </span>
                 <span className="px-2 py-1 rounded bg-amber-50 text-amber-800 font-semibold border border-amber-100">
                   Reminder: {outcomeCounts.Reminder}
                 </span>
+                <span className="px-2 py-1 rounded bg-purple-50 text-purple-800 font-semibold border border-purple-100">
+                  Field Visit: {outcomeCounts.FieldVisit}
+                </span>
                 <span className="px-2 py-1 rounded bg-blue-50 text-blue-800 font-semibold border border-blue-100">
                   Not Attend: {outcomeCounts.NotAttend}
                 </span>
-                <span className="px-2 py-1 rounded bg-rose-50 text-rose-800 font-semibold border border-rose-100">
+                <span className="px-2 py-1 rounded bg-rose-50 text-rose-800 font-semibold border border-rose-100 sm:col-span-2">
                   No Need: {outcomeCounts.NoNeed}
                 </span>
               </div>
@@ -1118,6 +1180,7 @@ export const TelecallingPage = () => {
                       <option value="Not Attend">Not Attend</option>
                       <option value="No Need">No Need</option>
                       <option value="Reminder">Reminder</option>
+                      <option value="Field Visit">Field Visit</option>
                     </select>
                   </div>
 

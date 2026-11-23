@@ -403,9 +403,9 @@ export const CRMProvider = ({ children }) => {
       callDate,
       callTime,
       duration,
-      outcome, // 'OK' | 'Not Attend' | 'No Need' | 'Reminder'
+      outcome, // 'OK' | 'Not Attend' | 'No Need' | 'Reminder' | 'Field Visit'
       remarks,
-      reminderDate: outcome === 'Reminder' ? reminderDate : ''
+      reminderDate: (outcome === 'Reminder' || outcome === 'Field Visit') ? reminderDate : ''
     };
 
     setCalls(prev => [newCall, ...prev]);
@@ -420,7 +420,7 @@ export const CRMProvider = ({ children }) => {
       actionedByName: currentUser?.name || 'Ananya Subramanian'
     };
 
-    if (outcome === 'Reminder') {
+    if (outcome === 'Reminder' || outcome === 'Field Visit') {
       customerUpdates.reminderDate = reminderDate;
       customerUpdates.reminderRemark = remarks;
     } else {

@@ -10,6 +10,7 @@ import {
   PhoneMissed,
   XCircle,
   CalendarClock,
+  MapPin,
   X,
   AlertTriangle,
   ArrowRight
@@ -94,7 +95,8 @@ export const FollowUpReminderModal = () => {
       const defaultNotes = {
         'OK': 'Interested / Converted - Customer confirmed interest in advisory services',
         'Not Attend': 'Not Attend - Ringing / Busy / Switched Off',
-        'No Need': 'No Need - Not Interested / DND requested'
+        'No Need': 'No Need - Not Interested / DND requested',
+        'Field Visit': 'Field Visit - Customer requested direct / in-person meeting or site inspection'
       };
       const note = remarksMap[customerId]?.trim() || defaultNotes[outcome] || `Outcome: ${outcome}`;
 
@@ -102,7 +104,8 @@ export const FollowUpReminderModal = () => {
         customerId,
         outcome,
         duration: 'Manual Call',
-        remarks: note
+        remarks: note,
+        reminderDate: outcome === 'Field Visit' ? (rescheduleDates[customerId] || '') : ''
       });
 
       updateCustomer(customerId, {
@@ -211,7 +214,7 @@ export const FollowUpReminderModal = () => {
                           )}
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                           {/* 1. OK */}
                           <button
                             type="button"
@@ -271,6 +274,21 @@ export const FollowUpReminderModal = () => {
                             <span className="text-xs font-bold">4. Reminder</span>
                             <span className="text-[10px] text-slate-500">Schedule Follow-up</span>
                           </button>
+
+                          {/* 5. Field Visit */}
+                          <button
+                            type="button"
+                            onClick={() => handleSelectOutcome(c.id, 'Field Visit')}
+                            className={`p-2.5 rounded-xl border-2 transition flex flex-col items-center text-center ${
+                              activeOutcome === 'Field Visit'
+                                ? 'border-purple-600 bg-purple-50 text-purple-950 font-bold ring-2 ring-purple-500/20 shadow-sm'
+                                : 'border-slate-200 bg-white hover:border-purple-300 hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <MapPin className={`w-4 h-4 mb-1 ${activeOutcome === 'Field Visit' ? 'text-purple-600' : 'text-slate-400'}`} />
+                            <span className="text-xs font-bold">5. Field Visit</span>
+                            <span className="text-[10px] text-slate-500">In-Person / Meeting</span>
+                          </button>
                         </div>
 
                         {/* Inline Input & Confirmation Bar */}
@@ -296,6 +314,32 @@ export const FollowUpReminderModal = () => {
                                   <input
                                     type="text"
                                     placeholder="e.g. Call back at 4:30 PM, client reviewing file"
+                                    value={remarksMap[c.id] || ''}
+                                    onChange={(e) => setRemarksMap({ ...remarksMap, [c.id]: e.target.value })}
+                                    className="w-full text-xs rounded-lg border border-slate-300 px-2.5 py-1.5 focus:outline-none focus:border-burgundy-800"
+                                  />
+                                </div>
+                              </div>
+                            ) : activeOutcome === 'Field Visit' ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                    Planned Visit Date (Optional)
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={rescheduleDates[c.id] || ''}
+                                    onChange={(e) => setRescheduleDates({ ...rescheduleDates, [c.id]: e.target.value })}
+                                    className="w-full text-xs rounded-lg border border-slate-300 px-2.5 py-1.5 focus:outline-none focus:border-burgundy-800"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                    Visit Location / Agenda
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. In-person visit at client office / factory"
                                     value={remarksMap[c.id] || ''}
                                     onChange={(e) => setRemarksMap({ ...remarksMap, [c.id]: e.target.value })}
                                     className="w-full text-xs rounded-lg border border-slate-300 px-2.5 py-1.5 focus:outline-none focus:border-burgundy-800"
@@ -341,6 +385,8 @@ export const FollowUpReminderModal = () => {
                                     ? 'bg-blue-700 hover:bg-blue-800'
                                     : activeOutcome === 'No Need'
                                     ? 'bg-rose-700 hover:bg-rose-800'
+                                    : activeOutcome === 'Field Visit'
+                                    ? 'bg-purple-700 hover:bg-purple-800'
                                     : 'bg-amber-700 hover:bg-amber-800'
                                 }`}
                               >

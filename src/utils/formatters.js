@@ -73,6 +73,8 @@ export const getStatusBadgeClass = (status) => {
     case 'rejected':
     case 'inactive':
       return 'bg-rose-50 text-rose-800 border-rose-200 ring-1 ring-rose-500/20';
+    case 'field visit':
+      return 'bg-purple-50 text-purple-800 border-purple-200 ring-1 ring-purple-500/20';
     default:
       return 'bg-slate-100 text-slate-700 border-slate-200';
   }
@@ -82,7 +84,7 @@ export const getStatusBadgeClass = (status) => {
 export const exportToCSV = (data, filename = 'export.csv') => {
   if (!data || !data.length) return;
   const headers = Object.keys(data[0]);
-  const rows = data.map(obj => 
+  const rows = data.map(obj =>
     headers.map(header => {
       let val = obj[header];
       if (val === null || val === undefined) val = '';

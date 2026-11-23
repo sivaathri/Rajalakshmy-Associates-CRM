@@ -290,6 +290,11 @@ export const CustomerDatabasePage = () => {
                           Due: {formatDate(cust.reminderDate)}
                         </span>
                       )}
+                      {cust.callingStatus === 'Field Visit' && cust.reminderDate && (
+                        <span className="block text-[10px] text-purple-800 font-semibold mt-0.5">
+                          Visit: {formatDate(cust.reminderDate)}
+                        </span>
+                      )}
                     </td>
 
                     <td className="px-4 py-3 text-right">

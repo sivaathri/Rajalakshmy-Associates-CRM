@@ -1360,6 +1360,20 @@ export const INITIAL_CALL_HISTORY = [
     reminderDate: ""
   },
   {
+    id: "CALL-815",
+    customerId: "RA-CUST-1005",
+    customerName: "G. Soundarapandian",
+    mobile: "+91 98405 66785",
+    employeeId: "EMP004",
+    employeeName: "Ananya Subramanian",
+    callDate: "2026-11-16",
+    callTime: "03:15 PM",
+    duration: "4m 50s",
+    outcome: "Field Visit",
+    remarks: "In-person visit scheduled to inspect transport fleet for asset loan.",
+    reminderDate: "2026-11-18"
+  },
+  {
     id: "CALL-803",
     customerId: "RA-CUST-1026",
     customerName: "Anand Natarajan",
