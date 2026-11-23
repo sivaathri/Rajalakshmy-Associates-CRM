@@ -14,7 +14,6 @@ import { DashboardPage } from './pages/DashboardPage';
 import { CustomerManagementPage } from './pages/CustomerManagementPage';
 import { CustomerDatabasePage } from './pages/CustomerDatabasePage';
 import { TelecallingPage } from './pages/TelecallingPage';
-import { EnquiryPage } from './pages/EnquiryPage';
 import { DailyActivitiesPage } from './pages/DailyActivitiesPage';
 import { PerformancePage } from './pages/PerformancePage';
 import { ResignationPage } from './pages/ResignationPage';
@@ -49,7 +48,6 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
     if (path.startsWith('/customers/old/unknown') || path.startsWith('/database/old/unknown')) return 'Database • Old Unknown Numbers';
     if (path.startsWith('/customers/new/known') || path.startsWith('/database/new/known')) return 'Database • New Known Numbers';
     if (path.startsWith('/customers/new/unknown') || path.startsWith('/database/new/unknown')) return 'Database • New Unknown Numbers';
-    if (path.startsWith('/enquiry') || path.startsWith('/enquiries')) return 'Website Enquiries • rajalakshmyassociates.com';
     if (path.startsWith('/leads') || path.startsWith('/lead')) return 'Lead Management Pipeline';
     if (path.startsWith('/bank-logins') || path.startsWith('/logins')) return 'Bank File Login & 2-Day Routine Console';
     if (path.startsWith('/daily-activities')) return 'Field Sales Daily Activities';
@@ -141,15 +139,6 @@ export function App() {
               }
             />
 
-            <Route
-              path="/enquiry"
-              element={
-                <ProtectedLayout requiredRoute="enquiry">
-                  <EnquiryPage />
-                </ProtectedLayout>
-              }
-            />
-
             {/* Lead Management Pipeline (Req 2) */}
             <Route
               path="/leads"
@@ -179,14 +168,9 @@ export function App() {
               }
             />
 
-            <Route
-              path="/enquiries"
-              element={
-                <ProtectedLayout requiredRoute="enquiry">
-                  <EnquiryPage />
-                </ProtectedLayout>
-              }
-            />
+            {/* Legacy enquiry redirects */}
+            <Route path="/enquiry" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/enquiries" element={<Navigate to="/dashboard" replace />} />
 
             <Route
               path="/daily-activities"

@@ -85,8 +85,6 @@ export const AuthProvider = ({ children }) => {
     switch (route) {
       case 'dashboard':
       case 'attendance':
-      case 'enquiry':
-      case 'enquiries':
       case 'lead':
       case 'leads':
       case 'login':
