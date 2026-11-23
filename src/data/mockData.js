@@ -2369,3 +2369,57 @@ export const INITIAL_BANK_LOGINS = [
     rejectionRemarks: "Low CIBIL score (612) and past bounce in credit card statement."
   }
 ];
+
+// ----------------------------------------------------
+// LEAVE MANAGEMENT & APPROVALS
+// ----------------------------------------------------
+export const INITIAL_LEAVES = [
+  {
+    id: "LV-101",
+    employeeId: "EMP004",
+    employeeName: "Ananya Subramanian",
+    employeeRole: "RM",
+    leaveType: "Casual Leave (CL)",
+    startDate: "2026-11-25",
+    endDate: "2026-11-26",
+    daysCount: 2,
+    reason: "Family function in hometown (Madurai)",
+    status: "Pending Approval",
+    requestedAt: "2026-11-22",
+    actionedBy: "",
+    actionedAt: "",
+    actionRemarks: ""
+  },
+  {
+    id: "LV-102",
+    employeeId: "EMP005",
+    employeeName: "Vijay Anand",
+    employeeRole: "Sales Manager",
+    leaveType: "Sick Leave (SL)",
+    startDate: "2026-11-24",
+    endDate: "2026-11-24",
+    daysCount: 1,
+    reason: "Viral fever and doctor consultation",
+    status: "Pending Approval",
+    requestedAt: "2026-11-23",
+    actionedBy: "",
+    actionedAt: "",
+    actionRemarks: ""
+  },
+  {
+    id: "LV-103",
+    employeeId: "EMP002",
+    employeeName: "Karthik Raja",
+    employeeRole: "Manager",
+    leaveType: "Earned Leave (EL)",
+    startDate: "2026-11-10",
+    endDate: "2026-11-12",
+    daysCount: 3,
+    reason: "Annual personal vacation",
+    status: "Approved",
+    requestedAt: "2026-11-05",
+    actionedBy: "Rajalakshmy S (Admin)",
+    actionedAt: "2026-11-06",
+    actionRemarks: "Approved. Handover tasks arranged."
+  }
+];

@@ -10,7 +10,8 @@ import {
   INITIAL_EMPLOYEES,
   INITIAL_WEBSITE_ENQUIRIES,
   INITIAL_LEADS,
-  INITIAL_BANK_LOGINS
+  INITIAL_BANK_LOGINS,
+  INITIAL_LEAVES
 } from '../data/mockData';
 import { useAuth } from './AuthContext';
 import { formatDateDDMMYYYY } from '../utils/formatters';
@@ -27,7 +28,8 @@ const STORAGE_KEYS = {
   ATTENDANCE: 'rajalakshmy_attendance_v1',
   ENQUIRIES: 'rajalakshmy_enquiries_v1',
   LEADS: 'rajalakshmy_leads_v1',
-  BANK_LOGINS: 'rajalakshmy_bank_logins_v1'
+  BANK_LOGINS: 'rajalakshmy_bank_logins_v1',
+  LEAVES: 'rajalakshmy_leaves_v1'
 };
 
 // Helper to guarantee strictly unique RA-CUST- IDs across all records
@@ -227,6 +229,16 @@ export const CRMProvider = ({ children }) => {
     }
   });
 
+  // Employee Leaves State
+  const [leaves, setLeaves] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.LEAVES);
+      return saved ? JSON.parse(saved) : INITIAL_LEAVES;
+    } catch {
+      return INITIAL_LEAVES;
+    }
+  });
+
   // Active call state for RM telecalling
   const [activeCallContact, setActiveCallContact] = useState(null);
   const [isCallingModalOpen, setIsCallingModalOpen] = useState(false);
@@ -272,6 +284,10 @@ export const CRMProvider = ({ children }) => {
     localStorage.setItem(STORAGE_KEYS.BANK_LOGINS, JSON.stringify(bankLogins));
   }, [bankLogins]);
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(leaves));
+  }, [leaves]);
+
   // Reset to initial mock data
   const resetToFactoryDefaults = () => {
     setCustomers(INITIAL_CUSTOMERS);
@@ -283,6 +299,7 @@ export const CRMProvider = ({ children }) => {
     setEnquiries(INITIAL_WEBSITE_ENQUIRIES);
     setLeads(INITIAL_LEADS);
     setBankLogins(INITIAL_BANK_LOGINS);
+    setLeaves(INITIAL_LEAVES);
     showToast('Reset all database tables to initial corporate mock data', 'info');
   };
 
@@ -794,6 +811,60 @@ export const CRMProvider = ({ children }) => {
   };
 
   // ----------------------------------------------------
+  // LEAVE MANAGEMENT & APPROVAL WORKFLOW
+  // ----------------------------------------------------
+  const requestLeave = (leaveData) => {
+    if (!currentUser) return;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const newId = `LV-${Date.now().toString().slice(-4)}`;
+
+    const newLeave = {
+      id: newId,
+      employeeId: currentUser.id,
+      employeeName: currentUser.name,
+      employeeRole: currentUser.role,
+      leaveType: leaveData.leaveType || 'Casual Leave (CL)',
+      startDate: leaveData.startDate,
+      endDate: leaveData.endDate || leaveData.startDate,
+      daysCount: Number(leaveData.daysCount) || 1,
+      reason: leaveData.reason || '',
+      status: 'Pending Approval',
+      requestedAt: todayStr,
+      actionedBy: '',
+      actionedAt: '',
+      actionRemarks: ''
+    };
+
+    setLeaves(prev => [newLeave, ...prev]);
+    showToast(`Leave application submitted for ${newLeave.daysCount} day(s)! Waiting for Admin approval.`, 'success');
+    return newLeave;
+  };
+
+  const approveLeave = (leaveId, remarks = '') => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    setLeaves(prev => prev.map(l => l.id === leaveId ? {
+      ...l,
+      status: 'Approved',
+      actionedBy: `${currentUser?.name || 'Admin'} (${currentUser?.role || 'Admin'})`,
+      actionedAt: todayStr,
+      actionRemarks: remarks || 'Leave request approved'
+    } : l));
+    showToast(`Leave requisition ${leaveId} has been APPROVED!`, 'success');
+  };
+
+  const rejectLeave = (leaveId, remarks = '') => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    setLeaves(prev => prev.map(l => l.id === leaveId ? {
+      ...l,
+      status: 'Rejected',
+      actionedBy: `${currentUser?.name || 'Admin'} (${currentUser?.role || 'Admin'})`,
+      actionedAt: todayStr,
+      actionRemarks: remarks || 'Leave request declined'
+    } : l));
+    showToast(`Leave requisition ${leaveId} has been REJECTED.`, 'info');
+  };
+
+  // ----------------------------------------------------
   // WEBSITE INBOUND ENQUIRIES (https://rajalakshmyassociates.com/)
   // ----------------------------------------------------
   const addEnquiry = (data) => {
@@ -1180,6 +1251,7 @@ export const CRMProvider = ({ children }) => {
         enquiries,
         leads,
         bankLogins,
+        leaves,
         employees: INITIAL_EMPLOYEES,
         // Actions
         addCustomer,
@@ -1200,6 +1272,9 @@ export const CRMProvider = ({ children }) => {
         submitAdvance,
         updateAdvanceStatus,
         punchIn,
+        requestLeave,
+        approveLeave,
+        rejectLeave,
         addEnquiry,
         updateEnquiryStatus,
         convertEnquiryToLead,

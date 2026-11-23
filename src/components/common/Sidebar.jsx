@@ -28,7 +28,7 @@ import { formatDateDDMMYYYY } from '../../utils/formatters';
 
 export const Sidebar = ({ isOpen, setIsOpen }) => {
   const { currentUser, canAccessRoute } = useAuth();
-  const { customers, performanceCases, advanceAmounts, resignations, attendance = [], leads = [], bankLogins = [] } = useCRM();
+  const { customers, performanceCases, advanceAmounts, resignations, attendance = [], leads = [], bankLogins = [], leaves = [] } = useCRM();
   const location = useLocation();
 
   // Collapsible sub-menus
@@ -56,6 +56,10 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
   const pendingResignationCount = resignations.filter(r => {
     return r.employeeId === currentUser?.id && r.status === 'Pending Approval';
   }).length;
+
+  const pendingLeavesAdminCount = (currentUser?.role === 'Admin' || currentUser?.role === 'Manager')
+    ? (leaves || []).filter(l => l.status === 'Pending Approval').length
+    : 0;
 
   // Check if current user has punched in for today (format: DD-MM-YYYY)
   const todayFormatted = formatDateDDMMYYYY(new Date());
@@ -484,13 +488,20 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
               {isExpanded && <span>Attendance</span>}
             </div>
             {isExpanded && (
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                userTodayPunched
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
-                  : 'bg-amber-400 text-amber-950 font-extrabold'
-              }`}>
-                {userTodayPunched ? 'Punched' : 'Punch In'}
-              </span>
+              <div className="flex items-center gap-1.5">
+                {pendingLeavesAdminCount > 0 && (
+                  <span className="text-[10px] bg-amber-400 text-amber-950 font-bold px-1.5 py-0.5 rounded-full animate-pulse" title="Pending Leave Requests">
+                    {pendingLeavesAdminCount} Leave{pendingLeavesAdminCount > 1 ? 's' : ''}
+                  </span>
+                )}
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                  userTodayPunched
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                    : 'bg-amber-400 text-amber-950 font-extrabold'
+                }`}>
+                  {userTodayPunched ? 'Punched' : 'Punch In'}
+                </span>
+              </div>
             )}
           </NavLink>
         )}
