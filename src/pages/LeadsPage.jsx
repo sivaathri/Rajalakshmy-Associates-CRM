@@ -22,7 +22,8 @@ import {
   Download,
   X,
   PhoneCall,
-  Eye
+  Eye,
+  Edit
 } from 'lucide-react';
 import { formatCurrency, formatDate, exportToCSV } from '../utils/formatters';
 
@@ -44,6 +45,17 @@ export const LeadsPage = () => {
   const [assigningLead, setAssigningLead] = useState(null);
   const [convertingLead, setConvertingLead] = useState(null);
   const [viewingLead, setViewingLead] = useState(null);
+  const [editingLead, setEditingLead] = useState(null);
+
+  // Edit Lead Form State
+  const [editLeadName, setEditLeadName] = useState('');
+  const [editLeadMobile, setEditLeadMobile] = useState('');
+  const [editLeadBusiness, setEditLeadBusiness] = useState('');
+  const [editLeadCity, setEditLeadCity] = useState('');
+  const [editLeadService, setEditLeadService] = useState('');
+  const [editLeadAmount, setEditLeadAmount] = useState('');
+  const [editLeadStatus, setEditLeadStatus] = useState('');
+  const [editLeadRemarks, setEditLeadRemarks] = useState('');
 
   // Add Lead Form State
   const [newLeadName, setNewLeadName] = useState('');
@@ -195,6 +207,37 @@ export const LeadsPage = () => {
     setConvertingLead(null);
   };
 
+  const handleOpenEditModal = (lead) => {
+    setEditingLead(lead);
+    setEditLeadName(lead.customerName || '');
+    setEditLeadMobile(lead.mobile || '');
+    setEditLeadBusiness(lead.business || '');
+    setEditLeadCity(lead.city || 'Chennai');
+    setEditLeadService(lead.requiredService || 'Working Capital (CC/OD)');
+    setEditLeadAmount(lead.estimatedAmount || '');
+    setEditLeadStatus(lead.status || 'New Lead');
+    setEditLeadRemarks(lead.remarks || '');
+    setViewingLead(null);
+  };
+
+  const handleSaveEditLead = (e) => {
+    e.preventDefault();
+    if (!editingLead) return;
+
+    updateLead(editingLead.id, {
+      customerName: editLeadName.trim() || editingLead.customerName,
+      mobile: editLeadMobile.trim() || editingLead.mobile,
+      business: editLeadBusiness.trim() || editingLead.business,
+      city: editLeadCity.trim() || editingLead.city,
+      requiredService: editLeadService,
+      estimatedAmount: Number(editLeadAmount) || editingLead.estimatedAmount,
+      status: editLeadStatus,
+      remarks: editLeadRemarks.trim()
+    });
+
+    setEditingLead(null);
+  };
+
   const handleExport = () => {
     const exportData = filteredLeads.map(l => ({
       "Lead ID": l.id,
@@ -226,9 +269,7 @@ export const LeadsPage = () => {
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             Lead Management Console
           </h2>
-          <p className="text-xs text-white/70 mt-1 max-w-2xl">
-            Assign prospects to yourself (RM) or hand off to Sales Managers for field visits. Push qualified leads straight to Bank Login.
-          </p>
+         
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -1149,19 +1190,11 @@ export const LeadsPage = () => {
               <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => {
-                    startCallingCustomer({
-                      id: viewingLead.customerId || viewingLead.id,
-                      name: viewingLead.customerName,
-                      mobile: viewingLead.mobile,
-                      business: viewingLead.business,
-                      city: viewingLead.city
-                    });
-                  }}
-                  className="px-3 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1.5 transition"
+                  onClick={() => handleOpenEditModal(viewingLead)}
+                  className="px-3.5 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
                 >
-                  <PhoneCall className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Call Client</span>
+                  <Edit className="w-3.5 h-3.5 text-burgundy-800" />
+                  <span>Edit Lead</span>
                 </button>
 
                 <div className="flex items-center gap-2">
@@ -1189,6 +1222,159 @@ export const LeadsPage = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* MODAL 5: EDIT LEAD DETAILS                           */}
+      {/* ---------------------------------------------------- */}
+      {editingLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
+              <div>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-gold-300 block">Edit Lead Record</span>
+                <h3 className="text-base font-bold text-white">Edit: {editingLead.customerName} ({editingLead.id})</h3>
+              </div>
+              <button
+                onClick={() => setEditingLead(null)}
+                className="rounded-lg p-1 text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditLead} className="p-6 space-y-3.5 max-h-[75vh] overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Client Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editLeadName}
+                    onChange={(e) => setEditLeadName(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Mobile Number <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={editLeadMobile}
+                    onChange={(e) => setEditLeadMobile(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Business / Enterprise
+                  </label>
+                  <input
+                    type="text"
+                    value={editLeadBusiness}
+                    onChange={(e) => setEditLeadBusiness(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    City / Location
+                  </label>
+                  <input
+                    type="text"
+                    value={editLeadCity}
+                    onChange={(e) => setEditLeadCity(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Financial Service
+                  </label>
+                  <select
+                    value={editLeadService}
+                    onChange={(e) => setEditLeadService(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800"
+                  >
+                    <option value="Working Capital (CC/OD)">Working Capital (CC/OD)</option>
+                    <option value="Term Loan for Machinery">Term Loan for Machinery</option>
+                    <option value="Business Loan">Business Loan</option>
+                    <option value="Commercial Vehicle Finance">Commercial Vehicle Finance</option>
+                    <option value="LAP (Loan Against Property)">LAP (Loan Against Property)</option>
+                    <option value="Solar Project Finance">Solar Project Finance</option>
+                    <option value="Home Loan">Home Loan</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Loan Requirement (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={editLeadAmount}
+                    onChange={(e) => setEditLeadAmount(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Lead Status
+                </label>
+                <select
+                  value={editLeadStatus}
+                  onChange={(e) => setEditLeadStatus(e.target.value)}
+                  className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800 font-medium"
+                >
+                  <option value="New Lead">New Lead</option>
+                  <option value="Discussion in Progress">Discussion in Progress</option>
+                  <option value="Field Visit Scheduled">Field Visit Scheduled</option>
+                  <option value="Ready for Login">Ready for Login</option>
+                  <option value="Converted to Login">Converted to Login</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Discussion Remarks & Notes
+                </label>
+                <textarea
+                  rows={3}
+                  value={editLeadRemarks}
+                  onChange={(e) => setEditLeadRemarks(e.target.value)}
+                  className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:outline-none focus:border-burgundy-800"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingLead(null)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-burgundy-900 hover:bg-burgundy-800 rounded-xl shadow-md transition"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
