@@ -100,6 +100,8 @@ export const AuthProvider = ({ children }) => {
       case 'performance':
         return ['Admin', 'Manager', 'RM', 'Sales Manager', 'Sales Executive'].includes(role);
       case 'customers':
+        return ['Admin', 'Manager', 'Ops'].includes(role);
+      case 'database':
         return ['Admin', 'Manager', 'Ops', 'RM'].includes(role);
       case 'telecalling':
         return ['Admin', 'Manager', 'RM'].includes(role);

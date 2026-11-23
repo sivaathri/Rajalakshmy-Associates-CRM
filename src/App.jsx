@@ -126,7 +126,7 @@ export function App() {
             <Route
               path="/customers/:dbType/:custType"
               element={
-                <ProtectedLayout requiredRoute="customers">
+                <ProtectedLayout requiredRoute="database">
                   <CustomerDatabasePage />
                 </ProtectedLayout>
               }
@@ -135,7 +135,7 @@ export function App() {
             <Route
               path="/database/:dbType/:custType"
               element={
-                <ProtectedLayout requiredRoute="customers">
+                <ProtectedLayout requiredRoute="database">
                   <CustomerDatabasePage />
                 </ProtectedLayout>
               }

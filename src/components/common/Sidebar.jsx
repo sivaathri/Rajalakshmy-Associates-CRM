@@ -219,8 +219,8 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
           </NavLink>
         )}
 
-        {/* Dedicated Customer Management Menu */}
-        {canAccessRoute('customers') && (
+        {/* Dedicated Customer Management Menu - Not shown for RM role */}
+        {canAccessRoute('customers') && currentUser?.role !== 'RM' && (
           <NavLink
             to="/customers"
             end
@@ -245,8 +245,8 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
           </NavLink>
         )}
 
-        {/* Database Tree (Old & New) */}
-        {canAccessRoute('customers') && (
+        {/* Database Tree (Old & New) - Fully accessible to RM, Admin, Manager, Ops */}
+        {canAccessRoute('database') && (
           <div>
             <button
               onClick={() => {
