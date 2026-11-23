@@ -16,6 +16,7 @@ import {
   IndianRupee,
   User,
   History,
+  Eye,
   X,
   ShieldCheck,
   ChevronRight,
@@ -567,14 +568,14 @@ export const BankLoginPage = () => {
                             </button>
                           )}
 
-                          {/* History View Button */}
+                          {/* View Details & History Button */}
                           <button
                             type="button"
                             onClick={() => setViewHistoryLogin(login)}
-                            className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition"
-                            title="View Follow-up Timeline & Notes"
+                            className="p-1.5 text-slate-500 hover:text-burgundy-900 rounded-lg hover:bg-slate-100 transition"
+                            title="View File Details & Follow-up Timeline"
                           >
-                            <History className="w-4 h-4" />
+                            <Eye className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
