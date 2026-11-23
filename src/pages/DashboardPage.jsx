@@ -32,7 +32,6 @@ import {
   Area
 } from 'recharts';
 import { formatCurrency, formatDate, getStatusBadgeClass } from '../utils/formatters';
-import { AddCustomerModal } from '../components/customers/AddCustomerModal';
 import { CaseSubmissionModal } from '../components/performance/CaseSubmissionModal';
 import { CustomerDetailModal } from '../components/customers/CustomerDetailModal';
 
@@ -59,7 +58,6 @@ export const DashboardPage = () => {
     ? calls.filter(c => c.employeeId === currentUser?.id || scopedCustomers.some(cust => cust.id === c.customerId))
     : calls;
 
-  const [isAddCustOpen, setIsAddCustOpen] = useState(false);
   const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
   const [selectedCustDetail, setSelectedCustDetail] = useState(null);
 
@@ -215,14 +213,6 @@ export const DashboardPage = () => {
           >
             <CalendarCheck className="w-4 h-4 text-gold-300" />
             <span>Open Follow-ups ({pendingFollowUps.length})</span>
-          </button>
-
-          <button
-            onClick={() => setIsAddCustOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-xs font-bold text-burgundy-900 hover:bg-slate-100 transition shadow-sm"
-          >
-            <PlusCircle className="w-4 h-4 text-burgundy-800" />
-            <span>Add Customer</span>
           </button>
 
           <button
@@ -501,11 +491,6 @@ export const DashboardPage = () => {
       </div>
 
       {/* Modals */}
-      <AddCustomerModal
-        isOpen={isAddCustOpen}
-        onClose={() => setIsAddCustOpen(false)}
-      />
-
       <CaseSubmissionModal
         isOpen={isCaseModalOpen}
         onClose={() => setIsCaseModalOpen(false)}
