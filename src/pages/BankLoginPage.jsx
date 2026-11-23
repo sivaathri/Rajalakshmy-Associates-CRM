@@ -261,8 +261,7 @@ export const BankLoginPage = () => {
   // Export
   const handleExport = () => {
     const exportData = filteredLogins.map(l => ({
-      "Login ID": l.id,
-      "Customer ID": l.customerId,
+      "Customer ID": l.customerId || l.id,
       "Customer Name": l.customerName,
       "Mobile Contact": l.mobile,
       "Business": l.business,
@@ -608,7 +607,7 @@ export const BankLoginPage = () => {
           <table className="w-full text-left text-xs text-slate-700 min-w-[950px]">
             <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3">Login ID</th>
+                <th className="px-4 py-3">Customer ID</th>
                 <th className="px-4 py-3">Customer / Enterprise (CRM)</th>
                 <th className="px-4 py-3">Bank & Loan Value</th>
                 <th className="px-4 py-3">2-Day Reminder & Updates</th>
@@ -632,20 +631,15 @@ export const BankLoginPage = () => {
                     <tr key={login.id} className={`hover:bg-slate-50/80 transition ${
                       isDue ? 'bg-amber-50/30' : ''
                     }`}>
-                      {/* Login ID & Date */}
+                      {/* Customer ID & Date */}
                       <td className="px-4 py-3">
-                        <span className="font-mono font-bold text-burgundy-900 block">{login.id}</span>
+                        <span className="font-mono font-bold text-burgundy-900 block">{login.customerId || login.id}</span>
                         <span className="text-[10px] text-slate-400 block mt-0.5">Logged: {formatDate(login.loginDate)}</span>
                       </td>
 
                       {/* Customer Info (Req 6: All are customers) */}
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-slate-900">{login.customerName}</span>
-                          <span className="text-[9px] bg-slate-100 border border-slate-200 text-slate-600 px-1 rounded font-mono">
-                            {login.customerId}
-                          </span>
-                        </div>
+                        <div className="font-bold text-slate-900">{login.customerName}</div>
                         <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                           <Building2 className="w-3 h-3 text-slate-400" />
                           <span>{login.business} • {login.city}</span>

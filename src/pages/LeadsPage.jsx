@@ -583,6 +583,13 @@ export const LeadsPage = () => {
                         }`}>
                           {lead.status}
                         </span>
+                        {lead.status === 'Converted to Login' && (
+                          <div className="mt-1 flex items-center gap-1">
+                            <span className="text-[10px] font-mono font-bold text-burgundy-900 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                              {lead.customerId || 'Customer Registered'}
+                            </span>
+                          </div>
+                        )}
                         {lead.remarks && (
                           <div className="text-[10px] text-slate-500 italic mt-1 line-clamp-1 max-w-xs">
                             "{lead.remarks}"
@@ -635,9 +642,16 @@ export const LeadsPage = () => {
                               <span>Login</span>
                             </button>
                           ) : (
-                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-                              ✓ In Bank
-                            </span>
+                            <div className="flex flex-col items-end">
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                                ✓ In Bank
+                              </span>
+                              {lead.customerId && (
+                                <span className="text-[9px] font-mono font-bold text-burgundy-900 mt-0.5">
+                                  {lead.customerId}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>
@@ -921,9 +935,17 @@ export const LeadsPage = () => {
             </div>
 
             <form onSubmit={handleConfirmConvert} className="p-6 space-y-3.5">
-              <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-200 text-xs">
-                <div className="font-bold text-emerald-950">{convertingLead.customerName}</div>
-                <div className="text-emerald-800 font-mono mt-0.5">{convertingLead.mobile} • {convertingLead.business}</div>
+              <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-200 text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-emerald-950">{convertingLead.customerName}</div>
+                  <span className="font-mono text-[10px] font-bold text-burgundy-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded">
+                    {convertingLead.customerId || 'Auto-Generates RA-CUST-'}
+                  </span>
+                </div>
+                <div className="text-emerald-800 font-mono">{convertingLead.mobile} • {convertingLead.business}</div>
+                <div className="text-[10px] text-emerald-700 font-semibold pt-1 border-t border-emerald-200/60">
+                  ✓ Automatically generates official Customer ID (RA-CUST-) upon Bank Login registration (No Login ID)
+                </div>
               </div>
 
               <div>

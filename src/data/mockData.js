@@ -2243,7 +2243,7 @@ export const INITIAL_LEADS = [
 // ----------------------------------------------------
 export const INITIAL_BANK_LOGINS = [
   {
-    id: "LOG-501",
+    id: "RA-CUST-1001",
     customerId: "RA-CUST-1001",
     customerName: "S. Swaminathan",
     mobile: "+91 98401 22341",
@@ -2276,7 +2276,7 @@ export const INITIAL_BANK_LOGINS = [
     rejectionRemarks: ""
   },
   {
-    id: "LOG-502",
+    id: "RA-CUST-1005",
     customerId: "RA-CUST-1005",
     customerName: "G. Soundarapandian",
     mobile: "+91 98405 66785",
@@ -2303,7 +2303,7 @@ export const INITIAL_BANK_LOGINS = [
     rejectionRemarks: ""
   },
   {
-    id: "LOG-503",
+    id: "RA-CUST-1002",
     customerId: "RA-CUST-1002",
     customerName: "Thirunavukkarasu M",
     mobile: "+91 98402 33452",
@@ -2342,7 +2342,7 @@ export const INITIAL_BANK_LOGINS = [
     rejectionRemarks: ""
   },
   {
-    id: "LOG-504",
+    id: "RA-CUST-1007",
     customerId: "RA-CUST-1007",
     customerName: "Radhakrishnan Nair",
     mobile: "+91 98407 88907",

@@ -214,7 +214,14 @@ export const CRMProvider = ({ children }) => {
   const [bankLogins, setBankLogins] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.BANK_LOGINS);
-      return saved ? JSON.parse(saved) : INITIAL_BANK_LOGINS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.map(b => ({
+          ...b,
+          id: (b.id && !b.id.startsWith('LOG-')) ? b.id : (b.customerId || b.id)
+        }));
+      }
+      return INITIAL_BANK_LOGINS;
     } catch {
       return INITIAL_BANK_LOGINS;
     }
@@ -916,10 +923,9 @@ export const CRMProvider = ({ children }) => {
     return d.toISOString().split('T')[0];
   };
 
-  // Add Bank Login (Req 4, 6: Ensure person is added as a customer)
+  // Add Bank Login (Req 4, 6: Ensure person is added as a customer with auto-generated Customer ID, NOT a login ID)
   const addBankLogin = (loginData) => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const newId = `LOG-${Date.now().toString().slice(-4)}`;
 
     // Ensure customer exists in Customer Directory (Req 6: Login persons all are as a customers)
     let custId = loginData.customerId;
@@ -931,7 +937,21 @@ export const CRMProvider = ({ children }) => {
     if (existingCust) {
       custId = existingCust.id;
     } else {
-      const newCust = addCustomer({
+      // Auto-generate Customer ID (RA-CUST-XXXX)
+      let maxNum = 1000;
+      customers.forEach(c => {
+        if (c.id && typeof c.id === 'string') {
+          const match = c.id.match(/\d+/);
+          if (match) {
+            const num = parseInt(match[0], 10);
+            if (!isNaN(num) && num > maxNum) maxNum = num;
+          }
+        }
+      });
+      custId = `RA-CUST-${maxNum + 1}`;
+
+      addCustomer({
+        id: custId,
         name: loginData.customerName || 'New Loan Client',
         mobile: loginData.mobile,
         business: loginData.business || 'General Client',
@@ -941,12 +961,11 @@ export const CRMProvider = ({ children }) => {
         databaseType: 'new',
         source: 'Bank Login'
       });
-      if (newCust) custId = newCust.id;
     }
 
     const newLogin = {
-      id: newId,
-      customerId: custId || `RA-CUST-${Date.now().toString().slice(-4)}`,
+      id: custId, // ID is the Customer ID! (NOT a login ID)
+      customerId: custId,
       customerName: loginData.customerName,
       mobile: loginData.mobile,
       business: loginData.business || 'General Business',
@@ -973,17 +992,55 @@ export const CRMProvider = ({ children }) => {
     };
 
     setBankLogins(prev => [newLogin, ...prev]);
-    showToast(`Bank Login ${newId} created for ${newLogin.customerName}! 2-day reminder scheduled.`, 'success');
+    showToast(`Registered Customer ${custId} into Bank Login with ${newLogin.bankName}!`, 'success');
     return newLogin;
   };
 
-  // Convert Lead to Login
+  // Convert Lead to Login (Auto-generates Customer ID RA-CUST-XXXX, NOT a login ID)
   const convertLeadToLogin = (leadId, loginData) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
 
+    // Check if customer already exists or auto-generate RA-CUST- ID
+    let custId = lead.customerId;
+    const existingCust = customers.find(c =>
+      (custId && c.id === custId) ||
+      (lead.mobile && c.mobile?.replace(/\D/g, '').slice(-10) === lead.mobile?.replace(/\D/g, '').slice(-10))
+    );
+
+    if (existingCust) {
+      custId = existingCust.id;
+    } else {
+      // Auto-generate Customer ID (RA-CUST-XXXX)
+      let maxNum = 1000;
+      customers.forEach(c => {
+        if (c.id && typeof c.id === 'string') {
+          const match = c.id.match(/\d+/);
+          if (match) {
+            const num = parseInt(match[0], 10);
+            if (!isNaN(num) && num > maxNum) maxNum = num;
+          }
+        }
+      });
+      custId = `RA-CUST-${maxNum + 1}`;
+
+      // Automatically register into Customer Management directory
+      addCustomer({
+        id: custId,
+        name: lead.customerName || 'Customer',
+        mobile: lead.mobile,
+        business: lead.business || 'General Business',
+        city: lead.city || 'Chennai',
+        state: lead.state || 'Tamil Nadu',
+        customerType: 'known',
+        databaseType: 'new',
+        source: lead.source || 'Lead Pipeline'
+      });
+    }
+
     const createdLogin = addBankLogin({
-      customerId: lead.customerId,
+      id: custId,
+      customerId: custId,
       customerName: lead.customerName,
       mobile: lead.mobile,
       business: lead.business,
@@ -999,11 +1056,12 @@ export const CRMProvider = ({ children }) => {
 
     setLeads(prev => prev.map(l => l.id === leadId ? {
       ...l,
+      customerId: custId, // Auto-assign the generated Customer ID to the lead!
       status: 'Converted to Login',
-      remarks: `${l.remarks ? l.remarks + ' | ' : ''}Converted to Bank Login ${createdLogin.id} with ${loginData.bankName}`
+      remarks: `${l.remarks ? l.remarks + ' | ' : ''}Customer ID: ${custId} (Bank Login with ${loginData.bankName})`
     } : l));
 
-    showToast(`Lead successfully converted to Bank Login (${createdLogin.id})!`, 'success');
+    showToast(`Customer ID ${custId} auto-generated! Registered in Bank Login with ${loginData.bankName}.`, 'success');
     return createdLogin;
   };
 
