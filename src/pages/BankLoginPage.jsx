@@ -307,7 +307,7 @@ export const BankLoginPage = () => {
             className="flex items-center gap-2 rounded-xl bg-gold-500 hover:bg-gold-600 px-4 py-2.5 text-xs font-bold text-amber-950 shadow-md transition"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Add Bank Login</span>
+            <span> Add Bank Login</span>
           </button>
           <button
             onClick={handleExport}

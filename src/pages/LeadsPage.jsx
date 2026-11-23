@@ -21,7 +21,8 @@ import {
   FileCheck,
   Download,
   X,
-  PhoneCall
+  PhoneCall,
+  Eye
 } from 'lucide-react';
 import { formatCurrency, formatDate, exportToCSV } from '../utils/formatters';
 
@@ -42,6 +43,7 @@ export const LeadsPage = () => {
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
   const [assigningLead, setAssigningLead] = useState(null);
   const [convertingLead, setConvertingLead] = useState(null);
+  const [viewingLead, setViewingLead] = useState(null);
 
   // Add Lead Form State
   const [newLeadName, setNewLeadName] = useState('');
@@ -235,7 +237,7 @@ export const LeadsPage = () => {
             className="flex items-center gap-2 rounded-xl bg-gold-500 hover:bg-gold-600 px-4 py-2.5 text-xs font-bold text-amber-950 shadow-md transition"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Add New Lead</span>
+            <span> Add New Lead</span>
           </button>
           <button
             onClick={handleExport}
@@ -653,6 +655,16 @@ export const LeadsPage = () => {
                               )}
                             </div>
                           )}
+
+                          {/* View Lead Details Eye Button */}
+                          <button
+                            type="button"
+                            onClick={() => setViewingLead(lead)}
+                            className="p-1.5 text-slate-500 hover:text-burgundy-900 rounded-lg hover:bg-slate-100 transition"
+                            title="View Lead Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1029,6 +1041,154 @@ export const LeadsPage = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* MODAL 4: VIEW LEAD DETAILS (Eye Icon)                */}
+      {/* ---------------------------------------------------- */}
+      {viewingLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-gold-300 block">Lead Details</span>
+                  <span className="text-[10px] font-mono bg-white/20 text-white px-1.5 py-0.5 rounded">{viewingLead.id}</span>
+                </div>
+                <h3 className="text-base font-bold text-white mt-0.5">{viewingLead.customerName}</h3>
+              </div>
+              <button
+                onClick={() => setViewingLead(null)}
+                className="rounded-lg p-1 text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              {/* Top Summary Card */}
+              <div className="bg-[#FAF6EF] p-4 rounded-xl border border-gold-200/60 flex items-start justify-between">
+                <div>
+                  <div className="text-sm font-bold text-slate-900">{viewingLead.customerName}</div>
+                  <div className="text-xs text-slate-600 flex items-center gap-1 mt-0.5">
+                    <Building className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{viewingLead.business}</span>
+                  </div>
+                  <div className="text-xs font-mono text-slate-700 mt-1 flex items-center gap-1">
+                    <Phone className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{viewingLead.mobile}</span>
+                  </div>
+                  <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{viewingLead.city}, {viewingLead.state}</span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold border ${
+                    viewingLead.status === 'Ready for Login'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                      : viewingLead.status === 'Converted to Login'
+                      ? 'bg-blue-50 text-blue-800 border-blue-300'
+                      : viewingLead.status === 'Field Visit Scheduled'
+                      ? 'bg-purple-50 text-purple-800 border-purple-300'
+                      : 'bg-amber-50 text-amber-800 border-amber-300'
+                  }`}>
+                    {viewingLead.status}
+                  </span>
+                  {viewingLead.customerId && (
+                    <div className="text-[11px] font-mono font-bold text-burgundy-900 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded mt-2">
+                      Cust ID: {viewingLead.customerId}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Requirement & Value */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Requested Service</span>
+                  <span className="text-xs font-bold text-slate-800 block mt-0.5">{viewingLead.requiredService}</span>
+                </div>
+                <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
+                  <span className="text-[10px] uppercase font-bold text-emerald-800 block">Estimated Amount</span>
+                  <span className="text-sm font-extrabold text-emerald-900 block mt-0.5">{formatCurrency(viewingLead.estimatedAmount)}</span>
+                </div>
+              </div>
+
+              {/* Lead Origin & Assignment */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Lead Source</span>
+                  <span className="text-xs font-semibold text-slate-700 block mt-0.5">{viewingLead.source}</span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Assigned Executive</span>
+                  <span className="text-xs font-bold text-slate-800 block mt-0.5">
+                    {viewingLead.assignedToName} ({viewingLead.assignedToRole})
+                  </span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">
+                    Assigned on: {viewingLead.assignedAt || 'Recent'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Remarks & Discussion Notes */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Discussion Notes & Remarks
+                </h4>
+                <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed shadow-xs">
+                  {viewingLead.remarks || 'No discussion remarks recorded yet.'}
+                </div>
+              </div>
+
+              {/* Quick Actions Footer */}
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    startCallingCustomer({
+                      id: viewingLead.customerId || viewingLead.id,
+                      name: viewingLead.customerName,
+                      mobile: viewingLead.mobile,
+                      business: viewingLead.business,
+                      city: viewingLead.city
+                    });
+                  }}
+                  className="px-3 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1.5 transition"
+                >
+                  <PhoneCall className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Call Client</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {viewingLead.status !== 'Converted to Login' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = viewingLead;
+                        setViewingLead(null);
+                        handleOpenConvertModal(target);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition"
+                    >
+                      <FileCheck className="w-3.5 h-3.5 text-gold-400" />
+                      <span>Convert to Bank Login</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setViewingLead(null)}
+                    className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-100"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -158,7 +158,7 @@ export const CustomerDatabasePage = () => {
             className="flex items-center gap-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 text-white px-3.5 py-2 text-xs font-bold transition shadow-sm"
           >
             <Plus className="w-4 h-4 text-gold-400" />
-            <span>+ Add Record</span>
+            <span>Add Record</span>
           </button>
           <button
             onClick={handleExport}
