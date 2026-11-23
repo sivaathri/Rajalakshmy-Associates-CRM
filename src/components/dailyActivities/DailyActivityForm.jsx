@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { useCRM } from '../../context/CRMContext';
 import { useAuth } from '../../context/AuthContext';
-import { PlusCircle, Building2, User, Phone, MapPin, Tag, Share2 } from 'lucide-react';
+import { PlusCircle, Building2, User, Phone, MapPin, Tag, Share2, UploadCloud, FileSpreadsheet, Download, CheckCircle, AlertTriangle } from 'lucide-react';
 
 export const DailyActivityForm = () => {
-  const { addDailyActivity } = useCRM();
-  const { currentUser } = useAuth();
+  const { addDailyActivity, processBulkExcelImport } = useCRM();
+  const { currentUser, showToast } = useAuth();
 
   const [customerType, setCustomerType] = useState('known'); // 'known' | 'unknown'
   const [customerName, setCustomerName] = useState('');
@@ -13,6 +14,82 @@ export const DailyActivityForm = () => {
   const [business, setBusiness] = useState('');
   const [source, setSource] = useState('Bills'); // 'Bills' | 'Open Source' | 'Reference'
   const [referenceFrom, setReferenceFrom] = useState('');
+
+  // Bulk Excel Upload state for Open Source
+  const fileInputRef = useRef(null);
+  const [bulkFile, setBulkFile] = useState(null);
+  const [isBulkParsing, setIsBulkParsing] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null);
+
+  const handleDownloadSample = () => {
+    const sampleRows = [
+      {
+        "Customer Name": "Senthil Murugan Traders",
+        "Mobile Number": "9840199881",
+        "Business": "Spices Wholesale",
+        "State": "Tamil Nadu",
+        "Type": "known",
+        "Source": "Open Source"
+      },
+      {
+        "Customer Name": "Unknown / Retail",
+        "Mobile Number": "9841288771",
+        "Business": "Hardware Store",
+        "State": "Tamil Nadu",
+        "Type": "unknown",
+        "Source": "Open Source"
+      },
+      {
+        "Customer Name": "Sri Lakshmi Silks",
+        "Mobile Number": "9842511223",
+        "Business": "Textiles Retail",
+        "State": "Tamil Nadu",
+        "Type": "known",
+        "Source": "Open Source"
+      }
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(sampleRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "OpenSourceLeads");
+    XLSX.writeFile(wb, "Open_Source_Bulk_Upload_Sample.xlsx");
+  };
+
+  const handleBulkUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setBulkFile(file);
+    setIsBulkParsing(true);
+    setBulkResult(null);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const rawData = XLSX.utils.sheet_to_json(ws);
+
+        // Guarantee all imported records are tagged as Open Source
+        const mappedData = rawData.map(r => ({
+          ...r,
+          Source: 'Open Source'
+        }));
+
+        const result = processBulkExcelImport(mappedData);
+        setBulkResult(result);
+        showToast(`Bulk Excel imported: ${result.importedCount} new leads added to Open Source Database!`, 'success');
+      } catch (err) {
+        alert("Failed to parse Excel file. Please ensure it is a valid .xlsx or .xls file.");
+        console.error(err);
+      } finally {
+        setIsBulkParsing(false);
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -204,6 +281,76 @@ export const DailyActivityForm = () => {
             </div>
           )}
         </div>
+
+        {/* Conditional Bulk Upload Option for Open Source (Requirement 1) */}
+        {source === 'Open Source' && (
+          <div className="rounded-xl border-2 border-dashed border-blue-300 bg-blue-50/60 p-4 space-y-3 animate-fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-blue-950">
+                    Bulk Upload Open Source Excel File
+                  </h4>
+                  <p className="text-[11px] text-blue-800">
+                    Upload an Excel (.xlsx, .xls, .csv) to auto-import leads into Open Source Database with duplicate checks.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleDownloadSample}
+                className="flex items-center gap-1.5 self-start sm:self-auto rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-blue-800 hover:bg-blue-50 transition shadow-xs"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Sample Template</span>
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".xlsx, .xls, .csv"
+                onChange={handleBulkUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                disabled={isBulkParsing}
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 rounded-xl bg-blue-700 hover:bg-blue-800 px-4 py-2 text-xs font-bold text-white shadow-sm transition disabled:opacity-50"
+              >
+                <UploadCloud className="w-4 h-4" />
+                <span>{isBulkParsing ? 'Parsing Excel...' : 'Choose Excel File to Bulk Upload'}</span>
+              </button>
+
+              {bulkFile && (
+                <span className="text-xs font-medium text-slate-700 bg-white px-2.5 py-1 rounded-md border border-slate-200">
+                  {bulkFile.name} ({(bulkFile.size / 1024).toFixed(1)} KB)
+                </span>
+              )}
+            </div>
+
+            {bulkResult && (
+              <div className="p-3 bg-white rounded-xl border border-blue-200 text-xs space-y-1.5 animate-fade-in">
+                <div className="flex items-center gap-2 font-bold text-emerald-800">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span>Successfully imported {bulkResult.importedCount} new lead(s) into Open Source!</span>
+                </div>
+                {bulkResult.duplicateCount > 0 && (
+                  <div className="flex items-center gap-2 text-amber-800 text-[11px]">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                    <span>{bulkResult.duplicateCount} existing telephone numbers skipped automatically.</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Submit Bar */}
         <div className="flex items-center justify-end pt-3 border-t border-slate-100">

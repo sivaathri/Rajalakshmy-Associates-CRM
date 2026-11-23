@@ -127,13 +127,16 @@ export const CustomerManagementPage = () => {
             <span>Export CSV</span>
           </button>
 
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-gold-500 hover:bg-gold-600 px-4 py-2 text-xs font-bold text-amber-950 shadow-md transition"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Customer</span>
-          </button>
+          {/* Add Customer Button: Disabled/Hidden for RM role (Req: RM not able to add customer, able to add only in database menu) */}
+          {currentUser?.role !== 'RM' && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl bg-gold-500 hover:bg-gold-600 px-4 py-2 text-xs font-bold text-amber-950 shadow-md transition"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Customer</span>
+            </button>
+          )}
         </div>
       </div>
 

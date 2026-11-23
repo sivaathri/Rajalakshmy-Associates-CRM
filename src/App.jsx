@@ -20,6 +20,8 @@ import { PerformancePage } from './pages/PerformancePage';
 import { ResignationPage } from './pages/ResignationPage';
 import { AdvanceAmountPage } from './pages/AdvanceAmountPage';
 import { AttendancePage } from './pages/AttendancePage';
+import { LeadsPage } from './pages/LeadsPage';
+import { BankLoginPage } from './pages/BankLoginPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -48,6 +50,8 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
     if (path.startsWith('/customers/new/known') || path.startsWith('/database/new/known')) return 'Database • New Known Numbers';
     if (path.startsWith('/customers/new/unknown') || path.startsWith('/database/new/unknown')) return 'Database • New Unknown Numbers';
     if (path.startsWith('/enquiry') || path.startsWith('/enquiries')) return 'Website Enquiries • rajalakshmyassociates.com';
+    if (path.startsWith('/leads') || path.startsWith('/lead')) return 'Lead Management Pipeline';
+    if (path.startsWith('/bank-logins') || path.startsWith('/logins')) return 'Bank File Login & 2-Day Routine Console';
     if (path.startsWith('/daily-activities')) return 'Field Sales Daily Activities';
     if (path.startsWith('/performance')) return 'Performance & Case Disposition';
     if (path.startsWith('/attendance')) return 'Daily Attendance & In-Punch';
@@ -142,6 +146,35 @@ export function App() {
               element={
                 <ProtectedLayout requiredRoute="enquiry">
                   <EnquiryPage />
+                </ProtectedLayout>
+              }
+            />
+
+            {/* Lead Management Pipeline (Req 2) */}
+            <Route
+              path="/leads"
+              element={
+                <ProtectedLayout requiredRoute="leads">
+                  <LeadsPage />
+                </ProtectedLayout>
+              }
+            />
+            <Route path="/lead" element={<Navigate to="/leads" replace />} />
+
+            {/* Bank Loan File Login Console (Req 2, 4, 5, 6) */}
+            <Route
+              path="/bank-logins"
+              element={
+                <ProtectedLayout requiredRoute="bank-logins">
+                  <BankLoginPage />
+                </ProtectedLayout>
+              }
+            />
+            <Route
+              path="/logins"
+              element={
+                <ProtectedLayout requiredRoute="logins">
+                  <BankLoginPage />
                 </ProtectedLayout>
               }
             />

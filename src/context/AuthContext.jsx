@@ -87,6 +87,11 @@ export const AuthProvider = ({ children }) => {
       case 'attendance':
       case 'enquiry':
       case 'enquiries':
+      case 'lead':
+      case 'leads':
+      case 'login':
+      case 'logins':
+      case 'bank-logins':
         return true;
       case 'resignation':
         return ['Admin', 'Manager', 'Ops', 'RM', 'Sales Manager'].includes(role);

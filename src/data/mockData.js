@@ -2151,3 +2151,221 @@ export const INITIAL_WEBSITE_ENQUIRIES = [
     notes: "Converted to Performance Case file CASE-307."
   }
 ];
+
+// ----------------------------------------------------
+// INITIAL LEADS & PIPELINE (Requirement 2 & 7)
+// ----------------------------------------------------
+export const INITIAL_LEADS = [
+  {
+    id: "LEAD-101",
+    customerId: "RA-CUST-1001",
+    customerName: "S. Swaminathan",
+    mobile: "+91 98401 22341",
+    business: "Sri Murugan Silks & Textiles",
+    city: "Kanchipuram",
+    state: "Tamil Nadu",
+    requiredService: "Working Capital (CC/OD)",
+    estimatedAmount: 2500000,
+    source: "Bills",
+    status: "Ready for Login",
+    assignedToRole: "RM",
+    assignedToId: "EMP004",
+    assignedToName: "Ananya Subramanian",
+    assignedBy: "EMP004",
+    assignedByName: "Ananya Subramanian",
+    assignedAt: "2026-11-18",
+    remarks: "MSME renewal discussion completed. Customer agreed to submit 2 yrs ITR and 6 months bank statement."
+  },
+  {
+    id: "LEAD-102",
+    customerId: "RA-CUST-1002",
+    customerName: "Thirunavukkarasu M",
+    mobile: "+91 98402 33452",
+    business: "Kaveri Engineering Works",
+    city: "Tiruchirappalli",
+    state: "Tamil Nadu",
+    requiredService: "Term Loan for Machinery",
+    estimatedAmount: 4000000,
+    source: "Bills",
+    status: "Field Visit Scheduled",
+    assignedToRole: "Sales Manager",
+    assignedToId: "EMP005",
+    assignedToName: "Vijay Anand",
+    assignedBy: "EMP004",
+    assignedByName: "Ananya Subramanian",
+    assignedAt: "2026-11-19",
+    remarks: "RM assigned to Sales Manager Vijay Anand for site inspection of lathe workshop in Trichy."
+  },
+  {
+    id: "LEAD-103",
+    customerId: "RA-CUST-1003",
+    customerName: "Meenakshi Sundaram",
+    mobile: "+91 98403 44563",
+    business: "Madurai Meenakshi Rice Mill",
+    city: "Madurai",
+    state: "Tamil Nadu",
+    requiredService: "Solar Project Finance",
+    estimatedAmount: 3500000,
+    source: "Open Source",
+    status: "Discussion in Progress",
+    assignedToRole: "Sales Manager",
+    assignedToId: "EMP010",
+    assignedToName: "Aravind Balaji",
+    assignedBy: "EMP004",
+    assignedByName: "Ananya Subramanian",
+    assignedAt: "2026-11-20",
+    remarks: "Assigned to Field Sales Aravind for collecting quotation from solar vendor."
+  },
+  {
+    id: "LEAD-104",
+    customerId: "RA-CUST-1005",
+    customerName: "G. Soundarapandian",
+    mobile: "+91 98405 66785",
+    business: "Pandian Transport & Logistics",
+    city: "Madurai",
+    state: "Tamil Nadu",
+    requiredService: "Commercial Vehicle Finance",
+    estimatedAmount: 5000000,
+    source: "Reference",
+    status: "Ready for Login",
+    assignedToRole: "RM",
+    assignedToId: "EMP004",
+    assignedToName: "Ananya Subramanian",
+    assignedBy: "EMP004",
+    assignedByName: "Ananya Subramanian",
+    assignedAt: "2026-11-21",
+    remarks: "Transport fleet inspection done. Customer signed loan application."
+  }
+];
+
+// ----------------------------------------------------
+// INITIAL BANK / FILE LOGINS (Requirement 4, 5, 6)
+// ----------------------------------------------------
+export const INITIAL_BANK_LOGINS = [
+  {
+    id: "LOG-501",
+    customerId: "RA-CUST-1001",
+    customerName: "S. Swaminathan",
+    mobile: "+91 98401 22341",
+    business: "Sri Murugan Silks & Textiles",
+    city: "Kanchipuram",
+    bankName: "State Bank of India",
+    loanType: "Working Capital (CC/OD)",
+    loanAmount: 2500000,
+    loginDate: "2026-11-20",
+    lastUpdateDate: "2026-11-21",
+    nextFollowUpDate: "2026-11-23", // Due today (23 Nov)
+    status: "In Progress",
+    assignedRMId: "EMP004",
+    assignedRMName: "Ananya Subramanian",
+    updates: [
+      {
+        id: "UPD-1",
+        date: "2026-11-20",
+        note: "File officially logged in at SBI SME Branch Kanchipuram. Application ref #SBI-KC-9812.",
+        updatedBy: "Ananya Subramanian"
+      },
+      {
+        id: "UPD-2",
+        date: "2026-11-21",
+        note: "Bank field officer completed unit visit. Unit stock verification report submitted.",
+        updatedBy: "Ananya Subramanian"
+      }
+    ],
+    disbursementDetails: null,
+    rejectionRemarks: ""
+  },
+  {
+    id: "LOG-502",
+    customerId: "RA-CUST-1005",
+    customerName: "G. Soundarapandian",
+    mobile: "+91 98405 66785",
+    business: "Pandian Transport & Logistics",
+    city: "Madurai",
+    bankName: "HDFC Bank",
+    loanType: "Commercial Vehicle Finance",
+    loanAmount: 4500000,
+    loginDate: "2026-11-19",
+    lastUpdateDate: "2026-11-20",
+    nextFollowUpDate: "2026-11-22", // Overdue 2-day update
+    status: "In Progress",
+    assignedRMId: "EMP004",
+    assignedRMName: "Ananya Subramanian",
+    updates: [
+      {
+        id: "UPD-1",
+        date: "2026-11-19",
+        note: "Logged in with HDFC Commercial Transport division. Credit appraisal pending.",
+        updatedBy: "Ananya Subramanian"
+      }
+    ],
+    disbursementDetails: null,
+    rejectionRemarks: ""
+  },
+  {
+    id: "LOG-503",
+    customerId: "RA-CUST-1002",
+    customerName: "Thirunavukkarasu M",
+    mobile: "+91 98402 33452",
+    business: "Kaveri Engineering Works",
+    city: "Tiruchirappalli",
+    bankName: "Indian Bank",
+    loanType: "Term Loan",
+    loanAmount: 3000000,
+    loginDate: "2026-11-12",
+    lastUpdateDate: "2026-11-17",
+    nextFollowUpDate: "2026-11-17",
+    status: "Disbursed",
+    assignedRMId: "EMP004",
+    assignedRMName: "Ananya Subramanian",
+    updates: [
+      {
+        id: "UPD-1",
+        date: "2026-11-12",
+        note: "Logged in with Indian Bank SME branch.",
+        updatedBy: "Ananya Subramanian"
+      },
+      {
+        id: "UPD-2",
+        date: "2026-11-17",
+        note: "Sanction letter approved. Disbursed into current account.",
+        updatedBy: "Ananya Subramanian"
+      }
+    ],
+    disbursementDetails: {
+      bankName: "Indian Bank",
+      loanAmount: 3000000,
+      loanType: "Term Loan",
+      disbursementDate: "2026-11-17",
+      remarks: "Full term loan sanctioned at 9.25% p.a."
+    },
+    rejectionRemarks: ""
+  },
+  {
+    id: "LOG-504",
+    customerId: "RA-CUST-1007",
+    customerName: "Radhakrishnan Nair",
+    mobile: "+91 98407 88907",
+    business: "Nair Pharma Distributors",
+    city: "Chennai",
+    bankName: "Axis Bank",
+    loanType: "Business Loan",
+    loanAmount: 2000000,
+    loginDate: "2026-11-10",
+    lastUpdateDate: "2026-11-14",
+    nextFollowUpDate: "2026-11-14",
+    status: "Rejected",
+    assignedRMId: "EMP004",
+    assignedRMName: "Ananya Subramanian",
+    updates: [
+      {
+        id: "UPD-1",
+        date: "2026-11-10",
+        note: "File submitted to Axis Bank credit desk.",
+        updatedBy: "Ananya Subramanian"
+      }
+    ],
+    disbursementDetails: null,
+    rejectionRemarks: "Low CIBIL score (612) and past bounce in credit card statement."
+  }
+];

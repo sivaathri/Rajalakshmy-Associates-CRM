@@ -21,13 +21,15 @@ import {
   Clock,
   Menu,
   Globe,
+  Compass,
+  FileCheck,
   X
 } from 'lucide-react';
 import { formatDateDDMMYYYY } from '../../utils/formatters';
 
 export const Sidebar = ({ isOpen, setIsOpen }) => {
   const { currentUser, canAccessRoute } = useAuth();
-  const { customers, performanceCases, advanceAmounts, resignations, attendance = [], enquiries = [] } = useCRM();
+  const { customers, performanceCases, advanceAmounts, resignations, attendance = [], enquiries = [], leads = [], bankLogins = [] } = useCRM();
   const location = useLocation();
 
   // Collapsible sub-menus
@@ -74,6 +76,18 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
     : (currentUser?.role === 'RM'
         ? customerOnlyList.filter(c => c.assignedTo === currentUser?.id).length
         : customerOnlyList.length);
+
+  // Active leads count (scoped if RM / Sales Manager)
+  const scopedLeads = currentUser?.role === 'RM' || isSalesManager
+    ? leads.filter(l => l.assignedToId === currentUser?.id || l.assignedBy === currentUser?.id)
+    : leads;
+  const activeLeadsCount = scopedLeads.filter(l => l.status !== 'Converted to Login').length;
+
+  // Bank Logins 2-Day Updates Due count
+  const todayIso = new Date().toISOString().split('T')[0];
+  const loginUpdatesDueCount = bankLogins.filter(
+    b => b.status === 'In Progress' && (!b.nextFollowUpDate || b.nextFollowUpDate <= todayIso)
+  ).length;
 
   // Database sub-menu counts
   // RM sees fresh un-actioned numbers + numbers actioned by/assigned to themselves
@@ -355,6 +369,62 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
               </div>
             )}
           </div>
+        )}
+
+        {/* Lead Management Menu (Req 2) */}
+        {canAccessRoute('leads') && (
+          <NavLink
+            to="/leads"
+            onClick={() => isMobile && setIsOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition ${
+                isActive
+                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            <div className="flex items-center gap-3">
+              <Compass className="w-4 h-4 shrink-0 text-emerald-400" />
+              {isExpanded && <span>Lead</span>}
+            </div>
+            {isExpanded && activeLeadsCount > 0 && (
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-1.5 text-[10px] font-bold">
+                {activeLeadsCount}
+              </span>
+            )}
+          </NavLink>
+        )}
+
+        {/* Bank File Login Menu (Req 2, 4, 5, 6) */}
+        {canAccessRoute('bank-logins') && (
+          <NavLink
+            to="/bank-logins"
+            onClick={() => isMobile && setIsOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition ${
+                isActive
+                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            <div className="flex items-center gap-3">
+              <FileCheck className="w-4 h-4 shrink-0 text-gold-400" />
+              {isExpanded && <span>Login</span>}
+            </div>
+            {isExpanded && loginUpdatesDueCount > 0 ? (
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-amber-950 shadow-sm animate-pulse" title="2-Day Follow-up Updates Due!">
+                {loginUpdatesDueCount}
+              </span>
+            ) : (
+              isExpanded && (
+                <span className="text-[10px] bg-white/10 text-white/70 px-1.5 py-0.5 rounded-full">
+                  {bankLogins.filter(b => b.status === 'In Progress').length}
+                </span>
+              )
+            )}
+          </NavLink>
         )}
 
         {/* 5. Website Enquiries Menu (Live from https://rajalakshmyassociates.com/) */}

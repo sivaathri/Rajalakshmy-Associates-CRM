@@ -8,7 +8,9 @@ import {
   INITIAL_ADVANCE_AMOUNTS,
   INITIAL_ATTENDANCE,
   INITIAL_EMPLOYEES,
-  INITIAL_WEBSITE_ENQUIRIES
+  INITIAL_WEBSITE_ENQUIRIES,
+  INITIAL_LEADS,
+  INITIAL_BANK_LOGINS
 } from '../data/mockData';
 import { useAuth } from './AuthContext';
 import { formatDateDDMMYYYY } from '../utils/formatters';
@@ -23,7 +25,9 @@ const STORAGE_KEYS = {
   RESIGNATIONS: 'rajalakshmy_resignations_v1',
   ADVANCES: 'rajalakshmy_advances_v1',
   ATTENDANCE: 'rajalakshmy_attendance_v1',
-  ENQUIRIES: 'rajalakshmy_enquiries_v1'
+  ENQUIRIES: 'rajalakshmy_enquiries_v1',
+  LEADS: 'rajalakshmy_leads_v1',
+  BANK_LOGINS: 'rajalakshmy_bank_logins_v1'
 };
 
 // Helper to guarantee strictly unique RA-CUST- IDs across all records
@@ -196,6 +200,26 @@ export const CRMProvider = ({ children }) => {
     }
   });
 
+  // Active Sales Leads Pipeline (Req 2 & 7)
+  const [leads, setLeads] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.LEADS);
+      return saved ? JSON.parse(saved) : INITIAL_LEADS;
+    } catch {
+      return INITIAL_LEADS;
+    }
+  });
+
+  // Bank Loan File Logins (Req 2, 4, 5, 6)
+  const [bankLogins, setBankLogins] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.BANK_LOGINS);
+      return saved ? JSON.parse(saved) : INITIAL_BANK_LOGINS;
+    } catch {
+      return INITIAL_BANK_LOGINS;
+    }
+  });
+
   // Active call state for RM telecalling
   const [activeCallContact, setActiveCallContact] = useState(null);
   const [isCallingModalOpen, setIsCallingModalOpen] = useState(false);
@@ -233,6 +257,14 @@ export const CRMProvider = ({ children }) => {
     localStorage.setItem(STORAGE_KEYS.ENQUIRIES, JSON.stringify(enquiries));
   }, [enquiries]);
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
+  }, [leads]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.BANK_LOGINS, JSON.stringify(bankLogins));
+  }, [bankLogins]);
+
   // Reset to initial mock data
   const resetToFactoryDefaults = () => {
     setCustomers(INITIAL_CUSTOMERS);
@@ -242,6 +274,8 @@ export const CRMProvider = ({ children }) => {
     setResignations(INITIAL_RESIGNATIONS);
     setAdvanceAmounts(INITIAL_ADVANCE_AMOUNTS);
     setEnquiries(INITIAL_WEBSITE_ENQUIRIES);
+    setLeads(INITIAL_LEADS);
+    setBankLogins(INITIAL_BANK_LOGINS);
     showToast('Reset all database tables to initial corporate mock data', 'info');
   };
 
@@ -817,6 +851,258 @@ export const CRMProvider = ({ children }) => {
     showToast(`Enquiry moved to ${databaseType === 'new' ? 'New' : 'Old'} Database!`, 'success');
   };
 
+  // ----------------------------------------------------
+  // LEADS PIPELINE MANAGEMENT (Req 2 & 7)
+  // ----------------------------------------------------
+  const addLead = (leadData) => {
+    const newId = `LEAD-${Date.now().toString().slice(-4)}`;
+    const newLead = {
+      id: newId,
+      customerId: leadData.customerId || '',
+      customerName: leadData.customerName || 'Prospect Lead',
+      mobile: leadData.mobile,
+      business: leadData.business || 'General Business',
+      city: leadData.city || 'Tamil Nadu',
+      state: leadData.state || 'Tamil Nadu',
+      requiredService: leadData.requiredService || 'Business Loan',
+      estimatedAmount: Number(leadData.estimatedAmount) || 1000000,
+      source: leadData.source || 'Direct',
+      status: leadData.status || 'New Lead',
+      assignedToRole: leadData.assignedToRole || (currentUser?.role === 'Sales Manager' ? 'Sales Manager' : 'RM'),
+      assignedToId: leadData.assignedToId || currentUser?.id || 'EMP004',
+      assignedToName: leadData.assignedToName || currentUser?.name || 'Ananya Subramanian',
+      assignedBy: currentUser?.id || 'EMP004',
+      assignedByName: currentUser?.name || 'Ananya Subramanian',
+      assignedAt: new Date().toISOString().split('T')[0],
+      remarks: leadData.remarks || 'New lead registered'
+    };
+
+    setLeads(prev => [newLead, ...prev]);
+    showToast(`Lead created for ${newLead.customerName}!`, 'success');
+    return newLead;
+  };
+
+  // Assign Lead (Req 7: RM can assign to himself or assign person of the Sales Manager role)
+  const assignLead = (leadId, assigneeId, assigneeName, assigneeRole) => {
+    setLeads(prev => prev.map(l => {
+      if (l.id === leadId) {
+        return {
+          ...l,
+          assignedToId: assigneeId,
+          assignedToName: assigneeName,
+          assignedToRole: assigneeRole,
+          assignedBy: currentUser?.id || 'EMP004',
+          assignedByName: currentUser?.name || 'Ananya Subramanian',
+          assignedAt: new Date().toISOString().split('T')[0],
+          remarks: `${l.remarks ? l.remarks + ' | ' : ''}Assigned to ${assigneeName} (${assigneeRole}) by ${currentUser?.name || 'RM'}`
+        };
+      }
+      return l;
+    }));
+    showToast(`Lead assigned to ${assigneeName} (${assigneeRole})`, 'success');
+  };
+
+  const updateLead = (leadId, updates) => {
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, ...updates } : l));
+    showToast('Lead details updated', 'success');
+  };
+
+  // ----------------------------------------------------
+  // BANK / FILE LOGINS & 2-DAY REMINDERS (Req 2, 4, 5, 6)
+  // ----------------------------------------------------
+  const addTwoDays = (dateStr) => {
+    const d = dateStr ? new Date(dateStr) : new Date();
+    d.setDate(d.getDate() + 2);
+    return d.toISOString().split('T')[0];
+  };
+
+  // Add Bank Login (Req 4, 6: Ensure person is added as a customer)
+  const addBankLogin = (loginData) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const newId = `LOG-${Date.now().toString().slice(-4)}`;
+
+    // Ensure customer exists in Customer Directory (Req 6: Login persons all are as a customers)
+    let custId = loginData.customerId;
+    const existingCust = customers.find(c =>
+      (custId && c.id === custId) ||
+      (loginData.mobile && c.mobile?.replace(/\D/g, '').slice(-10) === loginData.mobile?.replace(/\D/g, '').slice(-10))
+    );
+
+    if (existingCust) {
+      custId = existingCust.id;
+    } else {
+      const newCust = addCustomer({
+        name: loginData.customerName || 'New Loan Client',
+        mobile: loginData.mobile,
+        business: loginData.business || 'General Client',
+        city: loginData.city || 'Chennai',
+        state: 'Tamil Nadu',
+        customerType: 'known',
+        databaseType: 'new',
+        source: 'Bank Login'
+      });
+      if (newCust) custId = newCust.id;
+    }
+
+    const newLogin = {
+      id: newId,
+      customerId: custId || `RA-CUST-${Date.now().toString().slice(-4)}`,
+      customerName: loginData.customerName,
+      mobile: loginData.mobile,
+      business: loginData.business || 'General Business',
+      city: loginData.city || 'Tamil Nadu',
+      bankName: loginData.bankName || 'State Bank of India',
+      loanType: loginData.loanType || 'Business Loan',
+      loanAmount: Number(loginData.loanAmount) || 1000000,
+      loginDate: loginData.loginDate || todayStr,
+      lastUpdateDate: todayStr,
+      nextFollowUpDate: addTwoDays(loginData.loginDate || todayStr), // Every 2 days reminder (Req 4)
+      status: 'In Progress',
+      assignedRMId: loginData.assignedRMId || currentUser?.id || 'EMP004',
+      assignedRMName: loginData.assignedRMName || currentUser?.name || 'Ananya Subramanian',
+      updates: [
+        {
+          id: `UPD-${Date.now().toString().slice(-4)}`,
+          date: todayStr,
+          note: loginData.notes || `File logged in with ${loginData.bankName || 'Bank'}`,
+          updatedBy: currentUser?.name || 'RM'
+        }
+      ],
+      disbursementDetails: null,
+      rejectionRemarks: ''
+    };
+
+    setBankLogins(prev => [newLogin, ...prev]);
+    showToast(`Bank Login ${newId} created for ${newLogin.customerName}! 2-day reminder scheduled.`, 'success');
+    return newLogin;
+  };
+
+  // Convert Lead to Login
+  const convertLeadToLogin = (leadId, loginData) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+
+    const createdLogin = addBankLogin({
+      customerId: lead.customerId,
+      customerName: lead.customerName,
+      mobile: lead.mobile,
+      business: lead.business,
+      city: lead.city,
+      bankName: loginData.bankName,
+      loanType: loginData.loanType || lead.requiredService,
+      loanAmount: loginData.loanAmount || lead.estimatedAmount,
+      loginDate: loginData.loginDate || new Date().toISOString().split('T')[0],
+      assignedRMId: currentUser?.id || lead.assignedToId,
+      assignedRMName: currentUser?.name || lead.assignedToName,
+      notes: loginData.notes || `Converted from Lead #${lead.id}`
+    });
+
+    setLeads(prev => prev.map(l => l.id === leadId ? {
+      ...l,
+      status: 'Converted to Login',
+      remarks: `${l.remarks ? l.remarks + ' | ' : ''}Converted to Bank Login ${createdLogin.id} with ${loginData.bankName}`
+    } : l));
+
+    showToast(`Lead successfully converted to Bank Login (${createdLogin.id})!`, 'success');
+    return createdLogin;
+  };
+
+  // Add 2-Day Update / Note (Req 4: remind every 2 days for do next or wt today update)
+  const addLoginUpdate = (loginId, updateNote) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const nextDate = addTwoDays(todayStr);
+
+    setBankLogins(prev => prev.map(l => {
+      if (l.id === loginId) {
+        const newUpdate = {
+          id: `UPD-${Date.now().toString().slice(-4)}`,
+          date: todayStr,
+          note: updateNote,
+          updatedBy: currentUser?.name || 'RM'
+        };
+        return {
+          ...l,
+          lastUpdateDate: todayStr,
+          nextFollowUpDate: nextDate,
+          updates: [newUpdate, ...(l.updates || [])]
+        };
+      }
+      return l;
+    }));
+
+    showToast(`Update saved! Next follow-up reminder scheduled for ${nextDate}`, 'success');
+  };
+
+  // Disburse Login (Req 5: convert to Disposement with bank name, loan amount, type of loan)
+  const disburseLogin = (loginId, { bankName, loanAmount, loanType, disbursementDate, remarks = '' }) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const login = bankLogins.find(l => l.id === loginId);
+    if (!login) return;
+
+    const disburseData = {
+      bankName: bankName || login.bankName,
+      loanAmount: Number(loanAmount) || login.loanAmount,
+      loanType: loanType || login.loanType,
+      disbursementDate: disbursementDate || todayStr,
+      remarks: remarks || 'Disbursement confirmed by bank'
+    };
+
+    setBankLogins(prev => prev.map(l => {
+      if (l.id === loginId) {
+        const disburseUpdate = {
+          id: `UPD-${Date.now().toString().slice(-4)}`,
+          date: todayStr,
+          note: `Loan Disbursed: ₹${Number(disburseData.loanAmount).toLocaleString('en-IN')} via ${disburseData.bankName} (${disburseData.loanType}). ${remarks}`,
+          updatedBy: currentUser?.name || 'RM'
+        };
+        return {
+          ...l,
+          status: 'Disbursed',
+          lastUpdateDate: todayStr,
+          disbursementDetails: disburseData,
+          updates: [disburseUpdate, ...(l.updates || [])]
+        };
+      }
+      return l;
+    }));
+
+    // Record into Performance Case Dispositions
+    submitPerformanceCase({
+      customerName: login.customerName,
+      mobile: login.mobile,
+      caseAmount: disburseData.loanAmount,
+      details: `${disburseData.bankName} - ${disburseData.loanType} Disbursement (from Login #${login.id})`,
+      caseDate: disburseData.disbursementDate
+    });
+
+    showToast(`Login #${loginId} converted to Disbursement (₹${Number(disburseData.loanAmount).toLocaleString('en-IN')})!`, 'success');
+  };
+
+  // Reject Login (Req 5: if reject enter remarks)
+  const rejectLogin = (loginId, { remarks }) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    setBankLogins(prev => prev.map(l => {
+      if (l.id === loginId) {
+        const rejectUpdate = {
+          id: `UPD-${Date.now().toString().slice(-4)}`,
+          date: todayStr,
+          note: `File Rejected: ${remarks}`,
+          updatedBy: currentUser?.name || 'RM'
+        };
+        return {
+          ...l,
+          status: 'Rejected',
+          lastUpdateDate: todayStr,
+          rejectionRemarks: remarks,
+          updates: [rejectUpdate, ...(l.updates || [])]
+        };
+      }
+      return l;
+    }));
+
+    showToast(`Login #${loginId} marked as Rejected. Remarks logged.`, 'info');
+  };
+
   // Quick initiate call
   const startCallingCustomer = (customer) => {
     setActiveCallContact(customer);
@@ -834,6 +1120,8 @@ export const CRMProvider = ({ children }) => {
         advanceAmounts,
         attendance,
         enquiries,
+        leads,
+        bankLogins,
         employees: INITIAL_EMPLOYEES,
         // Actions
         addCustomer,
@@ -857,6 +1145,14 @@ export const CRMProvider = ({ children }) => {
         addEnquiry,
         updateEnquiryStatus,
         convertEnquiryToLead,
+        addLead,
+        assignLead,
+        updateLead,
+        convertLeadToLogin,
+        addBankLogin,
+        addLoginUpdate,
+        disburseLogin,
+        rejectLogin,
         resetToFactoryDefaults,
         // Calling state
         activeCallContact,

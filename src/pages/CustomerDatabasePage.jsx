@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { formatDate, getStatusBadgeClass, exportToCSV } from '../utils/formatters';
 import { CustomerDetailModal } from '../components/customers/CustomerDetailModal';
+import { AddDatabaseRecordModal } from '../components/database/AddDatabaseRecordModal';
 
 export const CustomerDatabasePage = () => {
   const { dbType = 'old', custType = 'known' } = useParams();
@@ -37,6 +38,7 @@ export const CustomerDatabasePage = () => {
 
   // Modals
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Normalize route params
   const normalizedDb = dbType.toLowerCase(); // 'old' or 'new'
@@ -151,6 +153,13 @@ export const CustomerDatabasePage = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 text-white px-3.5 py-2 text-xs font-bold transition shadow-sm"
+          >
+            <Plus className="w-4 h-4 text-gold-400" />
+            <span>+ Add Record</span>
+          </button>
           <button
             onClick={handleExport}
             className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm"
@@ -352,6 +361,14 @@ export const CustomerDatabasePage = () => {
           onClose={() => setSelectedCustomer(null)}
         />
       )}
+
+      {/* Add Database Record Modal (Req 3: RM able to add in Old and New database) */}
+      <AddDatabaseRecordModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        defaultDatabase={normalizedDb}
+        defaultType={normalizedType}
+      />
     </div>
   );
 };
