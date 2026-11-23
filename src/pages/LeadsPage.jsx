@@ -34,6 +34,9 @@ export const LeadsPage = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [roleFilter, setRoleFilter] = useState('All');
   const [onlyMyLeads, setOnlyMyLeads] = useState(false);
+  const [dateRangeType, setDateRangeType] = useState('all'); // 'all' | 'today' | 'week' | 'month' | 'custom'
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
 
   // Modals
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
@@ -87,6 +90,24 @@ export const LeadsPage = () => {
         return false;
       }
 
+      // Date Range filter on assignedAt
+      const leadDate = lead.assignedAt || lead.createdDate || lead.date;
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (dateRangeType === 'today') {
+        if (leadDate !== todayStr) return false;
+      } else if (dateRangeType === 'week') {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        const sevenDaysAgoStr = d.toISOString().split('T')[0];
+        if (!leadDate || leadDate < sevenDaysAgoStr || leadDate > todayStr) return false;
+      } else if (dateRangeType === 'month') {
+        const currentMonthPrefix = todayStr.slice(0, 7);
+        if (!leadDate?.startsWith(currentMonthPrefix)) return false;
+      } else if (dateRangeType === 'custom') {
+        if (customStartDate && (!leadDate || leadDate < customStartDate)) return false;
+        if (customEndDate && (!leadDate || leadDate > customEndDate)) return false;
+      }
+
       // Search term
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
@@ -100,7 +121,7 @@ export const LeadsPage = () => {
 
       return true;
     });
-  }, [leads, onlyMyLeads, roleFilter, statusFilter, searchTerm, currentUser]);
+  }, [leads, onlyMyLeads, roleFilter, statusFilter, dateRangeType, customStartDate, customEndDate, searchTerm, currentUser]);
 
   // Metrics
   const totalLeadsCount = leads.length;
@@ -255,7 +276,7 @@ export const LeadsPage = () => {
 
       {/* Filter and Search Bar */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Universal Search */}
           <div className="relative">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
@@ -297,6 +318,26 @@ export const LeadsPage = () => {
             </select>
           </div>
 
+          {/* Date Range Selector */}
+          <div>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+              <select
+                value={dateRangeType}
+                onChange={(e) => setDateRangeType(e.target.value)}
+                className={`w-full text-xs rounded-xl border py-2 pl-9 pr-3 focus:outline-none focus:border-burgundy-800 bg-white transition ${
+                  dateRangeType !== 'all' ? 'border-burgundy-800 text-burgundy-900 bg-burgundy-50/40 font-bold' : 'border-slate-300 text-slate-700'
+                }`}
+              >
+                <option value="all">Date: All Time</option>
+                <option value="today">Date: Today</option>
+                <option value="week">Date: Last 7 Days</option>
+                <option value="month">Date: This Month</option>
+                <option value="custom">Date: Custom Date Range</option>
+              </select>
+            </div>
+          </div>
+
           {/* My Leads Only Toggle */}
           <div className="flex items-center">
             <button
@@ -309,10 +350,168 @@ export const LeadsPage = () => {
               }`}
             >
               <UserCheck className="w-4 h-4 text-burgundy-800" />
-              <span>{onlyMyLeads ? '✓ My Leads Only' : 'Show My Leads Only'}</span>
+              <span>{onlyMyLeads ? '✓ My Leads Only' : 'My Leads Only'}</span>
             </button>
           </div>
         </div>
+
+        {/* Custom Date Range Panel (Visible when Custom Date Range is selected) */}
+        {dateRangeType === 'custom' && (
+          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-[#FAF6EF]/60 p-3 rounded-xl border border-gold-200/50">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-burgundy-800" /> Start Date:
+                </span>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="text-xs rounded-lg border border-slate-300 px-2.5 py-1.5 bg-white text-slate-800 focus:outline-none focus:border-burgundy-800"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">End Date:</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="text-xs rounded-lg border border-slate-300 px-2.5 py-1.5 bg-white text-slate-800 focus:outline-none focus:border-burgundy-800"
+                />
+              </div>
+
+              {/* Quick Presets for Custom Picker */}
+              <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
+                <span className="text-[10px] text-slate-400 font-semibold uppercase">Presets:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    setCustomStartDate(today);
+                    setCustomEndDate(today);
+                  }}
+                  className="px-2 py-1 text-[11px] font-semibold rounded-md bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition"
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() - 7);
+                    setCustomStartDate(d.toISOString().split('T')[0]);
+                    setCustomEndDate(new Date().toISOString().split('T')[0]);
+                  }}
+                  className="px-2 py-1 text-[11px] font-semibold rounded-md bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition"
+                >
+                  Last 7 Days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    const firstDay = `${today.slice(0, 7)}-01`;
+                    setCustomStartDate(firstDay);
+                    setCustomEndDate(today);
+                  }}
+                  className="px-2 py-1 text-[11px] font-semibold rounded-md bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 transition"
+                >
+                  This Month
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {(customStartDate || customEndDate) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomStartDate('');
+                    setCustomEndDate('');
+                  }}
+                  className="flex items-center gap-1 text-xs text-rose-700 hover:text-rose-900 font-bold px-2 py-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Clear Dates</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Active Filters Summary Strip */}
+        {(dateRangeType !== 'all' || statusFilter !== 'All' || roleFilter !== 'All' || searchTerm || onlyMyLeads) && (
+          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-slate-600">Active Filters:</span>
+              {dateRangeType !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-burgundy-50 text-burgundy-900 border border-burgundy-200 text-[11px] font-semibold">
+                  <Calendar className="w-3 h-3 text-burgundy-700" />
+                  {dateRangeType === 'today' && 'Today'}
+                  {dateRangeType === 'week' && 'Last 7 Days'}
+                  {dateRangeType === 'month' && 'This Month'}
+                  {dateRangeType === 'custom' && (
+                    customStartDate || customEndDate
+                      ? `${customStartDate || 'Any'} to ${customEndDate || 'Any'}`
+                      : 'Custom Range'
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDateRangeType('all');
+                      setCustomStartDate('');
+                      setCustomEndDate('');
+                    }}
+                    className="ml-1 hover:text-rose-600"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {statusFilter !== 'All' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold">
+                  Status: {statusFilter}
+                  <button type="button" onClick={() => setStatusFilter('All')} className="ml-1 hover:text-rose-600">×</button>
+                </span>
+              )}
+              {roleFilter !== 'All' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold">
+                  Assignee: {roleFilter}
+                  <button type="button" onClick={() => setRoleFilter('All')} className="ml-1 hover:text-rose-600">×</button>
+                </span>
+              )}
+              {onlyMyLeads && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-burgundy-50 text-burgundy-900 border border-burgundy-200 text-[11px] font-semibold">
+                  My Leads Only
+                  <button type="button" onClick={() => setOnlyMyLeads(false)} className="ml-1 hover:text-rose-600">×</button>
+                </span>
+              )}
+              {searchTerm && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold">
+                  Query: "{searchTerm}"
+                  <button type="button" onClick={() => setSearchTerm('')} className="ml-1 hover:text-rose-600">×</button>
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('All');
+                setRoleFilter('All');
+                setOnlyMyLeads(false);
+                setDateRangeType('all');
+                setCustomStartDate('');
+                setCustomEndDate('');
+              }}
+              className="text-xs text-rose-700 hover:text-rose-900 font-bold underline cursor-pointer"
+            >
+              Reset All Filters
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Leads Table */}
