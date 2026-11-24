@@ -80,10 +80,14 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         ? customerOnlyList.filter(c => c.assignedTo === currentUser?.id).length
         : customerOnlyList.length);
 
-  // Active leads count (scoped if RM / Sales Manager)
-  const scopedLeads = currentUser?.role === 'RM' || isSalesManager
-    ? leads.filter(l => l.assignedToId === currentUser?.id || l.assignedBy === currentUser?.id)
-    : leads;
+  // Active leads count (strictly scoped to logged-in user)
+  const scopedLeads = currentUser
+    ? leads.filter(l =>
+        l.assignedToId === currentUser.id ||
+        l.actionedBy === currentUser.id ||
+        (currentUser.name && (l.assignedToName === currentUser.name || l.actionedByName === currentUser.name))
+      )
+    : [];
   const activeLeadsCount = scopedLeads.filter(l => l.status !== 'Converted to Login').length;
 
   // Bank Logins 2-Day Updates Due count

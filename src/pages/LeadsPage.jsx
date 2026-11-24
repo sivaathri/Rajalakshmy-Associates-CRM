@@ -95,32 +95,21 @@ export const LeadsPage = () => {
     return employees.filter(e => e.role === 'RM');
   }, [employees]);
 
-  // Check if logged-in user is privileged (Admin/Ops/Manager)
-  const isPrivileged = currentUser?.role === 'Admin' || currentUser?.role === 'Ops' || currentUser?.role === 'Manager';
-
   // Base accessible leads:
-  // If not Admin/Ops/Manager, strictly ONLY show leads that this user actioned or is assigned to!
-  // "on that lead only shows which user action that number so another user no need to show the number"
+  // Strictly ONLY show the data of the particular logged-in user!
+  // No other user's leads or details will be shown.
   const accessibleLeads = useMemo(() => {
-    if (!isPrivileged && currentUser) {
-      return leads.filter(l => l.assignedToId === currentUser?.id || l.actionedBy === currentUser?.id);
-    }
-    return leads;
-  }, [leads, isPrivileged, currentUser]);
+    if (!currentUser) return [];
+    return leads.filter(l =>
+      l.assignedToId === currentUser.id ||
+      l.actionedBy === currentUser.id ||
+      (currentUser.name && (l.assignedToName === currentUser.name || l.actionedByName === currentUser.name))
+    );
+  }, [leads, currentUser]);
 
   // Filtered Leads
   const filteredLeads = useMemo(() => {
     return accessibleLeads.filter(lead => {
-      // My Leads scope for Admin/Ops toggle
-      if (onlyMyLeads && lead.assignedToId !== currentUser?.id && lead.actionedBy !== currentUser?.id) {
-        return false;
-      }
-
-      // Role filter
-      if (roleFilter !== 'All' && lead.assignedToRole !== roleFilter) {
-        return false;
-      }
-
       // Status filter
       if (statusFilter !== 'All' && lead.status !== statusFilter) {
         return false;
@@ -157,12 +146,12 @@ export const LeadsPage = () => {
 
       return true;
     });
-  }, [accessibleLeads, onlyMyLeads, roleFilter, statusFilter, dateRangeType, customStartDate, customEndDate, searchTerm, currentUser]);
+  }, [accessibleLeads, statusFilter, dateRangeType, customStartDate, customEndDate, searchTerm]);
 
-  // Metrics
+  // Metrics (Strictly scoped to logged-in user)
   const totalLeadsCount = accessibleLeads.length;
-  const myAssignedCount = accessibleLeads.filter(l => l.assignedToId === currentUser?.id || l.actionedBy === currentUser?.id).length;
-  const salesManagerAssignedCount = accessibleLeads.filter(l => l.assignedToRole === 'Sales Manager' || l.assignedToRole === 'Sales Executive').length;
+  const inProgressCount = accessibleLeads.filter(l => l.status === 'Discussion in Progress' || l.status === 'New Lead').length;
+  const fieldVisitsCount = accessibleLeads.filter(l => l.status === 'Field Visit Scheduled').length;
   const readyForLoginCount = accessibleLeads.filter(l => l.status === 'Ready for Login').length;
 
   const paginatedLeads = useMemo(() => {
@@ -265,6 +254,15 @@ export const LeadsPage = () => {
     setEditingLead(null);
   };
 
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('All');
+    setDateRangeType('all');
+    setCustomStartDate('');
+    setCustomEndDate('');
+    setCurrentPage(1);
+  };
+
   const handleExport = () => {
     const exportData = filteredLeads.map((l, idx) => ({
       "Sl No": idx + 1,
@@ -313,21 +311,21 @@ export const LeadsPage = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Active Leads</span>
+          <span className="text-[10px] uppercase font-bold text-slate-400 block">My Active Leads</span>
           <span className="text-2xl font-black text-slate-900">{totalLeadsCount}</span>
-          <span className="text-[10px] text-slate-500 block mt-1">Across all branches & RMs</span>
+          <span className="text-[10px] text-slate-500 block mt-1">Under {currentUser?.name}</span>
         </div>
 
         <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4 shadow-sm">
-          <span className="text-[10px] uppercase font-bold text-blue-800 block">My Assigned Leads</span>
-          <span className="text-2xl font-black text-blue-900">{myAssignedCount}</span>
-          <span className="text-[10px] text-blue-700 block mt-1">Under {currentUser?.name}</span>
+          <span className="text-[10px] uppercase font-bold text-blue-800 block">Discussions in Progress</span>
+          <span className="text-2xl font-black text-blue-900">{inProgressCount}</span>
+          <span className="text-[10px] text-blue-700 block mt-1">Ongoing discussions</span>
         </div>
 
         <div className="rounded-2xl border border-purple-200 bg-purple-50/60 p-4 shadow-sm">
-          <span className="text-[10px] uppercase font-bold text-purple-800 block">With Sales Managers</span>
-          <span className="text-2xl font-black text-purple-900">{salesManagerAssignedCount}</span>
-          <span className="text-[10px] text-purple-700 block mt-1">Field visits & inspections</span>
+          <span className="text-[10px] uppercase font-bold text-purple-800 block">Field Visits Scheduled</span>
+          <span className="text-2xl font-black text-purple-900">{fieldVisitsCount}</span>
+          <span className="text-[10px] text-purple-700 block mt-1">Site inspections & meetings</span>
         </div>
 
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm">
@@ -339,7 +337,7 @@ export const LeadsPage = () => {
 
       {/* Filter and Search Bar */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Universal Search */}
           <div className="relative">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
@@ -368,19 +366,6 @@ export const LeadsPage = () => {
             </select>
           </div>
 
-          {/* Assignee Role Filter */}
-          <div>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800 bg-white"
-            >
-              <option value="All">All Assignees</option>
-              <option value="RM">Relationship Managers (RM)</option>
-              <option value="Sales Manager">Sales Managers (Field Sales)</option>
-            </select>
-          </div>
-
           {/* Date Range Selector */}
           <div>
             <div className="relative">
@@ -401,19 +386,15 @@ export const LeadsPage = () => {
             </div>
           </div>
 
-          {/* My Leads Only Toggle */}
+          {/* Reset Filters */}
           <div className="flex items-center">
             <button
               type="button"
-              onClick={() => setOnlyMyLeads(!onlyMyLeads)}
-              className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-xs font-bold transition ${
-                onlyMyLeads
-                  ? 'border-burgundy-800 bg-burgundy-50 text-burgundy-950 ring-2 ring-burgundy-800/20'
-                  : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-              }`}
+              onClick={handleResetFilters}
+              className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition"
             >
-              <UserCheck className="w-4 h-4 text-burgundy-800" />
-              <span>{onlyMyLeads ? '✓ My Leads Only' : 'My Leads Only'}</span>
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+              <span>Reset Filters</span>
             </button>
           </div>
         </div>
@@ -692,7 +673,7 @@ export const LeadsPage = () => {
                             </div>
                             <div className="text-[10px] text-slate-400 mt-0.5">
                               Assigned: {lead.assignedAt ? formatDate(lead.assignedAt) : 'Recent'}
-                              {lead.actionedByName && (
+                              {lead.actionedByName && lead.actionedByName !== lead.assignedToName && (
                                 <span className="block text-emerald-700 font-semibold mt-0.5">
                                   Actioned by: {lead.actionedByName}
                                 </span>
