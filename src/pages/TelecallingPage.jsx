@@ -14,6 +14,7 @@ import {
   Building,
   ChevronLeft,
   ChevronRight,
+  RotateCcw,
   Search,
   Download,
   Calendar,
@@ -276,9 +277,17 @@ export const TelecallingPage = () => {
     { name: 'Field Visit', value: outcomeCounts.FieldVisit, color: '#8B5CF6' }
   ].filter(d => d.value > 0);
 
+  const handleResetCallingFilters = () => {
+    setReportDateRange('this-month');
+    setSelectedOutcomeFilter('All');
+    setCustomStartDate('');
+    setCustomEndDate('');
+    setHistoryPage(1);
+  };
+
   const handleExportCalls = () => {
-    const data = filteredCalls.map(c => ({
-      "Call ID": c.id,
+    const data = filteredCalls.map((c, idx) => ({
+      "Sl No": idx + 1,
       "Customer Name": c.customerName,
       "Mobile Contact": c.mobile,
       "Telecaller": c.employeeName,
@@ -327,21 +336,7 @@ export const TelecallingPage = () => {
       {/* 2-Step Database & Classification Selector Card */}
       <div className="rounded-2xl border-2 border-burgundy-100 bg-white p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-burgundy-900 bg-burgundy-50 border border-burgundy-200 px-2.5 py-0.5 rounded-full">
-                Step-by-Step Calling Setup
-              </span>
-              {selectedDb && selectedType && (
-                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                  ✓ Fresh Numbers Loaded ({displayQueue.length})
-                </span>
-              )}
-            </div>
-            <h3 className="text-base font-bold text-slate-900 font-corporate mt-1">
-              1. Select Database &nbsp;➔&nbsp; 2. Select Classification &nbsp;➔&nbsp; 3. View Customer Numbers
-            </h3>
-          </div>
+         
 
           {selectedDb && (
             <button
@@ -611,7 +606,9 @@ export const TelecallingPage = () => {
                         {currentFocusedContact.business || 'Commercial Enterprise'}
                       </div>
                       <div className="text-xs text-slate-500 mt-0.5">
-                        {currentFocusedContact.city}, {currentFocusedContact.state} • Source: {currentFocusedContact.source}
+                        {[currentFocusedContact.city, currentFocusedContact.state].filter(Boolean).join(', ')}
+                        {[currentFocusedContact.city, currentFocusedContact.state].filter(Boolean).length > 0 ? ' • ' : ''}
+                        Source: {currentFocusedContact.source}
                       </div>
                     </div>
 
@@ -1184,13 +1181,13 @@ export const TelecallingPage = () => {
                   Calling Reports Filter Controls
                 </h4>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Time Horizon</label>
                     <select
                       value={reportDateRange}
                       onChange={(e) => setReportDateRange(e.target.value)}
-                      className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white"
+                      className="w-full h-9 text-xs rounded-xl border border-slate-300 px-3 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-burgundy-800"
                     >
                       <option value="today">Today's Telecalls</option>
                       <option value="this-month">This Month (November 2026)</option>
@@ -1203,7 +1200,7 @@ export const TelecallingPage = () => {
                     <select
                       value={selectedOutcomeFilter}
                       onChange={(e) => setSelectedOutcomeFilter(e.target.value)}
-                      className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white"
+                      className="w-full h-9 text-xs rounded-xl border border-slate-300 px-3 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-burgundy-800"
                     >
                       <option value="All">All Outcomes</option>
                       <option value="OK">OK</option>
@@ -1214,29 +1211,45 @@ export const TelecallingPage = () => {
                     </select>
                   </div>
 
-                  {reportDateRange === 'range' && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">Start Date</label>
-                        <input
-                          type="date"
-                          value={customStartDate}
-                          onChange={(e) => setCustomStartDate(e.target.value)}
-                          className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">End Date</label>
-                        <input
-                          type="date"
-                          value={customEndDate}
-                          onChange={(e) => setCustomEndDate(e.target.value)}
-                          className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3"
-                        />
-                      </div>
-                    </>
-                  )}
+                  {/* Reset Filters Button */}
+                  <div>
+                    <label className="block text-xs font-semibold text-transparent mb-1 select-none pointer-events-none">
+                      Reset
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleResetCallingFilters}
+                      className="w-full h-9 flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 px-4 text-xs font-bold transition shadow-sm"
+                      title="Reset filters to default"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Reset Filters</span>
+                    </button>
+                  </div>
                 </div>
+
+                {reportDateRange === 'range' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100 mt-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        value={customStartDate}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                        className="w-full h-9 text-xs rounded-xl border border-slate-300 px-3 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-burgundy-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">End Date</label>
+                      <input
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        className="w-full h-9 text-xs rounded-xl border border-slate-300 px-3 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-burgundy-800"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end pt-4 border-t border-slate-100 mt-4">
@@ -1260,7 +1273,7 @@ export const TelecallingPage = () => {
               <table className="w-full text-left text-xs text-slate-700 min-w-[760px]">
                 <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
                   <tr>
-                    <th className="px-4 py-3">Call ID</th>
+                    <th className="px-4 py-3">Sl.No</th>
                     <th className="px-4 py-3">Customer Name</th>
                     <th className="px-4 py-3">Mobile Contact</th>
                     <th className="px-4 py-3">Telecaller / RM</th>
@@ -1271,10 +1284,12 @@ export const TelecallingPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {paginatedHistory.map(c => (
-                    <tr key={c.id} className="hover:bg-[#FAF6EF]/60 transition">
-                      <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{c.id}</td>
-                      <td className="px-4 py-3 font-bold text-slate-900">{c.customerName}</td>
+                  {paginatedHistory.map((c, idx) => {
+                    const slNo = (historyPage - 1) * itemsPerPage + idx + 1;
+                    return (
+                      <tr key={c.id} className="hover:bg-[#FAF6EF]/60 transition">
+                        <td className="px-4 py-3 font-semibold text-slate-700">{slNo}</td>
+                        <td className="px-4 py-3 font-bold text-slate-900">{c.customerName}</td>
                       <td className="px-4 py-3 font-mono font-medium">{c.mobile}</td>
                       <td className="px-4 py-3">
                         <span className="font-semibold text-slate-800">{c.employeeName}</span>
@@ -1299,7 +1314,8 @@ export const TelecallingPage = () => {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

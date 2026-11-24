@@ -112,7 +112,8 @@ export const DailyActivityForm = () => {
       mobile: formattedMobile,
       business,
       customerType,
-      state: 'Tamil Nadu',
+      state: '',
+      city: '',
       source,
       referenceFrom
     });

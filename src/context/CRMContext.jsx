@@ -40,10 +40,15 @@ export const ensureUniqueCustomerIds = (customerList) => {
 
   // Normalize all IDs to RA-CUST- format (seamlessly upgrades legacy CUST- IDs)
   const normalizedList = (customerList || []).map(c => {
+    let item = c;
     if (c.id && typeof c.id === 'string' && c.id.startsWith('CUST-')) {
-      return { ...c, id: c.id.replace('CUST-', 'RA-CUST-') };
+      item = { ...c, id: c.id.replace('CUST-', 'RA-CUST-') };
     }
-    return c;
+    // Remove auto-injected 'Chennai, Tamil Nadu' for field activities if no actual address was entered
+    if (item.city === 'Chennai' && !item.address && (item.submittedBy || item.referenceFrom)) {
+      item = { ...item, city: '', state: '' };
+    }
+    return item;
   });
 
   // First pass: find maximum numeric ID among valid unique RA-CUST- numbers
@@ -321,8 +326,8 @@ export const CRMProvider = ({ children }) => {
       mobile: customerData.mobile,
       altMobile: customerData.altMobile || '',
       business: customerData.business || 'General Business',
-      state: customerData.state || 'Tamil Nadu',
-      city: customerData.city || 'Chennai',
+      state: customerData.state || '',
+      city: customerData.city || '',
       address: customerData.address || '',
       databaseType: resolvedDatabaseType,
       customerType: customerData.customerType || 'known',
