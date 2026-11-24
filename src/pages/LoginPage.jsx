@@ -16,7 +16,7 @@ import {
 
 export const LoginPage = () => {
   const { login, loginAsRole, currentUser } = useAuth();
-  const [employeeId, setEmployeeId] = useState('EMP004'); // default to RM Ananya for telecalling showcase
+  const [employeeId, setEmployeeId] = useState('EMP001'); // default to EMP001 (Admin Rajesh Kannan)
   const [password, setPassword] = useState('password123');
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -163,6 +163,22 @@ export const LoginPage = () => {
                 Secure Access
               </span>
             </div>
+
+            {currentUser && (
+              <div className="mb-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-3 text-xs">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-emerald-700 block">Logged-In Session</span>
+                  <span className="font-bold text-slate-800">{currentUser.name} ({currentUser.role} • {currentUser.id})</span>
+                </div>
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-xs flex items-center gap-1"
+                >
+                  <span>Dashboard</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             {error && (
               <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">

@@ -16,7 +16,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
-  const { currentUser, logout, loginAsRole, setShowFollowUpModal } = useAuth();
+  const { currentUser, logout, confirmAndLogout, loginAsRole, setShowFollowUpModal } = useAuth();
   const { customers } = useCRM();
   const [profileOpen, setProfileOpen] = useState(false);
   const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
@@ -195,8 +195,7 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
                 <button
                   onClick={() => {
                     setProfileOpen(false);
-                    logout();
-                    navigate('/login');
+                    confirmAndLogout();
                   }}
                   className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 transition"
                 >
@@ -207,6 +206,16 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
             </div>
           )}
         </div>
+
+        {/* Direct One-Click Logout Button */}
+        <button
+          onClick={() => confirmAndLogout()}
+          title="Sign out of CRM session"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50/80 hover:bg-rose-100 text-rose-800 font-bold text-xs transition shadow-2xs active:scale-95 shrink-0"
+        >
+          <LogOut className="w-3.5 h-3.5 text-rose-600" />
+          <span className="hidden sm:inline">Logout</span>
+        </button>
       </div>
     </header>
   );

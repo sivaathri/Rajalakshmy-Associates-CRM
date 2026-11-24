@@ -15,13 +15,17 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       console.error("Error loading user from localStorage:", e);
     }
-    // Default to RM Ananya for immediate showcase of telecalling and follow-up popup,
-    // or EMP001 Admin. Ananya EMP004 has active pending follow-ups!
-    return INITIAL_EMPLOYEES.find(e => e.id === "EMP004") || INITIAL_EMPLOYEES[0];
+    // Default to null so user arrives on Login screen if logged out
+    return null;
   });
 
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+
+  const confirmAndLogout = () => {
+    setShowLogoutConfirmModal(true);
+  };
 
   useEffect(() => {
     if (currentUser) {
@@ -150,6 +154,9 @@ export const AuthProvider = ({ children }) => {
         loginAsRole,
         switchUser,
         logout,
+        confirmAndLogout,
+        showLogoutConfirmModal,
+        setShowLogoutConfirmModal,
         canAccessRoute,
         showFollowUpModal,
         setShowFollowUpModal,

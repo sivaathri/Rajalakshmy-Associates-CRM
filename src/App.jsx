@@ -5,6 +5,7 @@ import { CRMProvider } from './context/CRMContext';
 import { Navbar } from './components/common/Navbar';
 import { Sidebar } from './components/common/Sidebar';
 import { FollowUpReminderModal } from './components/common/FollowUpReminderModal';
+import { LogoutConfirmModal } from './components/common/LogoutConfirmModal';
 import { ActiveCallModal } from './components/telecalling/ActiveCallModal';
 import { Toast } from './components/common/Toast';
 
@@ -82,6 +83,7 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
 
       {/* Global Modals & Notifications */}
       <FollowUpReminderModal />
+      <LogoutConfirmModal />
       <ActiveCallModal />
       <Toast />
     </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCRM } from '../../context/CRMContext';
 import {
@@ -23,14 +23,16 @@ import {
   Compass,
   FileCheck,
   UserCog,
+  LogOut,
   X
 } from 'lucide-react';
 import { formatDateDDMMYYYY } from '../../utils/formatters';
 
 export const Sidebar = ({ isOpen, setIsOpen }) => {
-  const { currentUser, canAccessRoute } = useAuth();
+  const { currentUser, canAccessRoute, logout, confirmAndLogout } = useAuth();
   const { customers, performanceCases, advanceAmounts, resignations, attendance = [], leads = [], bankLogins = [], leaves = [], employees = [] } = useCRM();
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Collapsible sub-menus
   const [customerMenuOpen, setCustomerMenuOpen] = useState(
@@ -166,23 +168,6 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
           )
         )}
       </div>
-
-      {/* User Mini Card */}
-      {isExpanded && (
-        <div className="px-4 py-3 bg-black/15 border-b border-white/5 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-burgundy-950 border border-gold-400/60 text-gold-300 font-bold flex items-center justify-center shrink-0 shadow-sm">
-              <User className="w-4 h-4 text-gold-300" />
-            </div>
-            <div className="truncate">
-              <div className="text-xs font-bold text-white truncate">{currentUser?.name}</div>
-              <div className="text-[11px] font-semibold text-gold-300 truncate">
-                {currentUser?.role} • {currentUser?.id}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Navigation Links */}
       <div className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
@@ -623,12 +608,36 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         )}
       </div>
 
-      {/* Footer Info */}
-      {isExpanded && (
-        <div className="p-3 border-t border-white/10 bg-black/25 text-center text-[10px] text-white/50 shrink-0">
-          Rajalakshmy Associates v1.0
-        </div>
-      )}
+      {/* Footer Info & Logout */}
+      <div className="border-t border-white/10 bg-black/25 shrink-0">
+        {isExpanded ? (
+          <div className="p-3 space-y-2">
+            <button
+              onClick={() => {
+                if (isMobile) setIsOpen(false);
+                confirmAndLogout();
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-rose-600/90 text-rose-200 hover:text-white border border-white/10 py-2.5 px-3 text-xs font-bold transition shadow-sm active:scale-95"
+            >
+              <LogOut className="w-4 h-4 text-rose-300" />
+              <span>Log Out</span>
+            </button>
+            <div className="text-center text-[10px] text-white/40 pt-1">
+              Rajalakshmy Associates v1.0
+            </div>
+          </div>
+        ) : (
+          <div className="p-2 flex justify-center">
+            <button
+              onClick={() => confirmAndLogout()}
+              title={`Log Out (${currentUser?.name})`}
+              className="p-2.5 rounded-xl bg-white/10 hover:bg-rose-600 text-rose-300 hover:text-white transition shadow-sm active:scale-95"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
     </>
   );
 
