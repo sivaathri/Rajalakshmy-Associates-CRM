@@ -1,5 +1,5 @@
 import { app, BrowserWindow, shell, dialog } from 'electron';
-import { autoUpdater } from 'electron-updater';
+import electronUpdaterPkg from 'electron-updater';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -90,9 +90,12 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
 
-  // Automatic Background Update Checker for Client
+  // Automatic Background Update Checker for Client (Only in Packaged App)
   if (!isDev) {
     try {
+      const autoUpdater = electronUpdaterPkg.autoUpdater || electronUpdaterPkg.default?.autoUpdater;
+      if (!autoUpdater) return;
+
       autoUpdater.autoDownload = true;
       autoUpdater.autoInstallOnAppQuit = true;
 
