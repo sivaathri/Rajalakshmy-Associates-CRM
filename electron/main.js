@@ -3,6 +3,9 @@ import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// Suppress Electron Dev CSP warning in dev mode (Electron notes it won't show in packaged app anyway)
+process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
