@@ -244,33 +244,6 @@ export const DailyActivitiesPage = () => {
       {/* TAB 3: REPORTS & AUDIT LOGS */}
       {activeTab === 'reports' && (
         <div className="space-y-6">
-          {/* User Contribution Banner */}
-          <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-burgundy-800 to-burgundy-950 p-5 text-white shadow-md border border-gold-300/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gold-400 text-burgundy-950 font-bold shadow-md">
-                <Users className="w-6 h-6" />
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gold-300">Staff Contribution Summary</span>
-                <h3 className="text-base font-extrabold text-white font-corporate">
-                  {currentUser?.name} ({currentUser?.role})
-                </h3>
-                <p className="text-xs text-gold-100/90">
-                  Total contacts registered by your account: <strong className="text-white font-extrabold text-sm underline">{myTotalContactsCount} contact(s)</strong>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-white/10 px-4 py-2 text-center border border-white/10">
-                <span className="text-[10px] uppercase font-bold text-gold-200 block">Contacts Added by You</span>
-                <span className="text-xl font-extrabold text-gold-300">{myTotalContactsCount}</span>
-              </div>
-              <div className="rounded-xl bg-white/10 px-4 py-2 text-center border border-white/10">
-                <span className="text-[10px] uppercase font-bold text-slate-300 block">System Total</span>
-                <span className="text-xl font-extrabold text-white">{customers.length}</span>
-              </div>
-            </div>
-          </div>
           {/* Summary KPIs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
