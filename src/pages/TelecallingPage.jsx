@@ -24,8 +24,10 @@ import {
   FileText,
   Database,
   UserCheck,
-  MapPin
+  MapPin,
+  Plus
 } from 'lucide-react';
+import { AddDatabaseRecordModal } from '../components/database/AddDatabaseRecordModal';
 import {
   PieChart,
   Pie,
@@ -46,10 +48,15 @@ export const TelecallingPage = () => {
   const { currentUser } = useAuth();
 
   // State
-  const [activeTab, setActiveTab] = useState('focused'); // 'focused' | 'queue' | 'history' | 'analytics'
+  const [activeTab, setActiveTab] = useState('focused'); // 'focused' | 'queue' | 'my-numbers' | 'history' | 'analytics'
   const [queueFilter, setQueueFilter] = useState('reminders'); // 'reminders' | 'completed'
   const [searchQueue, setSearchQueue] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(0);
+
+  // Added Numbers Tracking State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [searchMyNumbers, setSearchMyNumbers] = useState('');
+  const [myNumbersPage, setMyNumbersPage] = useState(1);
 
   // Manual Response Entry State for Focused Mode
   const [outcome, setOutcome] = useState('OK');
@@ -265,6 +272,38 @@ export const TelecallingPage = () => {
     const start = (historyPage - 1) * itemsPerPage;
     return filteredCalls.slice(start, start + itemsPerPage);
   }, [filteredCalls, historyPage, itemsPerPage]);
+
+  // Numbers added/submitted by current RM / logged-in user
+  const myAddedCustomers = useMemo(() => {
+    return customers.filter(c =>
+      (currentUser?.id && c.submittedBy === currentUser.id) ||
+      (currentUser?.name && c.submittedByName === currentUser.name)
+    );
+  }, [customers, currentUser]);
+
+  const myAddedCount = myAddedCustomers.length;
+
+  useEffect(() => {
+    setMyNumbersPage(1);
+  }, [searchMyNumbers]);
+
+  const filteredMyNumbers = useMemo(() => {
+    return myAddedCustomers.filter(c => {
+      if (!searchMyNumbers.trim()) return true;
+      const q = searchMyNumbers.toLowerCase();
+      const mName = c.name && c.name.toLowerCase().includes(q);
+      const mPhone = c.mobile && c.mobile.includes(q);
+      const mBiz = c.business && c.business.toLowerCase().includes(q);
+      const mCity = c.city && c.city.toLowerCase().includes(q);
+      const mSource = c.source && c.source.toLowerCase().includes(q);
+      return mName || mPhone || mBiz || mCity || mSource;
+    });
+  }, [myAddedCustomers, searchMyNumbers]);
+
+  const paginatedMyNumbers = useMemo(() => {
+    const start = (myNumbersPage - 1) * itemsPerPage;
+    return filteredMyNumbers.slice(start, start + itemsPerPage);
+  }, [filteredMyNumbers, myNumbersPage, itemsPerPage]);
   const todayCallsCount = calls.filter(c => {
     const isToday = c.callDate === '2026-11-16' || c.callDate === new Date().toISOString().split('T')[0];
     return currentUser?.role === 'RM' ? (isToday && c.employeeId === currentUser.id) : isToday;
@@ -323,6 +362,19 @@ export const TelecallingPage = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+        
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-gold-400 hover:bg-gold-300 text-burgundy-950 px-3.5 py-2 text-xs font-bold transition shadow-md"
+            title="Add a new lead / phone number directly to database"
+          >
+            <Plus className="w-4 h-4 text-burgundy-950" />
+            <span>+ Add Number</span>
+          </button>
+          <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
+            <span className="text-[10px] text-white/60 block uppercase font-bold">My Added Numbers</span>
+            <span className="text-sm font-extrabold text-gold-300">{myAddedCount}</span>
+          </div>
           <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
             <span className="text-[10px] text-white/60 block uppercase font-bold">
               {selectedDb && selectedType ? 'Fresh Queue Numbers' : 'Total Fresh Numbers'}
@@ -521,6 +573,18 @@ export const TelecallingPage = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab('my-numbers')}
+          className={`py-3 px-4 border-b-2 transition flex items-center gap-2 ${
+            activeTab === 'my-numbers'
+              ? 'border-burgundy-800 text-burgundy-900 bg-[#FAF6EF]/50'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <UserCheck className="w-4 h-4 text-emerald-600" />
+          <span>My Added Numbers ({myAddedCount})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('history')}
           className={`py-3 px-4 border-b-2 transition flex items-center gap-2 ${
             activeTab === 'history'
@@ -534,7 +598,7 @@ export const TelecallingPage = () => {
       </div>
 
       {/* If neither or only one is selected and on focused/queue tab, show selection guidance */}
-      {(!selectedDb || !selectedType) && activeTab !== 'history' ? (
+      {(!selectedDb || !selectedType) && activeTab !== 'history' && activeTab !== 'my-numbers' ? (
         <div className="rounded-2xl border-2 border-dashed border-burgundy-200 bg-white p-12 text-center shadow-sm">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-burgundy-50 text-burgundy-900 border border-burgundy-200 mb-4 shadow-sm">
             <PhoneCall className="w-8 h-8 text-burgundy-900" />
@@ -1088,6 +1152,286 @@ export const TelecallingPage = () => {
       )}
 
       {/* ---------------------------------------------------- */}
+      {/* TAB: MY ADDED NUMBERS TRACKING & AUDIT               */}
+      {/* ---------------------------------------------------- */}
+      {activeTab === 'my-numbers' && (
+        <div className="space-y-4">
+          {/* Header & Filter Controls */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span>My Added Numbers</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-burgundy-50 text-burgundy-900 border border-burgundy-200">
+                  {myAddedCount} Total
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Track all direct telephone numbers and leads submitted by you ({currentUser?.name || 'RM'})
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search your added numbers..."
+                  value={searchMyNumbers}
+                  onChange={(e) => setSearchMyNumbers(e.target.value)}
+                  className="w-full text-xs rounded-xl border border-slate-300 py-1.5 pl-8 pr-3 focus:outline-none focus:border-burgundy-800"
+                />
+              </div>
+
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 text-white px-3.5 py-1.5 text-xs font-bold transition shadow-sm shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5 text-gold-300" />
+                <span>Add Number</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-700 min-w-[750px]">
+                <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3">Sl.No</th>
+                    <th className="px-4 py-3">Customer Name</th>
+                    <th className="px-4 py-3">Mobile Contact</th>
+                    <th className="px-4 py-3">Business</th>
+                    <th className="px-4 py-3">Location</th>
+                    <th className="px-4 py-3">Database</th>
+                    <th className="px-4 py-3">Source</th>
+                    <th className="px-4 py-3">Calling Status</th>
+                    <th className="px-4 py-3">Date Added</th>
+                    <th className="px-4 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedMyNumbers.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="px-4 py-12 text-center text-xs text-slate-500">
+                        <div className="max-w-sm mx-auto space-y-2">
+                          <p className="font-semibold text-slate-700">No numbers added yet</p>
+                          <p className="text-slate-400 text-[11px]">
+                            You can add new direct numbers to the database anytime. Click below to add your first number.
+                          </p>
+                          <button
+                            onClick={() => setIsAddModalOpen(true)}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 text-white px-4 py-2 text-xs font-bold shadow-sm transition mt-2"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-gold-300" />
+                            <span>Add New Number</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedMyNumbers.map((item, idx) => {
+                      const slNo = (myNumbersPage - 1) * itemsPerPage + idx + 1;
+                      return (
+                        <tr key={item.id} className="hover:bg-[#FAF6EF]/60 transition">
+                          <td className="px-4 py-3 font-semibold text-slate-700">{slNo}</td>
+                          <td className="px-4 py-3 font-bold text-slate-900">{item.name}</td>
+                          <td className="px-4 py-3 font-mono font-medium">{item.mobile}</td>
+                          <td className="px-4 py-3">{item.business || 'General Client'}</td>
+                          <td className="px-4 py-3">{[item.city, item.state].filter(Boolean).join(', ') || '-'}</td>
+                          <td className="px-4 py-3">
+                            <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                              {item.databaseType || 'new'} / {item.customerType || 'known'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-[10px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                              {item.source || 'Bills'}{item.referenceFrom ? ` (${item.referenceFrom})` : ''}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(item.callingStatus)}`}>
+                              {item.callingStatus || 'Pending'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-slate-500 font-mono text-[11px]">
+                            {item.createdAt ? formatDate(item.createdAt) : 'Recent'}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => {
+                                setSelectedDb(item.databaseType || 'new');
+                                setSelectedType(item.customerType || 'known');
+                                setActiveTab('focused');
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
+                              title="Go to focused calling for this lead"
+                            >
+                              <PhoneCall className="w-3.5 h-3.5 text-gold-300" />
+                              <span>Call Now</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Reusable Pagination for My Added Numbers */}
+            <Pagination
+              currentPage={myNumbersPage}
+              totalItems={filteredMyNumbers.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setMyNumbersPage}
+              summaryLabel="added numbers"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* TAB: MY ADDED NUMBERS TRACKING & AUDIT               */}
+      {/* ---------------------------------------------------- */}
+      {activeTab === 'my-numbers' && (
+        <div className="space-y-4">
+          {/* Header & Filter Controls */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span>My Added Numbers</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-burgundy-50 text-burgundy-900 border border-burgundy-200">
+                  {myAddedCount} Total
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Track all direct telephone numbers and leads submitted by you ({currentUser?.name || 'RM'})
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search your added numbers..."
+                  value={searchMyNumbers}
+                  onChange={(e) => setSearchMyNumbers(e.target.value)}
+                  className="w-full text-xs rounded-xl border border-slate-300 py-1.5 pl-8 pr-3 focus:outline-none focus:border-burgundy-800"
+                />
+              </div>
+
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 text-white px-3.5 py-1.5 text-xs font-bold transition shadow-sm shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5 text-gold-300" />
+                <span>+ Add Number</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-700 min-w-[750px]">
+                <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3">Sl.No</th>
+                    <th className="px-4 py-3">Customer Name</th>
+                    <th className="px-4 py-3">Mobile Contact</th>
+                    <th className="px-4 py-3">Business</th>
+                    <th className="px-4 py-3">Location</th>
+                    <th className="px-4 py-3">Database</th>
+                    <th className="px-4 py-3">Source</th>
+                    <th className="px-4 py-3">Calling Status</th>
+                    <th className="px-4 py-3">Date Added</th>
+                    <th className="px-4 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedMyNumbers.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="px-4 py-12 text-center text-xs text-slate-500">
+                        <div className="max-w-sm mx-auto space-y-2">
+                          <p className="font-semibold text-slate-700">No numbers added yet</p>
+                          <p className="text-slate-400 text-[11px]">
+                            You can add new direct numbers to the database anytime. Click below to add your first number.
+                          </p>
+                          <button
+                            onClick={() => setIsAddModalOpen(true)}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 text-white px-4 py-2 text-xs font-bold shadow-sm transition mt-2"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-gold-300" />
+                            <span>Add New Number</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedMyNumbers.map((item, idx) => {
+                      const slNo = (myNumbersPage - 1) * itemsPerPage + idx + 1;
+                      return (
+                        <tr key={item.id} className="hover:bg-[#FAF6EF]/60 transition">
+                          <td className="px-4 py-3 font-semibold text-slate-700">{slNo}</td>
+                          <td className="px-4 py-3 font-bold text-slate-900">{item.name}</td>
+                          <td className="px-4 py-3 font-mono font-medium">{item.mobile}</td>
+                          <td className="px-4 py-3">{item.business || 'General Client'}</td>
+                          <td className="px-4 py-3">{[item.city, item.state].filter(Boolean).join(', ') || '-'}</td>
+                          <td className="px-4 py-3">
+                            <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                              {item.databaseType || 'new'} / {item.customerType || 'known'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-[10px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                              {item.source || 'Bills'}{item.referenceFrom ? ` (${item.referenceFrom})` : ''}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(item.callingStatus)}`}>
+                              {item.callingStatus || 'Pending'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-slate-500 font-mono text-[11px]">
+                            {item.createdAt ? formatDate(item.createdAt) : 'Recent'}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => {
+                                setSelectedDb(item.databaseType || 'new');
+                                setSelectedType(item.customerType || 'known');
+                                setActiveTab('focused');
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
+                              title="Go to focused calling for this lead"
+                            >
+                              <PhoneCall className="w-3.5 h-3.5 text-gold-300" />
+                              <span>Call Now</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Reusable Pagination for My Added Numbers */}
+            <Pagination
+              currentPage={myNumbersPage}
+              totalItems={filteredMyNumbers.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setMyNumbersPage}
+              summaryLabel="added numbers"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
       {/* TAB 3: CALL LOGS & CALLING REPORTS                   */}
       {/* ---------------------------------------------------- */}
       {activeTab === 'history' && (
@@ -1332,6 +1676,14 @@ export const TelecallingPage = () => {
           </div>
         </div>
       )}
+
+      {/* Add Database Record Modal for RM */}
+      <AddDatabaseRecordModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        defaultDatabase={selectedDb || 'new'}
+        defaultType={selectedType || 'known'}
+      />
     </div>
   );
 };

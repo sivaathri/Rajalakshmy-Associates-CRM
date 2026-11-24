@@ -29,8 +29,8 @@ export const AddDatabaseRecordModal = ({
   const [business, setBusiness] = useState('');
   const [source, setSource] = useState('Bills'); // 'Bills' | 'Open Source' | 'Reference'
   const [referenceFrom, setReferenceFrom] = useState('');
-  const [city, setCity] = useState('Chennai');
-  const [state, setState] = useState('Tamil Nadu');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
 
   // Sync defaults when modal opens with new props
   React.useEffect(() => {
@@ -76,8 +76,8 @@ export const AddDatabaseRecordModal = ({
       customerType,
       source,
       referenceFrom: source === 'Reference' ? referenceFrom.trim() : '',
-      city: city.trim() || 'Chennai',
-      state: state.trim() || 'Tamil Nadu',
+      city: city.trim(),
+      state: state.trim(),
       isCustomer: false, // Explicitly not a verified customer profile (database lead only)
       callingStatus: 'Pending',
       submittedBy: currentUser?.id,

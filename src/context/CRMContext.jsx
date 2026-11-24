@@ -700,8 +700,8 @@ export const CRMProvider = ({ children }) => {
       referenceFrom: activity.source === 'Reference' ? activity.referenceFrom : '',
       submittedBy: newActivity.submittedBy,
       submittedByName: newActivity.submittedByName,
-      assignedTo: '', // Fresh unassigned lead open to all RMs
-      assignedName: '',
+      assignedTo: currentUser?.role === 'RM' ? currentUser.id : '',
+      assignedName: currentUser?.role === 'RM' ? currentUser.name : '',
       callingStatus: 'Pending',
       _fromActivity: true
     });

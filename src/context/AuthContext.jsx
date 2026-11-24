@@ -137,7 +137,7 @@ export const AuthProvider = ({ children }) => {
       case 'telecalling':
         return ['Admin', 'Manager', 'RM'].includes(role);
       case 'daily-activities':
-        return ['Admin', 'Manager', 'Sales Manager', 'Sales Executive'].includes(role);
+        return ['Admin', 'Manager', 'Sales Manager', 'Sales Executive', 'RM'].includes(role);
       case 'reports':
         return ['Admin', 'Manager', 'Ops', 'Sales Manager', 'RM'].includes(role);
       case 'settings':
