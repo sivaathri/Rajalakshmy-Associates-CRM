@@ -8,14 +8,12 @@ import {
   EyeOff,
   LogIn,
   Sparkles,
-  ShieldCheck,
   ChevronDown,
-  ChevronUp,
-  UserCheck
+  ChevronUp
 } from 'lucide-react';
 
 export const LoginPage = () => {
-  const { login, loginAsRole, currentUser, showToast } = useAuth();
+  const { login, loginAsRole, showToast } = useAuth();
   const [username, setUsername] = useState('EMP001');
   const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
@@ -51,93 +49,15 @@ export const LoginPage = () => {
   ];
 
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center lg:justify-end overflow-hidden bg-[#45020D]">
-      {/* 1. Left Office Background */}
-      <div
-        className="absolute inset-0 lg:w-[65%] w-full h-full bg-cover bg-left md:bg-center bg-no-repeat"
-        style={{ backgroundImage: `url('./login-office.jpg')` }}
-      >
-        {/* Subtle warm lighting vignette */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/30 pointer-events-none" />
-      </div>
+    <div className="min-h-screen w-full relative flex flex-col items-center justify-center p-4 sm:p-6 overflow-hidden bg-gradient-to-br from-[#6A081A] via-[#520412] to-[#3A010A]">
+      {/* Decorative Warm Ambient Glows */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gold-400/10 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-gold-500/10 blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full bg-burgundy-800/20 blur-3xl pointer-events-none" />
 
-      {/* 2. Seamless Curved Gold Wave Divider (Desktop Only) */}
-      <div className="hidden lg:block absolute inset-0 pointer-events-none z-10">
-        <svg
-          viewBox="0 0 1000 600"
-          className="w-full h-full"
-          preserveAspectRatio="none"
-          fill="none"
-        >
-          <defs>
-            <linearGradient id="goldCurveGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#DFB76C" />
-              <stop offset="35%" stopColor="#F5E2A8" />
-              <stop offset="70%" stopColor="#C9983E" />
-              <stop offset="100%" stopColor="#8F6218" />
-            </linearGradient>
-            <linearGradient id="goldCurveShadow" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(0,0,0,0.4)" />
-              <stop offset="100%" stopColor="transparent" />
-            </linearGradient>
-            <linearGradient id="burgundyFill" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#4A020E" />
-              <stop offset="60%" stopColor="#550412" />
-              <stop offset="100%" stopColor="#3E010C" />
-            </linearGradient>
-          </defs>
-
-          {/* Burgundy Right Section Fill */}
-          <path
-            d="M 640 0 
-               C 560 140, 480 270, 480 340 
-               C 480 430, 440 520, 420 600 
-               L 1000 600 
-               L 1000 0 Z"
-            fill="url(#burgundyFill)"
-          />
-
-          {/* Deep Drop Shadow along Curve */}
-          <path
-            d="M 638 0 
-               C 558 140, 478 270, 478 340 
-               C 478 430, 438 520, 418 600"
-            stroke="rgba(0,0,0,0.45)"
-            strokeWidth="14"
-            fill="none"
-          />
-
-          {/* Main Metallic Golden Ribbon Curve */}
-          <path
-            d="M 640 0 
-               C 560 140, 480 270, 480 340 
-               C 480 430, 440 520, 420 600"
-            stroke="url(#goldCurveGradient)"
-            strokeWidth="7"
-            strokeLinecap="round"
-            fill="none"
-          />
-
-          {/* Inner Golden Highlight Core */}
-          <path
-            d="M 640 0 
-               C 560 140, 480 270, 480 340 
-               C 480 430, 440 520, 420 600"
-            stroke="#FFF4D0"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            fill="none"
-            opacity="0.8"
-          />
-        </svg>
-      </div>
-
-      {/* Mobile Dark Backdrop Overlay */}
-      <div className="lg:hidden absolute inset-0 bg-[#45020D]/85 backdrop-blur-xs" />
-
-      {/* 3. Floating Interactive White Login Card */}
-      <div className="relative z-20 w-full max-w-[420px] mx-4 sm:mx-8 lg:mr-20 xl:mr-28">
-        <div className="rounded-[32px] bg-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] border border-white/40 px-8 pt-7 pb-0 overflow-hidden">
+      {/* Floating Interactive White Login Card */}
+      <div className="relative z-20 w-full max-w-[420px]">
+        <div className="rounded-[32px] bg-white shadow-[0_30px_70px_rgba(0,0,0,0.5)] border border-white/40 px-8 pt-8 pb-0 overflow-hidden">
           {/* Logo & Branding */}
           <div className="text-center">
             <img
@@ -145,7 +65,6 @@ export const LoginPage = () => {
               alt="Rajalakshmy Associates"
               className="h-[88px] w-auto mx-auto object-contain select-none"
               onError={(e) => {
-                // Fallback in case of path resolution difference
                 if (!e.target.src.includes('/login-card-logo.png')) {
                   e.target.src = '/login-card-logo.png';
                 }
@@ -251,12 +170,12 @@ export const LoginPage = () => {
           </div>
         </div>
 
-        {/* 4. Discreet Quick-Role Demo Helper (Floating Bar) */}
-        <div className="mt-3 text-center">
+        {/* Discreet Quick-Role Demo Helper */}
+        <div className="mt-4 text-center">
           <button
             type="button"
             onClick={() => setShowDemoRoles(!showDemoRoles)}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/40 hover:bg-black/60 text-gold-300 text-[11px] font-bold border border-gold-400/30 backdrop-blur-sm transition shadow-sm"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/40 hover:bg-black/60 text-gold-300 text-[11px] font-bold border border-gold-400/30 backdrop-blur-sm transition shadow-sm"
           >
             <Sparkles className="w-3 h-3 text-gold-400" />
             <span>1-Click Demo Accounts</span>
@@ -268,13 +187,13 @@ export const LoginPage = () => {
           </button>
 
           {showDemoRoles && (
-            <div className="mt-2 p-2.5 rounded-2xl bg-black/70 backdrop-blur-md border border-white/20 shadow-xl grid grid-cols-2 sm:grid-cols-3 gap-1.5 animate-fade-in text-left">
+            <div className="mt-2.5 p-3 rounded-2xl bg-black/75 backdrop-blur-md border border-white/20 shadow-2xl grid grid-cols-2 sm:grid-cols-3 gap-2 animate-fade-in text-left">
               {demoAccounts.map((acc) => (
                 <button
                   key={acc.id}
                   type="button"
                   onClick={() => handleQuickRole(acc.role)}
-                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition border border-white/10 text-left"
+                  className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition border border-white/10 text-left"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-gold-300">{acc.role}</span>

@@ -44,7 +44,7 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
   // Derive dynamic page title based on pathname
   const getPageTitle = (path) => {
     if (path.startsWith('/dashboard')) return 'Executive Dashboard';
-    if (path.startsWith('/telecalling')) return 'RM Focused Telecalling';
+    if (path.startsWith('/telecalling')) return 'RM Telecalling';
     if (path === '/customers') return 'Customer Management Directory';
     if (path.startsWith('/customers/old/known') || path.startsWith('/database/old/known')) return 'Database • Old Known Numbers';
     if (path.startsWith('/customers/old/unknown') || path.startsWith('/database/old/unknown')) return 'Database • Old Unknown Numbers';

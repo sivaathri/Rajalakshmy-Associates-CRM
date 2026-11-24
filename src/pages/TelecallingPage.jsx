@@ -297,12 +297,7 @@ export const TelecallingPage = () => {
       {/* Top Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider">
-            <PhoneCall className="w-4 h-4" />
-            <span>Telecalling Operations Command</span>
-            <span>•</span>
-            <span>{currentUser?.name} ({currentUser?.role})</span>
-          </div>
+         
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             Relationship Manager Calling Module
           </h2>
@@ -1108,7 +1103,7 @@ export const TelecallingPage = () => {
             </div>
 
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm">
-              <span className="text-[10px] uppercase font-bold text-emerald-800 block">1. OK Outcomes</span>
+              <span className="text-[10px] uppercase font-bold text-emerald-800 block">1. OK </span>
               <span className="text-2xl font-black text-emerald-900">{outcomeCounts.OK}</span>
               <span className="text-[10px] text-emerald-700 block mt-1">Interested / converted</span>
             </div>
