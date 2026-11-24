@@ -237,7 +237,7 @@ export const TelecallingPage = () => {
 
   useEffect(() => {
     setQueuePage(1);
-  }, [queueFilter, searchQueue, dbFilter, custTypeFilter]);
+  }, [queueFilter, searchQueue, selectedDb, selectedType]);
 
   const paginatedQueue = useMemo(() => {
     const start = (queuePage - 1) * itemsPerPage;
