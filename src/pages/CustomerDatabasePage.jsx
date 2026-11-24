@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +22,7 @@ import {
 import { formatDate, getStatusBadgeClass, exportToCSV } from '../utils/formatters';
 import { CustomerDetailModal } from '../components/customers/CustomerDetailModal';
 import { AddDatabaseRecordModal } from '../components/database/AddDatabaseRecordModal';
+import { Pagination } from '../components/common/Pagination';
 
 export const CustomerDatabasePage = () => {
   const { dbType = 'old', custType = 'known' } = useParams();
@@ -34,7 +35,11 @@ export const CustomerDatabasePage = () => {
   const [selectedCallingStatus, setSelectedCallingStatus] = useState('All');
   const [selectedSource, setSelectedSource] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedState, selectedCallingStatus, selectedSource, dbType, custType]);
 
   // Modals
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -327,31 +332,13 @@ export const CustomerDatabasePage = () => {
         </div>
 
         {/* Pagination Bar */}
-        <div className="flex items-center justify-between px-6 py-3 bg-[#FAF6EF]/50 border-t border-slate-200 text-xs text-slate-500">
-          <div>
-            Showing <span className="font-bold text-slate-900">{filteredCustomers.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * itemsPerPage, filteredCustomers.length)}</span> of <span className="font-bold text-slate-900">{filteredCustomers.length}</span> records
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="p-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="px-2 font-semibold text-slate-800">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="p-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredCustomers.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          summaryLabel="database records"
+        />
       </div>
 
       {/* Modals */}

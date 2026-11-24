@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { DailyActivityForm } from '../components/dailyActivities/DailyActivityForm';
 import { ExcelBulkUploader } from '../components/dailyActivities/ExcelBulkUploader';
+import { Pagination } from '../components/common/Pagination';
 import { formatDate, exportToCSV } from '../utils/formatters';
 
 export const DailyActivitiesPage = () => {
@@ -452,66 +453,14 @@ export const DailyActivitiesPage = () => {
               </table>
             </div>
 
-            {/* Pagination Controls (Shows minimum 15 per page) */}
-            <div className="px-6 py-3 bg-[#FAF6EF]/70 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-              <div className="text-slate-600 font-medium">
-                {filteredActivities.length === 0 ? (
-                  <span>Showing 0 records</span>
-                ) : (
-                  <span>
-                    Showing <strong className="text-slate-900">{startIndex + 1}</strong> to{' '}
-                    <strong className="text-slate-900">{endIndex}</strong> of{' '}
-                    <strong className="text-slate-900">{filteredActivities.length}</strong> records (15 per page)
-                  </span>
-                )}
-              </div>
-
-              {filteredActivities.length > itemsPerPage && (
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition shadow-2xs"
-                  >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                    <span>Prev</span>
-                  </button>
-
-                  <div className="flex items-center gap-1 px-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter(page => {
-                        return page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
-                      })
-                      .map((page, idx, arr) => (
-                        <React.Fragment key={page}>
-                          {idx > 0 && arr[idx - 1] !== page - 1 && (
-                            <span className="px-1 text-slate-400">...</span>
-                          )}
-                          <button
-                            onClick={() => setCurrentPage(page)}
-                            className={`w-7 h-7 rounded-lg text-xs font-bold transition ${
-                              currentPage === page
-                                ? 'bg-burgundy-900 text-gold-300 shadow-xs'
-                                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        </React.Fragment>
-                      ))}
-                  </div>
-
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition shadow-2xs"
-                  >
-                    <span>Next</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
+            {/* Reusable Pagination */}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredActivities.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              summaryLabel="records"
+            />
           </div>
         </div>
       )}

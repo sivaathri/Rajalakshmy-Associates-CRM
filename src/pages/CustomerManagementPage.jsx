@@ -19,6 +19,7 @@ import {
 import { formatDate, exportToCSV, getStatusBadgeClass } from '../utils/formatters';
 import { AddCustomerModal } from '../components/customers/AddCustomerModal';
 import { CustomerDetailModal } from '../components/customers/CustomerDetailModal';
+import { Pagination } from '../components/common/Pagination';
 
 export const CustomerManagementPage = () => {
   const { customers } = useCRM();
@@ -29,7 +30,11 @@ export const CustomerManagementPage = () => {
   // State
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 15;
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -268,32 +273,13 @@ export const CustomerManagementPage = () => {
         </div>
 
         {/* Pagination Footer */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-3 bg-[#FAF6EF]/60 border-t border-slate-200 text-xs">
-            <span className="text-slate-500">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredCustomers.length)} of {filteredCustomers.length} records
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                className="px-3 py-1 rounded-lg border border-slate-300 bg-white text-slate-700 disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <span className="font-bold text-slate-800">
-                {currentPage} / {totalPages}
-              </span>
-              <button
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                className="px-3 py-1 rounded-lg border border-slate-300 bg-white text-slate-700 disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredCustomers.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          summaryLabel="customers"
+        />
       </div>
 
       {/* Add Customer Modal */}

@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCRM } from '../context/CRMContext';
+import { Pagination } from '../components/common/Pagination';
 import {
   Users,
   UserPlus,
@@ -201,6 +202,19 @@ export const UserManagementPage = () => {
     });
   }, [employees, searchQuery, selectedRoleFilter, selectedStatusFilter]);
 
+  // Pagination (minimum 15 items per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedRoleFilter, selectedStatusFilter]);
+
+  const paginatedEmployees = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredEmployees.slice(start, start + itemsPerPage);
+  }, [filteredEmployees, currentPage, itemsPerPage]);
+
   // Metric counts
   const totalCount = employees.length;
   const activeCount = employees.filter(e => e.status === 'Active').length;
@@ -388,7 +402,7 @@ export const UserManagementPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredEmployees.map((emp) => {
+                {paginatedEmployees.map((emp) => {
                   const isCurrent = currentUser?.id === emp.id;
                   const initials = (emp.name || 'U')
                     .split(' ')
@@ -545,6 +559,15 @@ export const UserManagementPage = () => {
             </table>
           </div>
         )}
+
+        {/* Reusable Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredEmployees.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          summaryLabel="staff members"
+        />
       </div>
 
       {/* 5. Add / Edit User Modal */}
