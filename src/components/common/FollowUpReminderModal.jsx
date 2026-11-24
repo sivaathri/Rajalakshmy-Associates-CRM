@@ -26,8 +26,6 @@ export const FollowUpReminderModal = () => {
   const [remarksMap, setRemarksMap] = useState({});
   const [rescheduleDates, setRescheduleDates] = useState({});
 
-  if (!showFollowUpModal) return null;
-
   // Filter pending reminders
   const myReminders = customers.filter(c => {
     if (currentUser?.role === 'RM') {
@@ -43,6 +41,9 @@ export const FollowUpReminderModal = () => {
     }
     return c.callingStatus === 'Reminder';
   });
+
+  // If no follow-up modal requested OR there are no follow-ups pending, do NOT show this modal!
+  if (!showFollowUpModal || myReminders.length === 0) return null;
 
   const handleSelectOutcome = (customerId, outcome) => {
     setSelectedOutcomes(prev => ({ ...prev, [customerId]: outcome }));

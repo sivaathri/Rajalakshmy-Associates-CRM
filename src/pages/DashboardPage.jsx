@@ -37,7 +37,7 @@ import { CustomerDetailModal } from '../components/customers/CustomerDetailModal
 
 export const DashboardPage = () => {
   const { customers, calls, activities, performanceCases } = useCRM();
-  const { currentUser, setShowFollowUpModal } = useAuth();
+  const { currentUser, setShowFollowUpModal, showToast } = useAuth();
 
   const isSalesManager = currentUser?.role === 'Sales Manager';
 
@@ -199,7 +199,12 @@ export const DashboardPage = () => {
           </h2>
           <p className="text-xs text-white/80 max-w-xl mt-1">
             Role: <strong className="text-gold-300">{currentUser?.role}</strong> ({currentUser?.title}). You have{' '}
-            <strong className="text-white underline cursor-pointer" onClick={() => setShowFollowUpModal(true)}>
+            <strong
+              className={`text-white ${pendingFollowUps.length > 0 ? 'underline cursor-pointer' : ''}`}
+              onClick={() => {
+                if (pendingFollowUps.length > 0) setShowFollowUpModal(true);
+              }}
+            >
               {pendingFollowUps.length} pending follow-up call(s)
             </strong>{' '}
             waiting in your queue today.
@@ -208,7 +213,13 @@ export const DashboardPage = () => {
 
         <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={() => setShowFollowUpModal(true)}
+            onClick={() => {
+              if (pendingFollowUps.length > 0) {
+                setShowFollowUpModal(true);
+              } else {
+                showToast('No pending follow-ups in your queue at this moment.', 'info');
+              }
+            }}
             className="flex items-center gap-1.5 rounded-xl border border-gold-400 bg-gold-400/20 px-3.5 py-2 text-xs font-bold text-gold-200 hover:bg-gold-400/30 transition shadow-sm"
           >
             <CalendarCheck className="w-4 h-4 text-gold-300" />
@@ -393,12 +404,14 @@ export const DashboardPage = () => {
                 Pending Follow-up Queue ({pendingFollowUps.length})
               </h4>
             </div>
-            <button
-              onClick={() => setShowFollowUpModal(true)}
-              className="text-xs font-bold text-burgundy-800 hover:underline"
-            >
-              Open Full Modal →
-            </button>
+            {pendingFollowUps.length > 0 && (
+              <button
+                onClick={() => setShowFollowUpModal(true)}
+                className="text-xs font-bold text-burgundy-800 hover:underline"
+              >
+                Open Full Modal →
+              </button>
+            )}
           </div>
 
           <div className="space-y-2.5 max-h-72 overflow-y-auto">
