@@ -22,13 +22,14 @@ import {
   Menu,
   Compass,
   FileCheck,
+  UserCog,
   X
 } from 'lucide-react';
 import { formatDateDDMMYYYY } from '../../utils/formatters';
 
 export const Sidebar = ({ isOpen, setIsOpen }) => {
   const { currentUser, canAccessRoute } = useAuth();
-  const { customers, performanceCases, advanceAmounts, resignations, attendance = [], leads = [], bankLogins = [], leaves = [] } = useCRM();
+  const { customers, performanceCases, advanceAmounts, resignations, attendance = [], leads = [], bankLogins = [], leaves = [], employees = [] } = useCRM();
   const location = useLocation();
 
   // Collapsible sub-menus
@@ -578,7 +579,32 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
           </NavLink>
         )}
 
-        {/* 8. Settings & Distribution */}
+        {/* 8. User Management */}
+        {canAccessRoute('users') && (
+          <NavLink
+            to="/users"
+            onClick={() => isMobile && setIsOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition ${
+                isActive
+                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            <div className="flex items-center gap-3 truncate">
+              <UserCog className="w-4 h-4 shrink-0 text-gold-400" />
+              {isExpanded && <span>User Management</span>}
+            </div>
+            {isExpanded && (
+              <span className="text-[10px] bg-white/15 text-gold-200 font-semibold px-1.5 py-0.5 rounded-full">
+                {employees?.length || 0}
+              </span>
+            )}
+          </NavLink>
+        )}
+
+        {/* 9. Settings & Distribution */}
         {canAccessRoute('settings') && (
           <NavLink
             to="/settings"

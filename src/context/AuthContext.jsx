@@ -38,36 +38,61 @@ export const AuthProvider = ({ children }) => {
     }, 4000);
   };
 
+  const getStoredEmployees = () => {
+    try {
+      const saved = localStorage.getItem('rajalakshmy_employees_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+    return INITIAL_EMPLOYEES;
+  };
+
   const login = (employeeId, password) => {
-    const employee = INITIAL_EMPLOYEES.find(
+    const allEmployees = getStoredEmployees();
+    const employee = allEmployees.find(
       emp => emp.id.toUpperCase() === (employeeId || '').trim().toUpperCase()
     );
 
     if (employee) {
+      if (employee.status === 'Inactive') {
+        return {
+          success: false,
+          message: `User account ${employee.id} (${employee.name}) is Inactive. Please contact Admin.`
+        };
+      }
       setCurrentUser(employee);
       showToast(`Welcome back, ${employee.name} (${employee.role})`, 'success');
-      // Follow-up modal trigger on login
-      setShowFollowUpModal(true);
       return { success: true, user: employee };
     }
 
     return {
       success: false,
-      message: 'Invalid Employee ID or password. Use EMP001 to EMP005 or click quick login.'
+      message: 'Invalid Employee ID or credentials. Please check and try again.'
     };
   };
 
   const loginAsRole = (roleName) => {
-    const employee = INITIAL_EMPLOYEES.find(
-      emp => emp.role.toLowerCase() === roleName.toLowerCase()
+    const allEmployees = getStoredEmployees();
+    const employee = allEmployees.find(
+      emp => emp.role.toLowerCase() === roleName.toLowerCase() && emp.status !== 'Inactive'
     );
     if (employee) {
       setCurrentUser(employee);
       showToast(`Switched view to ${employee.name} (${employee.role})`, 'info');
-      setShowFollowUpModal(true);
       return employee;
     }
     return null;
+  };
+
+  const switchUser = (userObj) => {
+    if (userObj) {
+      setCurrentUser(userObj);
+      showToast(`Switched session to ${userObj.name} (${userObj.id} • ${userObj.role})`, 'info');
+    }
   };
 
   const logout = () => {
@@ -109,6 +134,9 @@ export const AuthProvider = ({ children }) => {
         return ['Admin', 'Manager', 'Ops', 'Sales Manager', 'RM'].includes(role);
       case 'settings':
         return ['Admin', 'Ops'].includes(role);
+      case 'users':
+      case 'user-management':
+        return ['Admin', 'Manager', 'Ops'].includes(role);
       default:
         return true;
     }
@@ -120,6 +148,7 @@ export const AuthProvider = ({ children }) => {
         currentUser,
         login,
         loginAsRole,
+        switchUser,
         logout,
         canAccessRoute,
         showFollowUpModal,

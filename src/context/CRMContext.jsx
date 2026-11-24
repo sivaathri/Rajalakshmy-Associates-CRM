@@ -29,7 +29,8 @@ const STORAGE_KEYS = {
   ENQUIRIES: 'rajalakshmy_enquiries_v2',
   LEADS: 'rajalakshmy_leads_v2',
   BANK_LOGINS: 'rajalakshmy_bank_logins_v2',
-  LEAVES: 'rajalakshmy_leaves_v2'
+  LEAVES: 'rajalakshmy_leaves_v2',
+  EMPLOYEES: 'rajalakshmy_employees_v2'
 };
 
 // Helper to guarantee strictly unique RA-CUST- IDs across all records
@@ -201,9 +202,28 @@ export const CRMProvider = ({ children }) => {
     }
   });
 
+  // Corporate Staff & Personnel State (Persisted in LocalStorage)
+  const [employees, setEmployees] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.EMPLOYEES);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Could not load employees from storage:', e);
+    }
+    return INITIAL_EMPLOYEES;
+  });
+
   // Active call state for RM telecalling
   const [activeCallContact, setActiveCallContact] = useState(null);
   const [isCallingModalOpen, setIsCallingModalOpen] = useState(false);
+
+  // Sync to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.EMPLOYEES, JSON.stringify(employees));
+  }, [employees]);
 
   // Sync to localStorage
   useEffect(() => {
@@ -394,7 +414,7 @@ export const CRMProvider = ({ children }) => {
 
   // Ops feature: distribute customer contacts to RM
   const assignCustomersToRM = (customerIds, rmEmployeeId) => {
-    const rm = INITIAL_EMPLOYEES.find(e => e.id === rmEmployeeId);
+    const rm = employees.find(e => e.id === rmEmployeeId);
     if (!rm) return;
 
     setCustomers(prev => prev.map(c => {
@@ -408,6 +428,84 @@ export const CRMProvider = ({ children }) => {
       return c;
     }));
     showToast(`Assigned ${customerIds.length} contact(s) to ${rm.name}`, 'success');
+  };
+
+  // User Management Actions (Add, Edit, Delete, Toggle Status)
+  const addEmployee = (employeeData) => {
+    let empId = (employeeData.id || '').trim().toUpperCase();
+
+    // Auto-generate sequential ID if empty (e.g. EMP006, EMP007)
+    if (!empId) {
+      let maxNum = 0;
+      employees.forEach(e => {
+        const match = e.id?.match(/\d+/);
+        if (match) {
+          const num = parseInt(match[0], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      });
+      empId = `EMP${String(maxNum + 1).padStart(3, '0')}`;
+    }
+
+    // Check duplicate ID
+    if (employees.some(e => e.id.toUpperCase() === empId)) {
+      showToast(`Employee ID ${empId} already exists! Please use a unique ID.`, 'error');
+      return { success: false, message: 'Employee ID already exists' };
+    }
+
+    const newEmp = {
+      id: empId,
+      name: (employeeData.name || '').trim() || 'New Staff',
+      role: employeeData.role || 'RM',
+      title: (employeeData.title || '').trim() || `${employeeData.role || 'Relationship'} Specialist`,
+      department: (employeeData.department || '').trim() || 'Operations & Client Services',
+      email: (employeeData.email || '').trim() || `${empId.toLowerCase()}@rajalakshmy.com`,
+      mobile: (employeeData.mobile || '').trim() || '+91 98400 00000',
+      location: (employeeData.location || '').trim() || 'Chennai Head Office',
+      password: employeeData.password || 'password123',
+      status: employeeData.status || 'Active',
+      createdAt: new Date().toISOString()
+    };
+
+    setEmployees(prev => [newEmp, ...prev]);
+    showToast(`Staff member ${newEmp.name} (${newEmp.id}) added successfully`, 'success');
+    return { success: true, employee: newEmp };
+  };
+
+  const updateEmployee = (id, updatedFields) => {
+    setEmployees(prev => prev.map(e => {
+      if (e.id === id) {
+        return { ...e, ...updatedFields };
+      }
+      return e;
+    }));
+    showToast(`User ${id} profile updated`, 'success');
+    return true;
+  };
+
+  const deleteEmployee = (id) => {
+    if (id === 'EMP001') {
+      showToast('Cannot delete Managing Director (Principal Admin)', 'error');
+      return false;
+    }
+    setEmployees(prev => prev.filter(e => e.id !== id));
+    showToast(`User ${id} removed from system`, 'info');
+    return true;
+  };
+
+  const toggleEmployeeStatus = (id) => {
+    if (id === 'EMP001') {
+      showToast('Cannot deactivate Principal Admin', 'error');
+      return;
+    }
+    setEmployees(prev => prev.map(e => {
+      if (e.id === id) {
+        const nextStatus = e.status === 'Active' ? 'Inactive' : 'Active';
+        showToast(`User ${e.name} account is now ${nextStatus}`, 'info');
+        return { ...e, status: nextStatus };
+      }
+      return e;
+    }));
   };
 
   // ----------------------------------------------------
@@ -1288,7 +1386,12 @@ export const CRMProvider = ({ children }) => {
         leads,
         bankLogins,
         leaves,
-        employees: INITIAL_EMPLOYEES,
+        employees,
+        setEmployees,
+        addEmployee,
+        updateEmployee,
+        deleteEmployee,
+        toggleEmployeeStatus,
         // Actions
         addCustomer,
         updateCustomer,

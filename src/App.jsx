@@ -23,6 +23,7 @@ import { LeadsPage } from './pages/LeadsPage';
 import { BankLoginPage } from './pages/BankLoginPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { UserManagementPage } from './pages/UserManagementPage';
 
 // Protected Route Guard with Role Verification
 const ProtectedLayout = ({ children, requiredRoute }) => {
@@ -56,6 +57,7 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
     if (path.startsWith('/resignation')) return 'Resignation Management';
     if (path.startsWith('/advance')) return 'Employee Advance Amount';
     if (path.startsWith('/reports')) return 'Intelligence Reports & Leaderboards';
+    if (path.startsWith('/users') || path.startsWith('/user-management')) return 'User Management & Personnel Directory';
     if (path.startsWith('/settings')) return 'Operations Settings & Lead Distribution';
     return 'Rajalakshmy Associates CRM';
   };
@@ -224,6 +226,19 @@ export function App() {
                   <ReportsPage />
                 </ProtectedLayout>
               }
+            />
+
+            <Route
+              path="/users"
+              element={
+                <ProtectedLayout requiredRoute="users">
+                  <UserManagementPage />
+                </ProtectedLayout>
+              }
+            />
+            <Route
+              path="/user-management"
+              element={<Navigate to="/users" replace />}
             />
 
             <Route

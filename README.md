@@ -262,6 +262,13 @@ If your GitHub username or account changes in the future, simply update these 2 
 - **Salary Advances**: Requisition form with real-time status tracking.
 - **Resignation Notices**: Managerial review and approval tracking.
 
+### 10. 👥 User Management & Access Control
+- Dedicated sidebar item **User Management** with staff counter badge.
+- **Add New User**: Create personnel with auto-generated sequential Employee IDs (`EMP006`, etc.), Role, Designation, Department, Branch, Email, Phone, and Password.
+- **LocalStorage Persistence**: Newly registered accounts are stored securely and can immediately log in on the Login Screen.
+- **Edit & Status Controls**: Edit staff details, toggle Active/Inactive status, and remove accounts (with protection for Principal Admin).
+- **1-Click Session Switcher**: Quickly switch into any user's perspective directly from the console to verify their role view.
+
 ---
 
 ## 📂 Project Directory Structure
