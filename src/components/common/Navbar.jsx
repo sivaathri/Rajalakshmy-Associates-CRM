@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useCRM } from '../../context/CRMContext';
 import {
   Bell,
   ChevronDown,
   User,
   LogOut,
-  CalendarCheck,
   Shield,
   Briefcase,
   PhoneCall,
@@ -16,8 +14,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
-  const { currentUser, logout, confirmAndLogout, loginAsRole, setShowFollowUpModal } = useAuth();
-  const { customers } = useCRM();
+  const { currentUser, logout, confirmAndLogout, loginAsRole } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
   const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
   const navigate = useNavigate();
@@ -51,22 +48,6 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
     };
   }, []);
 
-  // Calculate pending follow-ups scoped for currentUser
-  const pendingFollowUps = customers.filter(c => {
-    if (currentUser?.role === 'RM') {
-      return c.callingStatus === 'Reminder' && c.assignedTo === currentUser.id;
-    }
-    if (currentUser?.role === 'Sales Manager') {
-      return (
-        c.callingStatus === 'Reminder' &&
-        (c.submittedBy === currentUser.id ||
-          c.referenceFrom?.includes(currentUser.name) ||
-          c.assignedTo === currentUser.id)
-      );
-    }
-    return c.callingStatus === 'Reminder';
-  });
-
   const rolesList = ['Admin', 'Manager', 'Ops', 'RM', 'Sales Manager'];
 
   return (
@@ -83,21 +64,6 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
 
       {/* Right Controls */}
       <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0">
-        {/* Pending Follow-ups Quick Button */}
-        <button
-          onClick={() => setShowFollowUpModal(true)}
-          className="relative flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-2 sm:px-2.5 py-1.5 text-xs font-semibold text-amber-900 transition hover:bg-amber-100 hover:border-amber-400 shadow-sm"
-          title="View Pending Follow-ups"
-        >
-          <CalendarCheck className="w-4 h-4 text-amber-700" />
-          <span className="hidden sm:inline">Follow-ups</span>
-          {pendingFollowUps.length > 0 && (
-            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-burgundy-800 px-1.5 text-[10px] sm:text-[11px] font-bold text-white shadow">
-              {pendingFollowUps.length}
-            </span>
-          )}
-        </button>
-
         {/* Quick Role Switcher Pill */}
         <div className="relative" ref={roleSwitcherRef}>
           <button
