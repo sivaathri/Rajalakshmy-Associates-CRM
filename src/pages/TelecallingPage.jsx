@@ -256,7 +256,7 @@ export const TelecallingPage = () => {
       "Customer Name": c.customerName,
       "Mobile Contact": c.mobile,
       "Telecaller": c.employeeName,
-      "Date": c.callDate,
+      "Date": formatDate(c.callDate),
       "Time": c.callTime,
       "Duration": c.duration,
       "Call Outcome": c.outcome,
@@ -867,7 +867,7 @@ export const TelecallingPage = () => {
                       {calls.filter(c => c.customerId === currentFocusedContact.id).map(c => (
                         <div key={c.id} className="p-3 rounded-xl border border-slate-200 bg-white text-xs">
                           <div className="flex items-center justify-between">
-                            <span className="font-bold text-slate-800">{c.callDate} ({c.callTime})</span>
+                            <span className="font-bold text-slate-800">{formatDate(c.callDate)} ({c.callTime})</span>
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(c.outcome)}`}>
                               {c.outcome} ({c.duration})
                             </span>
@@ -1251,7 +1251,7 @@ export const TelecallingPage = () => {
                         <span className="text-[10px] text-slate-400 font-mono block">{c.employeeId}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="font-semibold text-slate-800">{c.callDate}</span>
+                        <span className="font-semibold text-slate-800">{formatDate(c.callDate)}</span>
                         <span className="text-[10px] text-slate-500 block">{c.callTime}</span>
                       </td>
                       <td className="px-4 py-3 font-mono">{c.duration}</td>

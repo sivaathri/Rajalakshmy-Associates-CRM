@@ -480,7 +480,7 @@ export const DashboardPage = () => {
                   </div>
 
                   <div className="text-right">
-                    <span className="text-[10px] text-slate-400 block">{act.submissionDate}</span>
+                    <span className="text-[10px] text-slate-400 block">{formatDate(act.submissionDate)}</span>
                     <span className="text-[10px] text-slate-500">{act.submissionTime}</span>
                   </div>
                 </div>

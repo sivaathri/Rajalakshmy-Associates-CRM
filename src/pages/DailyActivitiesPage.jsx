@@ -100,7 +100,7 @@ export const DailyActivitiesPage = () => {
       "Source": a.source,
       "Reference From": a.referenceFrom || '-',
       "Submitted By": `${a.submittedByName} (${a.submittedBy})`,
-      "Date": a.submissionDate,
+      "Date": formatDate(a.submissionDate),
       "Time": a.submissionTime,
       "Classified To": a.classifiedTo
     }));
@@ -367,7 +367,7 @@ export const DailyActivitiesPage = () => {
                         <span className="text-[10px] text-slate-400 font-mono block">{act.submittedBy}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="font-semibold text-slate-800">{act.submissionDate}</span>
+                        <span className="font-semibold text-slate-800">{formatDate(act.submissionDate)}</span>
                         <span className="text-[10px] text-slate-500 block">{act.submissionTime}</span>
                       </td>
                       <td className="px-4 py-3">

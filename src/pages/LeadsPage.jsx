@@ -262,7 +262,7 @@ export const LeadsPage = () => {
       "Estimated Amount": l.estimatedAmount,
       "Status": l.status,
       "Assigned To": `${l.assignedToName} (${l.assignedToRole})`,
-      "Assigned At": l.assignedAt,
+      "Assigned At": formatDate(l.assignedAt),
       "Remarks": l.remarks
     }));
     exportToCSV(exportData, 'rajalakshmy_leads_pipeline.csv');
@@ -665,7 +665,7 @@ export const LeadsPage = () => {
                               <span className="font-semibold text-slate-800">{lead.assignedToName}</span>
                             </div>
                             <div className="text-[10px] text-slate-400 mt-0.5">
-                              Assigned: {lead.assignedAt || 'Recent'}
+                              Assigned: {lead.assignedAt ? formatDate(lead.assignedAt) : 'Recent'}
                               {lead.actionedByName && (
                                 <span className="block text-emerald-700 font-semibold mt-0.5">
                                   Actioned by: {lead.actionedByName}
@@ -1196,7 +1196,7 @@ export const LeadsPage = () => {
                     {viewingLead.assignedToName} ({viewingLead.assignedToRole})
                   </span>
                   <span className="text-[10px] text-slate-500 block mt-0.5">
-                    Assigned on: {viewingLead.assignedAt || 'Recent'}
+                    Assigned on: {viewingLead.assignedAt ? formatDate(viewingLead.assignedAt) : 'Recent'}
                   </span>
                   {viewingLead.actionedByName && (
                     <span className="text-[10px] text-emerald-700 font-semibold block mt-0.5">

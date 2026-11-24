@@ -678,7 +678,7 @@ export const BankLoginPage = () => {
 
                             {lastUpdate && (
                               <div className="text-[10px] text-slate-500 italic mt-1 line-clamp-1 max-w-xs" title={lastUpdate.note}>
-                                Last ({lastUpdate.date}): "{lastUpdate.note}"
+                                Last ({formatDate(lastUpdate.date)}): "{lastUpdate.note}"
                               </div>
                             )}
                           </div>
@@ -1245,7 +1245,7 @@ export const BankLoginPage = () => {
                     {viewHistoryLogin.updates.map((u, idx) => (
                       <div key={u.id || idx} className="p-3 bg-white rounded-xl border border-slate-200 text-xs shadow-xs">
                         <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                          <span className="font-semibold text-burgundy-900">{u.date}</span>
+                          <span className="font-semibold text-burgundy-900">{formatDate(u.date)}</span>
                           <span>by {u.updatedBy || 'RM'}</span>
                         </div>
                         <p className="text-slate-800 leading-relaxed font-medium">{u.note}</p>
