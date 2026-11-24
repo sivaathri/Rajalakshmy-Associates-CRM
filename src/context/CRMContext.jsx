@@ -487,8 +487,74 @@ export const CRMProvider = ({ children }) => {
       customerUpdates.reminderRemark = '';
     }
 
+    if (outcome === 'OK' || outcome === 'Field Visit') {
+      customerUpdates.status = 'Lead';
+      customerUpdates.isLead = true;
+    }
+
     setCustomers(prev => prev.map(c => c.id === customerId ? { ...c, ...customerUpdates } : c));
-    showToast(`Response saved! Number now follows you (${currentUser?.name || 'RM'})`, 'success');
+
+    // Automatic conversion into Lead when OK or Field Visit is selected
+    if (outcome === 'OK' || outcome === 'Field Visit') {
+      const leadStatus = outcome === 'Field Visit' ? 'Field Visit Scheduled' : 'Discussion in Progress';
+      const cleanCustomerMobile = customer.mobile ? customer.mobile.replace(/\D/g, '') : '';
+      const actionUser = currentUser || { id: 'EMP004', name: 'Ananya Subramanian', role: 'RM' };
+
+      const currentLeadRemarks = remarks
+        ? `${remarks} (Converted from telecalling: ${outcome})`
+        : `Converted to Lead from telecalling (${outcome} by ${actionUser.name})`;
+
+      setLeads(prevLeads => {
+        // Check if lead already exists for this customer or mobile number
+        const existingIndex = prevLeads.findIndex(l =>
+          (l.customerId && l.customerId === customerId) ||
+          (cleanCustomerMobile && l.mobile && l.mobile.replace(/\D/g, '') === cleanCustomerMobile)
+        );
+
+        if (existingIndex >= 0) {
+          const updated = [...prevLeads];
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            status: leadStatus,
+            assignedToId: actionUser.id,
+            assignedToName: actionUser.name,
+            assignedToRole: actionUser.role || 'RM',
+            actionedBy: actionUser.id,
+            actionedByName: actionUser.name,
+            assignedAt: callDate,
+            remarks: currentLeadRemarks
+          };
+          return updated;
+        } else {
+          const newLead = {
+            id: `LEAD-${Date.now().toString().slice(-4)}`,
+            customerId: customer.id,
+            customerName: customer.name || 'Prospect Client',
+            mobile: customer.mobile,
+            business: customer.business || 'General Enterprise',
+            city: customer.city || 'Tamil Nadu',
+            state: customer.state || 'Tamil Nadu',
+            requiredService: customer.services?.[0]?.name || (outcome === 'Field Visit' ? 'Site Inspection / Loan' : 'Business Loan'),
+            estimatedAmount: Number(customer.loanRequirement) || 2000000,
+            source: customer.source || 'Telecalling',
+            status: leadStatus,
+            assignedToRole: actionUser.role || 'RM',
+            assignedToId: actionUser.id,
+            assignedToName: actionUser.name,
+            assignedBy: actionUser.id,
+            assignedByName: actionUser.name,
+            assignedAt: callDate,
+            actionedBy: actionUser.id,
+            actionedByName: actionUser.name,
+            remarks: currentLeadRemarks
+          };
+          return [newLead, ...prevLeads];
+        }
+      });
+      showToast(`Contact converted into Lead! Assigned strictly to you (${actionUser.name})`, 'success');
+    } else {
+      showToast(`Response saved! Number now follows you (${currentUser?.name || 'RM'})`, 'success');
+    }
   };
 
   // ----------------------------------------------------

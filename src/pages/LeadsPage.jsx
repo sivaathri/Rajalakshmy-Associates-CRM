@@ -86,11 +86,24 @@ export const LeadsPage = () => {
     return employees.filter(e => e.role === 'RM');
   }, [employees]);
 
+  // Check if logged-in user is privileged (Admin/Ops/Manager)
+  const isPrivileged = currentUser?.role === 'Admin' || currentUser?.role === 'Ops' || currentUser?.role === 'Manager';
+
+  // Base accessible leads:
+  // If not Admin/Ops/Manager, strictly ONLY show leads that this user actioned or is assigned to!
+  // "on that lead only shows which user action that number so another user no need to show the number"
+  const accessibleLeads = useMemo(() => {
+    if (!isPrivileged && currentUser) {
+      return leads.filter(l => l.assignedToId === currentUser?.id || l.actionedBy === currentUser?.id);
+    }
+    return leads;
+  }, [leads, isPrivileged, currentUser]);
+
   // Filtered Leads
   const filteredLeads = useMemo(() => {
-    return leads.filter(lead => {
-      // My Leads scope
-      if (onlyMyLeads && lead.assignedToId !== currentUser?.id) {
+    return accessibleLeads.filter(lead => {
+      // My Leads scope for Admin/Ops toggle
+      if (onlyMyLeads && lead.assignedToId !== currentUser?.id && lead.actionedBy !== currentUser?.id) {
         return false;
       }
 
@@ -135,13 +148,13 @@ export const LeadsPage = () => {
 
       return true;
     });
-  }, [leads, onlyMyLeads, roleFilter, statusFilter, dateRangeType, customStartDate, customEndDate, searchTerm, currentUser]);
+  }, [accessibleLeads, onlyMyLeads, roleFilter, statusFilter, dateRangeType, customStartDate, customEndDate, searchTerm, currentUser]);
 
   // Metrics
-  const totalLeadsCount = leads.length;
-  const myAssignedCount = leads.filter(l => l.assignedToId === currentUser?.id).length;
-  const salesManagerAssignedCount = leads.filter(l => l.assignedToRole === 'Sales Manager' || l.assignedToRole === 'Sales Executive').length;
-  const readyForLoginCount = leads.filter(l => l.status === 'Ready for Login').length;
+  const totalLeadsCount = accessibleLeads.length;
+  const myAssignedCount = accessibleLeads.filter(l => l.assignedToId === currentUser?.id || l.actionedBy === currentUser?.id).length;
+  const salesManagerAssignedCount = accessibleLeads.filter(l => l.assignedToRole === 'Sales Manager' || l.assignedToRole === 'Sales Executive').length;
+  const readyForLoginCount = accessibleLeads.filter(l => l.status === 'Ready for Login').length;
 
   const handleCreateLead = (e) => {
     e.preventDefault();
@@ -653,6 +666,11 @@ export const LeadsPage = () => {
                             </div>
                             <div className="text-[10px] text-slate-400 mt-0.5">
                               Assigned: {lead.assignedAt || 'Recent'}
+                              {lead.actionedByName && (
+                                <span className="block text-emerald-700 font-semibold mt-0.5">
+                                  Actioned by: {lead.actionedByName}
+                                </span>
+                              )}
                             </div>
                           </>
                         ) : (
@@ -1180,6 +1198,11 @@ export const LeadsPage = () => {
                   <span className="text-[10px] text-slate-500 block mt-0.5">
                     Assigned on: {viewingLead.assignedAt || 'Recent'}
                   </span>
+                  {viewingLead.actionedByName && (
+                    <span className="text-[10px] text-emerald-700 font-semibold block mt-0.5">
+                      Actioned by: {viewingLead.actionedByName}
+                    </span>
+                  )}
                 </div>
               </div>
 

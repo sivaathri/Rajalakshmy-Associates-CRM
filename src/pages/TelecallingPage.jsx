@@ -66,9 +66,9 @@ export const TelecallingPage = () => {
   const [selectedDb, setSelectedDb] = useState(null); // 'old' | 'new' | null
   const [selectedType, setSelectedType] = useState(null); // 'known' | 'unknown' | null
 
-  // Helper: check if a customer is a fresh, un-actioned number
+  // Helper: check if a customer is a fresh, un-actioned number (excludes converted leads and actioned numbers)
   const isFreshNumber = (c) => {
-    const isPending = c.callingStatus === 'Pending' && !c.actionedBy;
+    const isPending = (c.callingStatus === 'Pending' || !c.callingStatus) && !c.actionedBy && c.status !== 'Lead' && c.callingStatus !== 'OK' && c.callingStatus !== 'Field Visit';
     if (currentUser?.role === 'RM') {
       return isPending && (!c.assignedTo || c.assignedTo === currentUser.id);
     }
