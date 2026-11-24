@@ -107,15 +107,21 @@ To allow `electron-builder` to automatically upload releases to your GitHub repo
 2. Click **Generate new token (classic)**.
 3. Name it (e.g., `CRM-Releases`) and check the **`repo`** scope (full control of private repositories).
 4. Copy the generated token (starts with `ghp_...`).
-5. Set it in your terminal before publishing:
-   - **In PowerShell**:
-     ```powershell
-     $env:GH_TOKEN="ghp_your_actual_token_here"
+5. Configure your token using either method:
+   - **Method A (Easiest — inside `.env` file)**:
+     Open [.env](file:///.env) and paste your token:
+     ```env
+     GH_TOKEN=ghp_your_actual_token_here
      ```
-   - **In Command Prompt (CMD)**:
-     ```cmd
-     set GH_TOKEN=ghp_your_actual_token_here
-     ```
+   - **Method B (Via Terminal)**:
+     - **In PowerShell**:
+       ```powershell
+       $env:GH_TOKEN="ghp_your_actual_token_here"
+       ```
+     - **In Command Prompt (CMD)**:
+       ```cmd
+       set GH_TOKEN=ghp_your_actual_token_here
+       ```
    *(Tip: To set it permanently on Windows, search "Environment Variables" in Windows Start menu and add a user variable `GH_TOKEN` with your token value).*
 
 ---
