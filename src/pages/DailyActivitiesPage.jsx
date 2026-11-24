@@ -19,35 +19,92 @@ import { ExcelBulkUploader } from '../components/dailyActivities/ExcelBulkUpload
 import { formatDate, exportToCSV } from '../utils/formatters';
 
 export const DailyActivitiesPage = () => {
-  const { activities, employees } = useCRM();
+  const { activities, customers, employees } = useCRM();
   const { currentUser } = useAuth();
 
   const isSalesManager = currentUser?.role === 'Sales Manager';
 
   const [activeTab, setActiveTab] = useState('form'); // 'form' | 'excel' | 'reports'
 
-  // Reports Filter state
+  // Reports Filter state: default to 'all' so users immediately see all contacts they have added!
   const [selectedEmp, setSelectedEmp] = useState(isSalesManager ? (currentUser?.id || 'EMP005') : 'All');
-  const [dateFilterMode, setDateFilterMode] = useState('today'); // 'today' | 'month' | 'range' | 'all'
+  const [dateFilterMode, setDateFilterMode] = useState('all'); // 'all' | 'today' | 'month' | 'range'
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedSource, setSelectedSource] = useState('All');
 
-  // Base activities scoped by role (Sales Manager only sees their own created/submitted data)
-  const baseActivities = useMemo(() => {
-    if (isSalesManager) {
-      return activities.filter(
-        act => act.submittedBy === currentUser?.id || act.submittedByName === currentUser?.name
-      );
-    }
-    return activities;
-  }, [activities, isSalesManager, currentUser]);
+  // Unified dataset of all contacts added (from both activities and customer registrations)
+  const unifiedActivities = useMemo(() => {
+    const isPrivileged = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
 
-  // Filtered Activities
+    // 1. Activities
+    const scopedActs = activities.filter(a =>
+      isPrivileged ? true : (a.submittedBy === currentUser?.id || a.submittedByName === currentUser?.name)
+    );
+
+    // 2. Customers submitted directly
+    const scopedCusts = customers.filter(c =>
+      isPrivileged ? true : (c.submittedBy === currentUser?.id || c.submittedByName === currentUser?.name)
+    );
+
+    // Deduplicate by clean 10-digit mobile number
+    const seenMobiles = new Set();
+    const combined = [];
+
+    scopedActs.forEach(a => {
+      const cleanMobile = (a.mobile || '').replace(/\D/g, '').slice(-10);
+      if (cleanMobile) seenMobiles.add(cleanMobile);
+      combined.push(a);
+    });
+
+    scopedCusts.forEach(c => {
+      const cleanMobile = (c.mobile || '').replace(/\D/g, '').slice(-10);
+      if (!cleanMobile || !seenMobiles.has(cleanMobile)) {
+        if (cleanMobile) seenMobiles.add(cleanMobile);
+        combined.push({
+          id: `ACT-${c.id}`,
+          customerName: c.name,
+          mobile: c.mobile,
+          business: c.business || 'General Business',
+          customerType: c.customerType || 'known',
+          state: c.state || 'Tamil Nadu',
+          source: c.source || 'Bills',
+          referenceFrom: c.referenceFrom || '',
+          submittedBy: c.submittedBy || currentUser?.id,
+          submittedByName: c.submittedByName || currentUser?.name,
+          submissionDate: c.createdAt || new Date().toISOString().split('T')[0],
+          submissionTime: '10:00 AM',
+          classifiedTo: `New Database - ${c.customerType === 'unknown' ? 'Unknown' : 'Known'}`,
+          status: 'Direct Entry'
+        });
+      }
+    });
+
+    return combined;
+  }, [activities, customers, currentUser]);
+
+  // Total contacts added strictly by the current user
+  const myTotalContactsCount = useMemo(() => {
+    const myActs = activities.filter(a => a.submittedBy === currentUser?.id || a.submittedByName === currentUser?.name);
+    const myCusts = customers.filter(c => c.submittedBy === currentUser?.id || c.submittedByName === currentUser?.name);
+    const seen = new Set();
+    let count = 0;
+    [...myActs, ...myCusts].forEach(item => {
+      const clean = (item.mobile || '').replace(/\D/g, '').slice(-10);
+      if (!clean || !seen.has(clean)) {
+        if (clean) seen.add(clean);
+        count++;
+      }
+    });
+    return count;
+  }, [activities, customers, currentUser]);
+
+  // Filtered Activities based on UI filters
   const filteredActivities = useMemo(() => {
-    const todayStr = '2026-11-16'; // Local system current date
+    const todayStr = new Date().toISOString().split('T')[0];
+    const currentMonth = todayStr.slice(0, 7); // e.g. "2026-11"
 
-    return baseActivities.filter(act => {
+    return unifiedActivities.filter(act => {
       // Employee filter (for non-Sales Manager)
       if (!isSalesManager && selectedEmp !== 'All' && act.submittedBy !== selectedEmp) {
         return false;
@@ -60,11 +117,9 @@ export const DailyActivitiesPage = () => {
 
       // Date filter mode
       if (dateFilterMode === 'today') {
-        if (act.submissionDate !== todayStr && act.submissionDate !== new Date().toISOString().split('T')[0]) {
-          return false;
-        }
+        if (act.submissionDate !== todayStr) return false;
       } else if (dateFilterMode === 'month') {
-        if (!act.submissionDate.startsWith('2026-11')) return false;
+        if (!act.submissionDate?.startsWith(currentMonth)) return false;
       } else if (dateFilterMode === 'range') {
         if (startDate && act.submissionDate < startDate) return false;
         if (endDate && act.submissionDate > endDate) return false;
@@ -72,15 +127,17 @@ export const DailyActivitiesPage = () => {
 
       return true;
     });
-  }, [baseActivities, isSalesManager, selectedEmp, selectedSource, dateFilterMode, startDate, endDate]);
+  }, [unifiedActivities, isSalesManager, selectedEmp, selectedSource, dateFilterMode, startDate, endDate]);
 
-  // Aggregate Metrics (Scoped to user if Sales Manager)
-  const todayRecordsCount = baseActivities.filter(
-    a => a.submissionDate === '2026-11-16' || a.submissionDate === new Date().toISOString().split('T')[0]
+  const todayStr = new Date().toISOString().split('T')[0];
+  const currentMonth = todayStr.slice(0, 7);
+
+  const todayRecordsCount = unifiedActivities.filter(
+    a => a.submissionDate === todayStr
   ).length;
 
-  const monthlyRecordsCount = baseActivities.filter(
-    a => a.submissionDate.startsWith('2026-11')
+  const monthlyRecordsCount = unifiedActivities.filter(
+    a => a.submissionDate?.startsWith(currentMonth)
   ).length;
 
   const sourceCounts = {
@@ -134,6 +191,10 @@ export const DailyActivitiesPage = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          <div className="rounded-xl bg-gold-400/20 border border-gold-400/40 px-3.5 py-1.5 text-center">
+            <span className="text-[10px] text-gold-200 block uppercase font-bold">Added by You</span>
+            <span className="text-sm font-extrabold text-gold-300">{myTotalContactsCount}</span>
+          </div>
           <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
             <span className="text-[10px] text-white/60 block uppercase font-bold">Entered Today</span>
             <span className="text-sm font-extrabold text-emerald-300">{todayRecordsCount}</span>
@@ -180,7 +241,7 @@ export const DailyActivitiesPage = () => {
           }`}
         >
           <BarChart2 className="w-4 h-4 text-blue-600" />
-          <span>Activity Reports & Logs ({filteredActivities.length})</span>
+          <span>Activity Reports & Logs ({myTotalContactsCount})</span>
         </button>
       </div>
 
@@ -197,6 +258,33 @@ export const DailyActivitiesPage = () => {
       {/* TAB 3: REPORTS & AUDIT LOGS */}
       {activeTab === 'reports' && (
         <div className="space-y-6">
+          {/* User Contribution Banner */}
+          <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-burgundy-800 to-burgundy-950 p-5 text-white shadow-md border border-gold-300/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gold-400 text-burgundy-950 font-bold shadow-md">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gold-300">Staff Contribution Summary</span>
+                <h3 className="text-base font-extrabold text-white font-corporate">
+                  {currentUser?.name} ({currentUser?.role})
+                </h3>
+                <p className="text-xs text-gold-100/90">
+                  Total contacts registered by your account: <strong className="text-white font-extrabold text-sm underline">{myTotalContactsCount} contact(s)</strong>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl bg-white/10 px-4 py-2 text-center border border-white/10">
+                <span className="text-[10px] uppercase font-bold text-gold-200 block">Contacts Added by You</span>
+                <span className="text-xl font-extrabold text-gold-300">{myTotalContactsCount}</span>
+              </div>
+              <div className="rounded-xl bg-white/10 px-4 py-2 text-center border border-white/10">
+                <span className="text-[10px] uppercase font-bold text-slate-300 block">System Total</span>
+                <span className="text-xl font-extrabold text-white">{customers.length}</span>
+              </div>
+            </div>
+          </div>
           {/* Summary KPIs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

@@ -29,6 +29,8 @@ export const UserManagementPage = () => {
   const { currentUser, switchUser, showToast } = useAuth();
   const {
     employees = [],
+    customers = [],
+    activities = [],
     addEmployee,
     updateEmployee,
     deleteEmployee,
@@ -380,6 +382,7 @@ export const UserManagementPage = () => {
                   <th className="py-3 px-4">Role & Permissions</th>
                   <th className="py-3 px-4">Department & Title</th>
                   <th className="py-3 px-4">Contact Info</th>
+                  <th className="py-3 px-4 text-center">Contacts Added</th>
                   <th className="py-3 px-4">Account Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
@@ -454,6 +457,34 @@ export const UserManagementPage = () => {
                           <Phone className="w-3 h-3 text-slate-400 shrink-0" />
                           <span>{emp.mobile || 'N/A'}</span>
                         </div>
+                      </td>
+
+                      {/* Contacts Added Count */}
+                      <td className="py-3 px-4 text-center">
+                        {(() => {
+                          const empCusts = customers.filter(c => c.submittedBy === emp.id || c.submittedByName === emp.name);
+                          const empActs = activities.filter(a => a.submittedBy === emp.id || a.submittedByName === emp.name);
+                          const seen = new Set();
+                          let count = 0;
+                          [...empActs, ...empCusts].forEach(item => {
+                            const m = (item.mobile || '').replace(/\D/g, '').slice(-10);
+                            if (!m || !seen.has(m)) {
+                              if (m) seen.add(m);
+                              count++;
+                            }
+                          });
+
+                          return (
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                              count > 0
+                                ? 'bg-amber-50 text-amber-900 border border-amber-300 font-extrabold'
+                                : 'bg-slate-100 text-slate-500 border border-slate-200'
+                            }`}>
+                              <Phone className="w-3 h-3 text-amber-700" />
+                              <span>{count} Added</span>
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* Status */}

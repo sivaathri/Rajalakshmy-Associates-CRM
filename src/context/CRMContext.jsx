@@ -342,6 +342,34 @@ export const CRMProvider = ({ children }) => {
     };
 
     setCustomers(prev => [newCustomer, ...prev]);
+
+    // Also record into activities log if not already initiated from an activity
+    if (!customerData._fromActivity) {
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0];
+      const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      const isKnown = (customerData.customerType || 'known') === 'known';
+      const classification = `New Database - ${isKnown ? 'Known' : 'Unknown'}`;
+
+      const newAct = {
+        id: `ACT-${Date.now().toString().slice(-4)}`,
+        customerName: newCustomer.name,
+        mobile: newCustomer.mobile,
+        business: newCustomer.business,
+        customerType: newCustomer.customerType,
+        state: newCustomer.state,
+        source: newCustomer.source,
+        referenceFrom: newCustomer.referenceFrom || '',
+        submittedBy: newCustomer.submittedBy,
+        submittedByName: newCustomer.submittedByName,
+        submissionDate: dateStr,
+        submissionTime: timeStr,
+        classifiedTo: classification,
+        status: 'Direct Entry'
+      };
+      setActivities(prev => [newAct, ...prev]);
+    }
+
     showToast(
       resolvedDatabaseType === 'new'
         ? `Added to New Database: ${newCustomer.name} (${newCustomer.id})`
@@ -669,7 +697,8 @@ export const CRMProvider = ({ children }) => {
       submittedByName: newActivity.submittedByName,
       assignedTo: '', // Fresh unassigned lead open to all RMs
       assignedName: '',
-      callingStatus: 'Pending'
+      callingStatus: 'Pending',
+      _fromActivity: true
     });
 
     showToast(`Activity saved & classified into ${classification}`, 'success');
@@ -785,6 +814,30 @@ export const CRMProvider = ({ children }) => {
 
           return [...importedCustomers, ...currentList];
         });
+
+        // Also record each imported record in activities so reports accurately show user's added contacts
+        const nowStr = new Date().toISOString().split('T')[0];
+        const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+        const importedActivities = newCustomersToAdd.map((cust, idx) => ({
+          id: `ACT-EXCEL-${Date.now().toString().slice(-4)}-${idx + 1}`,
+          customerName: cust.name,
+          mobile: cust.mobile,
+          business: cust.business || 'Commercial Trader',
+          customerType: cust.customerType,
+          state: cust.state || 'Tamil Nadu',
+          source: cust.source || 'Open Source',
+          referenceFrom: cust.referenceFrom || '',
+          submittedBy: currentUser?.id || 'EMP005',
+          submittedByName: currentUser?.name || 'Murugan Velu',
+          submissionDate: nowStr,
+          submissionTime: timeStr,
+          classifiedTo: cust.customerType === 'known' ? 'New Database - Known' : 'New Database - Unknown',
+          status: 'Imported (Excel)'
+        }));
+
+        setActivities(prev => [...importedActivities, ...prev]);
+
         showToast(`Successfully imported ${newCustomersToAdd.length} records into New Database (Skipped ${duplicateCount} duplicates)`, 'success');
       }
     };
