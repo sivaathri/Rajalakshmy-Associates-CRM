@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -12,7 +12,9 @@ import {
   CheckCircle,
   Tag,
   Building,
-  Layers
+  Layers,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { DailyActivityForm } from '../components/dailyActivities/DailyActivityForm';
 import { ExcelBulkUploader } from '../components/dailyActivities/ExcelBulkUploader';
@@ -145,6 +147,21 @@ export const DailyActivitiesPage = () => {
     OpenSource: filteredActivities.filter(a => a.source === 'Open Source').length,
     Reference: filteredActivities.filter(a => a.source === 'Reference').length
   };
+
+  // Pagination State (Show minimum 15 items per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedEmp, dateFilterMode, selectedSource, startDate, endDate]);
+
+  const totalPages = Math.ceil(filteredActivities.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredActivities.length);
+  const paginatedActivities = useMemo(() => {
+    return filteredActivities.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredActivities, startIndex, itemsPerPage]);
 
   const handleExport = () => {
     const data = filteredActivities.map((a, idx) => ({
@@ -395,37 +412,109 @@ export const DailyActivitiesPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredActivities.map((act, index) => (
-                    <tr key={act.id} className="hover:bg-[#FAF6EF]/60 transition">
-                      <td className="px-4 py-3 text-center font-bold text-slate-700">{index + 1}</td>
-                      <td className="px-4 py-3 font-bold text-slate-900">{act.customerName}</td>
-                      <td className="px-4 py-3 font-mono font-medium">{act.mobile}</td>
-                      <td className="px-4 py-3">{act.business || 'General Client'}</td>
-                      <td className="px-4 py-3">
-                        <span className="font-semibold text-slate-800">{act.source}</span>
-                        {act.referenceFrom && (
-                          <span className="text-[10px] text-amber-900 block font-medium">
-                            Ref: {act.referenceFrom}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-semibold text-slate-800">{act.submittedByName}</span>
-                        <span className="text-[10px] text-slate-400 font-mono block">{act.submittedBy}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="font-semibold text-slate-800">{formatDate(act.submissionDate)}</span>
-                        <span className="text-[10px] text-slate-500 block">{act.submissionTime}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-block text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                          {act.classifiedTo}
-                        </span>
+                  {paginatedActivities.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="px-4 py-8 text-center text-xs text-slate-400 italic">
+                        No field submission records found matching your filters.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    paginatedActivities.map((act, index) => {
+                      const slNo = startIndex + index + 1;
+                      return (
+                        <tr key={act.id} className="hover:bg-[#FAF6EF]/60 transition">
+                          <td className="px-4 py-3 text-center font-bold text-slate-700">{slNo}</td>
+                          <td className="px-4 py-3 font-bold text-slate-900">{act.customerName}</td>
+                          <td className="px-4 py-3 font-mono font-medium">{act.mobile}</td>
+                          <td className="px-4 py-3">{act.business || 'General Client'}</td>
+                          <td className="px-4 py-3">
+                            <span className="font-semibold text-slate-800">{act.source}</span>
+                            {act.referenceFrom && (
+                              <span className="text-[10px] text-amber-900 block font-medium">
+                                Ref: {act.referenceFrom}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="font-semibold text-slate-800">{act.submittedByName}</span>
+                            <span className="text-[10px] text-slate-400 font-mono block">{act.submittedBy}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="font-semibold text-slate-800">{formatDate(act.submissionDate)}</span>
+                            <span className="text-[10px] text-slate-500 block">{act.submissionTime}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-block text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                              {act.classifiedTo}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Pagination Controls (Shows minimum 15 per page) */}
+            <div className="px-6 py-3 bg-[#FAF6EF]/70 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="text-slate-600 font-medium">
+                {filteredActivities.length === 0 ? (
+                  <span>Showing 0 records</span>
+                ) : (
+                  <span>
+                    Showing <strong className="text-slate-900">{startIndex + 1}</strong> to{' '}
+                    <strong className="text-slate-900">{endIndex}</strong> of{' '}
+                    <strong className="text-slate-900">{filteredActivities.length}</strong> records (15 per page)
+                  </span>
+                )}
+              </div>
+
+              {filteredActivities.length > itemsPerPage && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition shadow-2xs"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>Prev</span>
+                  </button>
+
+                  <div className="flex items-center gap-1 px-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(page => {
+                        return page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+                      })
+                      .map((page, idx, arr) => (
+                        <React.Fragment key={page}>
+                          {idx > 0 && arr[idx - 1] !== page - 1 && (
+                            <span className="px-1 text-slate-400">...</span>
+                          )}
+                          <button
+                            onClick={() => setCurrentPage(page)}
+                            className={`w-7 h-7 rounded-lg text-xs font-bold transition ${
+                              currentPage === page
+                                ? 'bg-burgundy-900 text-gold-300 shadow-xs'
+                                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        </React.Fragment>
+                      ))}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-slate-700 transition shadow-2xs"
+                  >
+                    <span>Next</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
