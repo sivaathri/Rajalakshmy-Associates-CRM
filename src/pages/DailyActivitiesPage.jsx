@@ -3,7 +3,6 @@ import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import {
   CalendarCheck,
-  FileSpreadsheet,
   PlusCircle,
   BarChart2,
   Users,
@@ -17,7 +16,6 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { DailyActivityForm } from '../components/dailyActivities/DailyActivityForm';
-import { ExcelBulkUploader } from '../components/dailyActivities/ExcelBulkUploader';
 import { Pagination } from '../components/common/Pagination';
 import { formatDate, exportToCSV } from '../utils/formatters';
 
@@ -165,7 +163,6 @@ export const DailyActivitiesPage = () => {
   }, [filteredActivities, startIndex, itemsPerPage]);
 
   const handleResetFilters = () => {
-    setSelectedEmp(isSalesManager ? (currentUser?.id || 'EMP005') : 'All');
     setDateFilterMode('all');
     setSelectedSource('All');
     setStartDate('');
@@ -216,18 +213,6 @@ export const DailyActivitiesPage = () => {
         </button>
 
         <button
-          onClick={() => setActiveTab('excel')}
-          className={`py-3 px-4 border-b-2 transition flex items-center gap-2 ${
-            activeTab === 'excel'
-              ? 'border-burgundy-800 text-burgundy-900 bg-[#FAF6EF]/50'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-          <span>Excel Bulk Upload (.xlsx / .xls)</span>
-        </button>
-
-        <button
           onClick={() => setActiveTab('reports')}
           className={`py-3 px-4 border-b-2 transition flex items-center gap-2 ${
             activeTab === 'reports'
@@ -245,70 +230,35 @@ export const DailyActivitiesPage = () => {
         <DailyActivityForm />
       )}
 
-      {/* TAB 2: EXCEL BULK UPLOAD */}
-      {activeTab === 'excel' && (
-        <ExcelBulkUploader />
-      )}
-
-      {/* TAB 3: REPORTS & AUDIT LOGS */}
+      {/* TAB 2: REPORTS & AUDIT LOGS */}
       {activeTab === 'reports' && (
         <div className="space-y-6">
           {/* Summary KPIs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Records (Filtered)</span>
-              <span className="text-2xl font-black text-slate-900">{filteredActivities.length}</span>
-              <span className="text-[10px] text-slate-500 block mt-0.5">Leads submitted</span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block">{filteredActivities.length}</span>
             </div>
 
             <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-blue-800 block">Source: 1. Bills</span>
-              <span className="text-2xl font-black text-blue-900">{sourceCounts.Bills}</span>
-              <span className="text-[10px] text-blue-700 block mt-0.5">Retail invoices</span>
+              <span className="text-2xl font-black text-blue-900 mt-1 block">{sourceCounts.Bills}</span>
             </div>
 
             <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-amber-800 block">Source: 2. Open Source</span>
-              <span className="text-2xl font-black text-amber-900">{sourceCounts.OpenSource}</span>
-              <span className="text-[10px] text-amber-700 block mt-0.5">Market walk-ins</span>
+              <span className="text-2xl font-black text-amber-900 mt-1 block">{sourceCounts.OpenSource}</span>
             </div>
 
             <div className="rounded-xl border border-purple-200 bg-purple-50/60 p-4 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-purple-800 block">Source: 3. Reference</span>
-              <span className="text-2xl font-black text-purple-900">{sourceCounts.Reference}</span>
-              <span className="text-[10px] text-purple-700 block mt-0.5">Referred clients</span>
+              <span className="text-2xl font-black text-purple-900 mt-1 block">{sourceCounts.Reference}</span>
             </div>
           </div>
 
           {/* Filter Bar */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {/* Employee Filter */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Filter by Submitting Employee</label>
-                {isSalesManager ? (
-                  <div className="w-full h-9 text-xs rounded-xl border border-gold-300 bg-gold-50/70 px-3 text-slate-800 font-bold flex items-center justify-between">
-                    <span className="truncate">{currentUser?.name} ({currentUser?.id})</span>
-                    <span className="text-[10px] text-burgundy-900 bg-white/80 px-2 py-0.5 rounded-full border border-burgundy-200 shrink-0 font-extrabold">
-                      Only My Entries
-                    </span>
-                  </div>
-                ) : (
-                  <select
-                    value={selectedEmp}
-                    onChange={(e) => setSelectedEmp(e.target.value)}
-                    className="w-full h-9 text-xs rounded-xl border border-slate-300 px-3 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-burgundy-800"
-                  >
-                    <option value="All">All Field Representatives</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name} ({emp.id} - {emp.role})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Time Period Filter */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Time Period</label>
@@ -358,7 +308,7 @@ export const DailyActivitiesPage = () => {
 
             {/* Custom Date Range Row */}
             {dateFilterMode === 'range' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-100">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Start Date</label>
                   <input

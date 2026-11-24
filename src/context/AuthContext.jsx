@@ -57,8 +57,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = (employeeId, password) => {
     const allEmployees = getStoredEmployees();
+    const q = (employeeId || '').trim().toLowerCase();
     const employee = allEmployees.find(
-      emp => emp.id.toUpperCase() === (employeeId || '').trim().toUpperCase()
+      emp =>
+        emp.id?.toLowerCase() === q ||
+        emp.email?.toLowerCase() === q ||
+        emp.name?.toLowerCase() === q
     );
 
     if (employee) {

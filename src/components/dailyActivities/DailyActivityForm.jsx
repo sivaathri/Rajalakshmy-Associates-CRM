@@ -131,13 +131,6 @@ export const DailyActivityForm = () => {
           <h3 className="text-base font-bold text-burgundy-900 font-corporate">
             Field Sales Daily Entry Form
           </h3>
-          <p className="text-xs text-slate-500">
-            Submit field prospect details. Record automatically syncs to New Database.
-          </p>
-        </div>
-        <div className="text-right">
-          <span className="text-[10px] font-semibold text-slate-400 block uppercase">Submitting Employee</span>
-          <span className="text-xs font-bold text-burgundy-900">{currentUser?.name} ({currentUser?.id})</span>
         </div>
       </div>
 
@@ -185,14 +178,14 @@ export const DailyActivityForm = () => {
                 Customer / Proprietor Name <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
                   required
                   placeholder="e.g. S. Ramanathan"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-slate-300 py-2 pl-9 pr-3 focus:outline-none focus:border-burgundy-800"
+                  className="w-full h-11 text-xs md:text-sm rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 focus:outline-none focus:border-burgundy-800 focus:ring-1 focus:ring-burgundy-800 transition bg-white"
                 />
               </div>
             </div>
@@ -205,7 +198,7 @@ export const DailyActivityForm = () => {
                 type="text"
                 disabled
                 value="Unknown / Lead"
-                className="w-full text-xs rounded-xl border border-slate-200 bg-slate-100 py-2 px-3 text-slate-500 cursor-not-allowed"
+                className="w-full h-11 text-xs md:text-sm rounded-xl border border-slate-200 bg-slate-100 py-2.5 px-3.5 text-slate-500 cursor-not-allowed"
               />
             </div>
           )}
@@ -216,14 +209,14 @@ export const DailyActivityForm = () => {
               Mobile Number <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <Phone className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+              <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
                 type="tel"
                 required
                 placeholder="10-digit mobile (e.g. 98401 23456)"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
-                className="w-full text-xs rounded-xl border border-slate-300 py-2 pl-9 pr-3 focus:outline-none focus:border-burgundy-800"
+                className="w-full h-11 text-xs md:text-sm rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 focus:outline-none focus:border-burgundy-800 focus:ring-1 focus:ring-burgundy-800 transition bg-white"
               />
             </div>
           </div>
@@ -234,13 +227,13 @@ export const DailyActivityForm = () => {
               Business / Occupation
             </label>
             <div className="relative">
-              <Building2 className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+              <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
                 type="text"
                 placeholder="e.g. Textiles, Rice Mill, Pharmacy"
                 value={business}
                 onChange={(e) => setBusiness(e.target.value)}
-                className="w-full text-xs rounded-xl border border-slate-300 py-2 pl-9 pr-3 focus:outline-none focus:border-burgundy-800"
+                className="w-full h-11 text-xs md:text-sm rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 focus:outline-none focus:border-burgundy-800 focus:ring-1 focus:ring-burgundy-800 transition bg-white"
               />
             </div>
           </div>
@@ -253,7 +246,7 @@ export const DailyActivityForm = () => {
             <select
               value={source}
               onChange={(e) => setSource(e.target.value)}
-              className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800 bg-white"
+              className="w-full h-11 text-xs md:text-sm rounded-xl border border-slate-300 py-2.5 px-3.5 focus:outline-none focus:border-burgundy-800 focus:ring-1 focus:ring-burgundy-800 transition bg-white text-slate-800 cursor-pointer"
             >
               <option value="Bills">1. Bills</option>
               <option value="Open Source">2. Open Source</option>
@@ -268,14 +261,14 @@ export const DailyActivityForm = () => {
                 Reference From / Who? <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <Share2 className="absolute left-3 top-2.5 w-4 h-4 text-amber-600" />
+                <Share2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-600 pointer-events-none" />
                 <input
                   type="text"
                   required
                   placeholder="Enter recommender or client name"
                   value={referenceFrom}
                   onChange={(e) => setReferenceFrom(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-amber-300 py-2 pl-9 pr-3 bg-amber-50/50 focus:outline-none focus:border-amber-600"
+                  className="w-full h-11 text-xs md:text-sm rounded-xl border border-amber-300 py-2.5 pl-10 pr-3 bg-amber-50/50 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 transition"
                 />
               </div>
             </div>
