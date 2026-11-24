@@ -4,6 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "main": "electron/main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sivaathri/Rajalakshmy-Associates-CRM.git"
+  },
   "scripts": {
     "dev": "vite",
     "web": "vite --open",
@@ -45,8 +49,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "github_username",
-        "repo": "rajalakshmy-associates-crm"
+        "owner": "sivaathri",
+        "repo": "Rajalakshmy-Associates-CRM"
       }
     ],
     "directories": {

@@ -1,6 +1,139 @@
-# Rajalakshmy Associates – Corporate CRM Prototype
+# Rajalakshmy Associates – Corporate CRM Platform
 
-A modern, interactive, fully responsive corporate CRM prototype built for **Rajalakshmy Associates** using **React.js**, **Vite**, and **Tailwind CSS**.
+A modern, high-performance, unified financial CRM platform built for **Rajalakshmy Associates**. Operates seamlessly both as an **Executive Web Application** and as a **Standalone Native Windows Desktop Application (Electron)** from a single, unified codebase.
+
+---
+
+## 🚀 Running Modes & Execution Commands
+
+### Quick Commands Summary
+
+| Mode | Command | Description |
+| :--- | :--- | :--- |
+| **🌐 Web App (Browser)** | `npm run web` *(or `npm run dev`)* | Starts Vite development server and opens the application in your default web browser (`http://localhost:5173`). |
+| **💻 Standalone Desktop App** | `npm run app` *(or `npm run electron:dev`)* | Launches the application as a standalone native Windows desktop software window powered by Electron. |
+| **📦 Build Web (Production)** | `npm run build` | Compiles production web bundle into the `dist/` directory. |
+| **💿 Generate Desktop Installer (.exe)** | `npm run app:dist` *(or `npm run electron:build`)* | Automatically compiles and packages the complete standalone Windows `.exe` installer setup in the `release/` folder. |
+
+---
+
+## 💿 Generating the Standalone Windows `.exe` Installer
+
+To generate the standalone Windows installer executable file for your client:
+
+```bash
+npm run app:dist
+```
+*(Alternative alias: `npm run electron:build`)*
+
+### What This Command Does:
+1. Compiles the frontend assets via Vite into `dist/`.
+2. Packages the Electron runtime, application logic, and the official **Rajalakshmy Associates logo**.
+3. Generates the distribution installer setup inside the **`release/`** directory:
+   * **Installer File**: `release/Rajalakshmy Associates CRM Setup 1.0.0.exe`
+4. **Client Distribution**: Deliver this `.exe` file to the client. When double-clicked, it installs the desktop software and creates a **Desktop Shortcut** with your logo.
+
+---
+
+## 🛠️ How to Open Developer Tools in Standalone Mode
+
+While running the standalone desktop application, Developer Tools and hot-reload can be accessed at any time:
+
+### 1. Keyboard Shortcuts
+- **`F12`** — Toggles Developer Tools open and closed.
+- **`Ctrl + Shift + I`** *(or `Cmd + Option + I` on macOS)* — Toggles Developer Tools.
+- **`F5`** or **`Ctrl + R`** — Quickly reloads the desktop application.
+
+### 2. Auto-Open on Startup (Optional)
+To have Developer Tools open automatically every time you run `npm run app`, open [electron/main.js](file:///electron/main.js) and uncomment line 57:
+```javascript
+if (isDev) {
+  mainWindow.loadURL('http://localhost:5173');
+  mainWindow.webContents.openDevTools(); // <-- Uncomment this line
+}
+```
+
+---
+
+## 🔄 How the Automatic Update Works
+
+The standalone desktop application includes an integrated automatic background updater powered by **`electron-updater`**. Once you give the client the `.exe`, any future updates pushed to Git can be automatically detected and installed on their PC without manual reinstallations.
+
+### The Automatic Update Lifecycle
+
+```
+[1. Developer pushes updates & bumps version in package.json] 
+                              │
+                              ▼
+            [2. Release published to GitHub repository]
+                              │
+                              ▼
+           [3. Client opens desktop software on their PC]
+                              │
+                              ▼
+       [4. App checks GitHub Releases in the background]
+                              │
+                              ▼
+         [5. Dialog: "New Update v1.0.1 Available"]
+                              │
+                              ▼
+       [6. Background download finishes & prompts client:]
+         "Update Ready! Restart now to install?"
+                              │
+                              ▼
+   [7. Client clicks Restart -> Installs & opens updated CRM!]
+```
+
+### Developer Step-by-Step for Future Client Updates:
+
+1. **Make code changes** requested by the client and test locally (`npm run dev` or `npm run app`).
+2. **Bump the version** in `package.json`:
+   ```json
+   "version": "1.0.1"   // (increment from 1.0.0)
+   ```
+3. **Commit & Push to Git**:
+   ```bash
+   git add .
+   git commit -m "Client feature updates v1.0.1"
+   git push
+   ```
+4. **Publish the Release**:
+   ```bash
+   npx electron-builder --publish always
+   ```
+   *(Or create a new Release with tag `v1.0.1` on your GitHub repository).*
+5. **Client PC Experience**:
+   * Next time the client launches the software, it automatically detects the update, downloads it in the background, and prompts:
+     > *"Version v1.0.1 has been downloaded. Restart the application now to apply the updates?"*
+     > `[Restart & Install Now]` | `[Later]`
+   * When they click **Restart & Install Now**, it updates silently in seconds and preserves all their existing LocalStorage data intact!
+
+### 🔧 Current GitHub Configuration & How to Change It in Future:
+- **Repository**: [https://github.com/sivaathri/Rajalakshmy-Associates-CRM.git](https://github.com/sivaathri/Rajalakshmy-Associates-CRM.git)
+- **Account**: `sivaathri`
+
+If your GitHub username or account changes in the future, simply update these 2 places in [package.json](file:///package.json):
+1. **Repository URL**:
+   ```json
+   "repository": {
+     "type": "git",
+     "url": "https://github.com/YOUR_NEW_USERNAME/YOUR_NEW_REPO.git"
+   }
+   ```
+2. **Publish Block** (under `"build"`):
+   ```json
+   "publish": [
+     {
+       "provider": "github",
+       "owner": "YOUR_NEW_USERNAME",
+       "repo": "YOUR_NEW_REPO"
+     }
+   ]
+   ```
+3. **Update Git Remote**:
+   ```bash
+   git remote set-url origin https://github.com/YOUR_NEW_USERNAME/YOUR_NEW_REPO.git
+   ```
 
 ---
 
@@ -12,7 +145,7 @@ A modern, interactive, fully responsive corporate CRM prototype built for **Raja
 - **Background**: `#FAF6EF`
 - **Cards**: `#FFFFFF`
 - **Text**: Dark Charcoal
-- **Branding**: Official corporate logo integrated in header, navigation, and login.
+- **Branding**: Official corporate logo integrated in desktop title bar, taskbar, web header, navigation, and login.
 
 ---
 
@@ -33,125 +166,50 @@ A modern, interactive, fully responsive corporate CRM prototype built for **Raja
 - **Route Guarding**: Unauthorized URLs are prevented and safely redirected with access alerts.
 
 ### 2. 📊 Executive Dashboard
-- **10 Core KPI Cards**:
-  - Total Customers
-  - Old Known Customers
-  - Old Unknown Customers
-  - New Known Customers
-  - New Unknown Customers
-  - Total Calls
-  - Today's Calls
-  - Pending Follow-ups
-  - Total Cases Filed
-  - Approved Cases (with sanctioned portfolio value)
-- **Interactive Charts (Recharts)**:
-  - Daily Telecalling Volume & Conversions (Bar chart)
-  - Customer Database Breakdown: Known vs. Unknown & Old vs. New (Donut chart)
-  - Monthly Performance & Case Volume Growth in Lakhs (Area chart)
-- **Live Widgets**:
-  - Pending follow-up queue with quick call trigger
-  - Recent field activities and lead submissions
+- **10 Core KPI Cards**: Total Customers, Old/New Database counts, Total Calls, Today's Calls, Pending Follow-ups, Total Cases Filed, Approved Cases with portfolio volume.
+- **Interactive Charts (Recharts)**: Daily Telecalling Volume & Conversions, Customer Database Breakdown, Monthly Performance Growth in Lakhs.
+- **Strict DD-MM-YYYY Date Format**: All timestamps, punch records, and logs are displayed in corporate `DD-MM-YYYY` standard.
 
-### 3. 📞 Relationship Manager (RM) – Telecalling Console
-- **Focused Calling View**:
-  - Displays assigned contacts one at a time with queue navigation (Previous / Next).
-  - Displays customer name, phone, trade/occupation, location, and past discussion history.
-  - **"Initiate Call Session"**: Simulates active telephone call with a live duration timer (`00:01`, `00:02`...) and animated voice waveform.
-- **4 Mandatory Call Outcomes**:
-  1. `OK` – Converted / interested lead
-  2. `Not Attend` – Ringing / busy / switched off
-  3. `No Need` – Not interested / DND
-  4. `Reminder` – Pops up date picker and remark input, saves reminder against the contact, and adds to follow-up schedule.
-- **Calling Reports & Audits**:
-  - Filter by Today, Month, or Custom Date Range.
-  - Outcome breakdown pie chart and count metrics.
-  - Detailed calling audit table with export to CSV.
+### 3. 🎯 Sales Leads Pipeline & Auto-Conversion
+- **Automatic Conversion from Telecalling**: When any telecaller marks a call outcome as **1. OK** or **5. Field Visit**, the number is automatically converted into a Lead and assigned strictly to that user.
+- **User Ownership & Visibility Isolation**: Leads actioned from calls are scoped so that only the user who actioned that number sees it. Other users cannot access or view that lead.
+- **Assign Lead Logic**: The "Assign Lead" button is only displayed for unassigned leads; already assigned leads hide the button.
+- **Eye Icon & Edit Modal**: Eye icon opens the full Lead details with a direct **Edit Lead** modal.
 
-### 4. 🗃️ Customer Database (Old & New / Known & Unknown)
-- Separate dedicated sections for:
-  - `Old Database – Known`
-  - `Old Database – Unknown`
-  - `New Database – Known`
-  - `New Database – Unknown`
-- **Fields**:
-  - Known: Customer Name, Mobile Number, Alternate Mobile, Business/Occupation, Address, State, City.
-  - Unknown: Mobile Number, State, Business Descriptor.
-- **Features**:
-  - Universal search by customer name, mobile, and business.
-  - Filters by State (Tamil Nadu / Puducherry), Calling Status, Source, and Creation Date.
-  - Pagination and CSV Export.
-  - **KYC Document Management**:
-    - Categories: `KYC 1` (Aadhaar / ID), `KYC 2` (PAN Card), `KYC 3` (GST / Registration), `Other Documents`.
-    - Upload documents, preview, and remove files.
-  - **Service History Timeline**:
-    - Multi-service tracking per customer (Service Name, Request Date, Details, Status, Remarks).
-    - Timeline view of all historical consultations and loans.
+### 4. 🏦 Bank Login & Disbursement Console
+- **Two-Day Reminder System**: Automatically alerts every 2 days if a bank appraisal file has not received progress notes.
+- **Customer ID Auto-Generation**: Converting a lead to bank login automatically generates a unique `RA-CUST-XXXX` Customer ID (no login IDs generated).
+- **Disbursement & Rejection Flow**:
+  - **Disburse**: Prompts for bank name, loan amount, and loan type to record sanctioned funds.
+  - **Reject**: Captures mandatory managerial decline remarks.
+- **Audit History**: Eye icon displays the complete chronological update timeline.
 
-### 5. 📝 Daily Activities – Field Sales & Excel Bulk Upload
-- **Daily Field Submission Form**:
-  - Customer Name, Mobile Number, Business/Occupation, Known/Unknown toggle, State.
-  - Database Source: `Bills`, `Open Source`, `Reference`.
-  - Conditional field: *"Reference From / Who?"* dynamically rendered when `Reference` is selected.
-  - Automatically classifies into `New Database – Known` or `New Database – Unknown`.
-- **Excel Bulk Upload (`.xlsx` / `.xls`)**:
-  - Drag-and-drop or select any `.xlsx` / `.xls` or CSV file.
-  - Downloadable Sample Excel Template provided inside the app for instant testing.
-  - Live preview table before committing.
-  - 10-digit mobile number format validation.
-  - **Duplicate Detection**: Cross-references against all existing records in the database.
-  - Summary metrics: Total rows, Valid new records, Duplicates skipped, and Invalid numbers.
-  - Saves valid unique records directly to the New Database.
-- **Activity Reports**:
-  - Today's entries, monthly count, employee-wise filter, and source distribution.
+### 5. ⏱️ Attendance & Leave Management Desk
+- **Dual Tab Architecture**:
+  - **Daily In-Punch & History** (`History` icon): One-click daily in-time punch, live digital clock, and audit history table in `DD-MM-YYYY`.
+  - **Leave Management & Approvals** (`CalendarCheck` icon): Full leave requisition workflow.
+- **Request Leave**: Allows employees to select leave type (CL, SL, PL, Emergency, etc.), date range, days count, and reason. Submits as `Pending Approval`.
+- **Admin Approval Console**: Shows who raised each leave (Name, ID, Role), date range, and reason, with one-click **Approve** and **Reject with Remarks** actions.
 
-### 6. 🏆 Performance – Case Disposition & Approval Console
-- Submit financial case dispositions (Customer Name, Mobile, Amount in ₹, Date, Details).
-- Initial status: `Pending Approval`.
-- **Admin & Manager Approval Pipeline**:
-  - **Approve**: Sets green `Approved` badge, records approver's name and approval date, and updates the sanctioned performance total.
-  - **Reject**: Opens modal to enter rejection reasons, sets red `Rejected` badge, and preserves rejection remarks.
+### 6. 📞 Relationship Manager (RM) – Telecalling Console
+- **Focused Calling View**: One-by-one contact navigation with active duration timer and call simulation.
+- **5 Mandatory Call Outcomes**: `1. OK`, `2. Not Attend`, `3. No Need`, `4. Reminder`, `5. Field Visit`.
+- **Calling Reports**: Filter by Today, Month, or Custom Date Range with CSV export.
 
-### 7. 📄 Resignation & Advance Amount Modules
-- **Resignation Management**:
-  - Submit resignation notice (Last working date, reason).
-  - Status tracking: Pending, Approved, Rejected.
-- **Advance Amount Management**:
-  - Requisition form for salary advance in ₹.
-  - Status tracking with approval actions for Admin and Managers.
+### 7. 🗃️ Customer Database (Old & New / Known & Unknown)
+- Dedicated views for `Old Database – Known`, `Old Database – Unknown`, `New Database – Known`, and `New Database – Unknown`.
+- **Role Scoping**: RMs can add records in database menus with auto-generated `RA-CUST-` IDs.
+- **KYC Document Vault**: Category-based file attachment (`KYC 1`, `KYC 2`, `KYC 3`, `Other`).
+- **Service History Timeline**: Multi-service tracking per customer.
 
-### 8. ⚙️ Operations Settings & RM Lead Distribution
-- **Ops Lead Distribution Engine**:
-  - Select target RM and batch size (3, 5, 10, 20 contacts).
-  - Automatically allocates unassigned/pending contacts from Old or New Database to the designated RM.
-- **Authorized Personnel Directory**:
-  - Complete profiles of 20 realistic employees across Tamil Nadu and Puducherry branch locations.
-- **Reset Prototype Data**:
-  - One-click restore to original factory mock data.
+### 8. 📝 Daily Activities – Field Sales & Excel Bulk Upload
+- Daily field submission form with database source selection (`Bills`, `Open Source`, `Reference`).
+- **Open Source Bulk Upload**: Excel bulk upload option (`.xlsx` / `.xls` / `.csv`) for batch customer registration with duplicate detection.
 
----
-
-## 🛠️ Installation & Running Instructions
-
-### Prerequisites
-- Node.js (v18 or higher recommended)
-- npm (v9 or higher)
-
-### Step 1: Install Dependencies
-```bash
-npm install
-```
-
-### Step 2: Start Development Server
-```bash
-npm run dev
-```
-Open `http://localhost:5173` in your browser.
-
-### Step 3: Build for Production
-```bash
-npm run build
-npm run preview
-```
+### 9. 🏆 Performance, Resignations & Advances
+- **Performance Case Dispositions**: Submit case values with Admin/Manager approval workflow.
+- **Salary Advances**: Requisition form with real-time status tracking.
+- **Resignation Notices**: Managerial review and approval tracking.
 
 ---
 
@@ -159,6 +217,9 @@ npm run preview
 
 ```
 rajalakshmy-associates-crm/
+├── electron/
+│   ├── main.js                           # Electron main process (window, shortcuts, auto-updater)
+│   └── preload.js                        # Context isolation bridge
 ├── public/
 │   └── logo.png                          # Official Rajalakshmy Associates Logo
 ├── src/
@@ -166,7 +227,7 @@ rajalakshmy-associates-crm/
 │   │   ├── common/
 │   │   │   ├── FollowUpReminderModal.jsx # Auto-popup on login for pending follow-ups
 │   │   │   ├── Navbar.jsx                # Universal search, role switcher, follow-up badge
-│   │   │   ├── Sidebar.jsx               # Collapsible corporate sidebar with role menus
+│   │   │   ├── Sidebar.jsx               # Corporate navigation sidebar with role guards
 │   │   │   └── Toast.jsx                 # System notifications
 │   │   ├── customers/
 │   │   │   ├── AddCustomerModal.jsx      # Customer creation with KYC document uploads
@@ -183,12 +244,15 @@ rajalakshmy-associates-crm/
 │   │   ├── AuthContext.jsx               # Authentication, user roles, and permissions
 │   │   └── CRMContext.jsx                # Centralized state & LocalStorage persistence
 │   ├── data/
-│   │   └── mockData.js                   # 20 employees, 50+ customers, calls, and cases
+│   │   └── mockData.js                   # Employee credentials & default structures
 │   ├── pages/
 │   │   ├── AdvanceAmountPage.jsx         # Salary advances
+│   │   ├── AttendancePage.jsx            # Daily In-Punch & Leave Management
+│   │   ├── BankLoginPage.jsx             # Bank appraisal logins & disbursements
 │   │   ├── CustomerDatabasePage.jsx      # Old/New & Known/Unknown database partitions
 │   │   ├── DailyActivitiesPage.jsx       # Field activities & Excel bulk upload
 │   │   ├── DashboardPage.jsx             # 10 KPI cards and Recharts analytics
+│   │   ├── LeadsPage.jsx                 # Sales leads pipeline & assignments
 │   │   ├── LoginPage.jsx                 # Role login & quick test switcher
 │   │   ├── PerformancePage.jsx           # Case disposition & approval pipeline
 │   │   ├── ReportsPage.jsx               # Comprehensive reports & leaderboard
@@ -196,13 +260,13 @@ rajalakshmy-associates-crm/
 │   │   ├── SettingsPage.jsx              # Ops lead distributor & employee directory
 │   │   └── TelecallingPage.jsx           # RM focused telecalling & calling queue
 │   ├── utils/
-│   │   └── formatters.js                 # INR currency, dates, and CSV export helpers
-│   ├── App.jsx                           # Protected routing & layout
-│   ├── index.css                         # Tailwind CSS and animations
+│   │   └── formatters.js                 # INR currency, strict DD-MM-YYYY dates, CSV helpers
+│   ├── App.jsx                           # Protected hash routing & layout
+│   ├── index.css                         # Tailwind CSS and corporate theme
 │   └── main.jsx                          # React application entry
 ├── index.html
 ├── package.json
-├── tailwind.config.js                    # Custom Burgundy & Gold corporate palette
+├── tailwind.config.js
 └── vite.config.js
 ```
 
@@ -212,13 +276,13 @@ rajalakshmy-associates-crm/
 
 | Role | Employee ID | Name | Department | Permissions |
 | :--- | :--- | :--- | :--- | :--- |
-| **Admin** | `EMP001` | Rajesh Kannan | Executive Management | Full system access, case approval, user settings |
-| **Manager** | `EMP002` | Priya Swaminathan | Branch Operations | Review team performance, approve cases & advances |
+| **Admin** | `EMP001` | Rajesh Kannan | Executive Management | Full system access, approvals, settings |
+| **Manager** | `EMP002` | Priya Swaminathan | Branch Operations | Review team performance, approve cases & leaves |
 | **Ops** | `EMP003` | Karthik Sundaram | CRM Operations | Manage database, distribute contacts to RMs |
-| **RM** | `EMP004` | Ananya Subramanian | Client Telecalling | Assigned calling queue, call simulator, follow-ups |
+| **RM** | `EMP004` | Ananya Subramanian | Client Telecalling | Assigned calling queue, lead owner, punch in |
 | **Sales Manager** | `EMP005` | Murugan Velu | Business Development | Field sales tracking, daily activities & Excel import |
 
-*Password: `password123` (or use the one-click quick switch buttons on the login screen).*
+*Password: `password123` (or click any of the one-click quick switch buttons on the login screen).*
 
 ---
 
