@@ -24,7 +24,8 @@ import {
   X,
   PhoneCall,
   Eye,
-  Edit
+  Edit,
+  RotateCcw
 } from 'lucide-react';
 import { formatCurrency, formatDate, exportToCSV } from '../utils/formatters';
 
