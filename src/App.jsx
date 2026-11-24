@@ -52,7 +52,7 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
     if (path.startsWith('/customers/new/unknown') || path.startsWith('/database/new/unknown')) return 'Database • New Unknown Numbers';
     if (path.startsWith('/leads') || path.startsWith('/lead')) return 'Lead Management';
     if (path.startsWith('/bank-logins') || path.startsWith('/logins')) return 'Bank File Login & 2-Day Routine Console';
-    if (path.startsWith('/daily-activities')) return 'Field Sales Daily Activities';
+    if (path.startsWith('/daily-activities')) return 'Daily Activities';
     if (path.startsWith('/performance')) return 'Performance & Case Disposition';
     if (path.startsWith('/attendance')) return 'Daily Attendance & In-Punch';
     if (path.startsWith('/resignation')) return 'Resignation Management';

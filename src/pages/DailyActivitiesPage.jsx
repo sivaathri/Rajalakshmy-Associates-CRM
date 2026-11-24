@@ -147,8 +147,8 @@ export const DailyActivitiesPage = () => {
   };
 
   const handleExport = () => {
-    const data = filteredActivities.map(a => ({
-      "Activity ID": a.id,
+    const data = filteredActivities.map((a, idx) => ({
+      "Sl No": idx + 1,
       "Customer Name": a.customerName,
       "Mobile Contact": a.mobile,
       "Business": a.business,
@@ -169,25 +169,11 @@ export const DailyActivitiesPage = () => {
       {/* Top Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider flex-wrap">
-            <CalendarCheck className="w-4 h-4" />
-            <span>Field Sales Lead Intake</span>
-            <span>•</span>
-            <span>{currentUser?.name} ({currentUser?.role})</span>
-            {isSalesManager && (
-              <span className="bg-gold-500/20 text-gold-300 border border-gold-400/40 text-[10px] px-2 py-0.5 rounded-full font-extrabold">
-                Personal Submissions Only
-              </span>
-            )}
-          </div>
+          
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
-            Daily Field Activities & Lead Ingestion
+            Daily  Activities
           </h2>
-          <p className="text-xs text-white/80 max-w-xl">
-            {isSalesManager
-              ? `Displaying field sales records created and submitted exclusively by ${currentUser?.name}. Entries from other representatives are filtered out.`
-              : 'Register single prospect leads from field visits or upload bulk Excel spreadsheets. All entries automatically categorize into New Database.'}
-          </p>
+         
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -425,7 +411,7 @@ export const DailyActivitiesPage = () => {
               <table className="w-full text-left text-xs text-slate-700 min-w-[760px]">
                 <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
                   <tr>
-                    <th className="px-4 py-3">ID</th>
+                    <th className="px-4 py-3 text-center w-16">Sl.No</th>
                     <th className="px-4 py-3">Customer Name</th>
                     <th className="px-4 py-3">Mobile Contact</th>
                     <th className="px-4 py-3">Business</th>
@@ -436,9 +422,9 @@ export const DailyActivitiesPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredActivities.map(act => (
+                  {filteredActivities.map((act, index) => (
                     <tr key={act.id} className="hover:bg-[#FAF6EF]/60 transition">
-                      <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{act.id}</td>
+                      <td className="px-4 py-3 text-center font-bold text-slate-700">{index + 1}</td>
                       <td className="px-4 py-3 font-bold text-slate-900">{act.customerName}</td>
                       <td className="px-4 py-3 font-mono font-medium">{act.mobile}</td>
                       <td className="px-4 py-3">{act.business || 'General Client'}</td>
