@@ -47,7 +47,7 @@ export const TelecallingPage = () => {
 
   // State
   const [activeTab, setActiveTab] = useState('focused'); // 'focused' | 'queue' | 'history' | 'analytics'
-  const [queueFilter, setQueueFilter] = useState('fresh'); // 'fresh' | 'reminders' | 'completed'
+  const [queueFilter, setQueueFilter] = useState('reminders'); // 'reminders' | 'completed'
   const [searchQueue, setSearchQueue] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(0);
 
@@ -122,20 +122,29 @@ export const TelecallingPage = () => {
     return baseCustomers.filter(c => c.databaseType === selectedDb && c.customerType === selectedType);
   }, [baseCustomers, selectedDb, selectedType]);
 
+  const myRemindersCount = useMemo(() => {
+    return assignedCustomers.filter(c => c.callingStatus === 'Reminder' && (c.actionedBy === currentUser?.id || c.assignedTo === currentUser?.id)).length;
+  }, [assignedCustomers, currentUser]);
+
+  const myActionedCount = useMemo(() => {
+    return assignedCustomers.filter(c => ['OK', 'Not Attend', 'No Need', 'Field Visit'].includes(c.callingStatus) && c.actionedBy === currentUser?.id).length;
+  }, [assignedCustomers, currentUser]);
+
   // Queue filtered items:
-  // In Focused Telecalling Mode and when queueFilter is 'fresh' (or default):
-  // STRICTLY show ONLY fresh numbers! Actioned numbers do NOT show in Queue Leads.
+  // In Focused Telecalling Mode: STRICTLY show ONLY fresh numbers!
+  // In Assigned Queue Table: Toggle between My Due Reminders and My Actioned Calls
   const displayQueue = useMemo(() => {
     return assignedCustomers.filter(c => {
-      if (activeTab === 'focused' || queueFilter === 'fresh' || queueFilter === 'pending' || queueFilter === 'all') {
-        // Queue Leads ONLY shows fresh numbers:
+      if (activeTab === 'focused') {
+        // Focused Calling strictly shows fresh numbers
         if (!isFreshNumber(c)) return false;
-      } else if (queueFilter === 'reminders') {
-        if (c.callingStatus !== 'Reminder') return false;
-        if (currentUser?.role === 'RM' && c.actionedBy !== currentUser.id && c.assignedTo !== currentUser.id) return false;
       } else if (queueFilter === 'completed') {
         if (!['OK', 'Not Attend', 'No Need', 'Field Visit'].includes(c.callingStatus)) return false;
         if (currentUser?.role === 'RM' && c.actionedBy !== currentUser.id) return false;
+      } else {
+        // 'reminders' (default in Assigned Queue)
+        if (c.callingStatus !== 'Reminder') return false;
+        if (currentUser?.role === 'RM' && c.actionedBy !== currentUser.id && c.assignedTo !== currentUser.id) return false;
       }
 
       if (searchQueue.trim()) {
@@ -508,7 +517,7 @@ export const TelecallingPage = () => {
           }`}
         >
           <Layers className="w-4 h-4 text-burgundy-800" />
-          <span>Assigned Queue ({displayQueue.length})</span>
+          <span>Assigned Queue ({myRemindersCount + myActionedCount})</span>
         </button>
 
         <button
@@ -966,16 +975,6 @@ export const TelecallingPage = () => {
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={() => setQueueFilter('fresh')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 ${
-                  queueFilter === 'fresh' || queueFilter === 'all' || queueFilter === 'pending'
-                    ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm'
-                    : 'bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50'
-                }`}
-              >
-                <span>Fresh Queue Leads ({assignedCustomers.filter(c => isFreshNumber(c)).length})</span>
-              </button>
-              <button
                 onClick={() => setQueueFilter('reminders')}
                 className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 ${
                   queueFilter === 'reminders'
@@ -983,7 +982,7 @@ export const TelecallingPage = () => {
                     : 'bg-white text-amber-800 border-amber-200 hover:bg-amber-50'
                 }`}
               >
-                <span>My Due Reminders ({assignedCustomers.filter(c => c.callingStatus === 'Reminder' && (c.actionedBy === currentUser?.id || c.assignedTo === currentUser?.id)).length})</span>
+                <span>My Due Reminders ({myRemindersCount})</span>
               </button>
               <button
                 onClick={() => setQueueFilter('completed')}
@@ -993,7 +992,7 @@ export const TelecallingPage = () => {
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                <span>My Actioned Calls ({assignedCustomers.filter(c => ['OK', 'Not Attend', 'No Need', 'Field Visit'].includes(c.callingStatus) && c.actionedBy === currentUser?.id).length})</span>
+                <span>My Actioned Calls ({myActionedCount})</span>
               </button>
             </div>
 
@@ -1026,42 +1025,50 @@ export const TelecallingPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {paginatedQueue.map((item, idx) => {
-                  const slNo = (queuePage - 1) * itemsPerPage + idx + 1;
-                  return (
-                    <tr key={item.id} className="hover:bg-[#FAF6EF]/60 transition">
-                      <td className="px-4 py-3 font-semibold text-slate-700">{slNo}</td>
-                      <td className="px-4 py-3 font-bold text-slate-900">{item.name}</td>
-                      <td className="px-4 py-3 font-mono font-medium">{item.mobile}</td>
-                      <td className="px-4 py-3">{item.business || 'General Client'}</td>
-                      <td className="px-4 py-3">{item.city || item.state || '-'}</td>
-                      <td className="px-4 py-3">
-                        <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                          {item.databaseType} / {item.customerType}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(item.callingStatus)}`}>
-                          {item.callingStatus || 'Pending'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => {
-                            const qIdx = displayQueue.findIndex(q => q.id === item.id);
-                            if (qIdx !== -1) setFocusedIndex(qIdx);
-                            setActiveTab('focused');
-                          }}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
-                          title="View mobile number & enter response"
-                        >
-                          <FileText className="w-3.5 h-3.5 text-gold-300" />
-                          <span>Enter Response</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {paginatedQueue.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-8 text-center text-xs text-slate-400 italic">
+                      {queueFilter === 'reminders' ? 'No due reminders found.' : 'No actioned calls found.'}
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedQueue.map((item, idx) => {
+                    const slNo = (queuePage - 1) * itemsPerPage + idx + 1;
+                    return (
+                      <tr key={item.id} className="hover:bg-[#FAF6EF]/60 transition">
+                        <td className="px-4 py-3 font-semibold text-slate-700">{slNo}</td>
+                        <td className="px-4 py-3 font-bold text-slate-900">{item.name}</td>
+                        <td className="px-4 py-3 font-mono font-medium">{item.mobile}</td>
+                        <td className="px-4 py-3">{item.business || 'General Client'}</td>
+                        <td className="px-4 py-3">{item.city || item.state || '-'}</td>
+                        <td className="px-4 py-3">
+                          <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                            {item.databaseType} / {item.customerType}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(item.callingStatus)}`}>
+                            {item.callingStatus || 'Pending'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => {
+                              const qIdx = displayQueue.findIndex(q => q.id === item.id);
+                              if (qIdx !== -1) setFocusedIndex(qIdx);
+                              setActiveTab('focused');
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
+                            title="View mobile number & enter response"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-gold-300" />
+                            <span>Enter Response</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
             </div>
@@ -1072,7 +1079,7 @@ export const TelecallingPage = () => {
               totalItems={displayQueue.length}
               itemsPerPage={itemsPerPage}
               onPageChange={setQueuePage}
-              summaryLabel="leads in queue"
+              summaryLabel={queueFilter === 'reminders' ? 'reminders' : 'actioned calls'}
             />
           </div>
         </div>

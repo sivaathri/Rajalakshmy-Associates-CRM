@@ -587,7 +587,7 @@ export const LeadsPage = () => {
                 <th className="px-4 py-3">Customer / Enterprise</th>
                 <th className="px-4 py-3">Requirement & Value</th>
                 <th className="px-4 py-3">Lead Status</th>
-                <th className="px-4 py-3">Assigned Executive (RM / Sales)</th>
+                <th className="px-4 py-3">Assigned Executive </th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
