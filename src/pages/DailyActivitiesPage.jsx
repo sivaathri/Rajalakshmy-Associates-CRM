@@ -333,17 +333,7 @@ export const DailyActivitiesPage = () => {
 
           {/* Activities Table */}
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="px-6 py-3 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800 flex items-center justify-between">
-              <span>
-                Field Sales Submission Records ({filteredActivities.length})
-                {isSalesManager && <span className="text-burgundy-900 font-semibold ml-1.5">• Sourced by {currentUser?.name}</span>}
-              </span>
-              {isSalesManager && (
-                <span className="text-[11px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  Sales Manager Private View
-                </span>
-              )}
-            </div>
+           
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-700 min-w-[760px]">
                 <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200">
