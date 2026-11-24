@@ -575,6 +575,10 @@ export const LeadsPage = () => {
                 filteredLeads.map(lead => {
                   const isAssignedToMe = lead.assignedToId === currentUser?.id;
                   const isSalesManager = lead.assignedToRole === 'Sales Manager' || lead.assignedToRole === 'Sales Executive';
+                  const isAssigned = Boolean(
+                    (lead.assignedToId && String(lead.assignedToId).trim() !== '') ||
+                    (lead.assignedToName && String(lead.assignedToName).trim() !== '' && lead.assignedToName !== 'Unassigned')
+                  );
 
                   return (
                     <tr key={lead.id} className="hover:bg-slate-50/80 transition">
@@ -635,36 +639,46 @@ export const LeadsPage = () => {
 
                       {/* Assigned Executive */}
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                            isSalesManager
-                              ? 'bg-purple-100 text-purple-900 border border-purple-200'
-                              : 'bg-blue-100 text-blue-900 border border-blue-200'
-                          }`}>
-                            {lead.assignedToRole}
+                        {isAssigned ? (
+                          <>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                isSalesManager
+                                  ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                                  : 'bg-blue-100 text-blue-900 border border-blue-200'
+                              }`}>
+                                {lead.assignedToRole || 'Assigned'}
+                              </span>
+                              <span className="font-semibold text-slate-800">{lead.assignedToName}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              Assigned: {lead.assignedAt || 'Recent'}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                            Unassigned
                           </span>
-                          <span className="font-semibold text-slate-800">{lead.assignedToName}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
-                          Assigned: {lead.assignedAt || 'Recent'}
-                        </div>
+                        )}
                       </td>
 
                       {/* Actions */}
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {/* Reassign Button (Req 7) */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAssigningLead(lead);
-                              setSelectedAssigneeId(lead.assignedToId);
-                            }}
-                            className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition"
-                            title="Assign to RM or Sales Manager"
-                          >
-                            Assign Lead
-                          </button>
+                          {/* Assign Lead Button: Only visible if lead is NOT yet assigned to anyone or myself */}
+                          {!isAssigned && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAssigningLead(lead);
+                                setSelectedAssigneeId(lead.assignedToId || currentUser?.id || '');
+                              }}
+                              className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition"
+                              title="Assign to RM or Sales Manager"
+                            >
+                              Assign Lead
+                            </button>
+                          )}
 
                           {/* Convert to Login Button */}
                           {lead.status !== 'Converted to Login' ? (
