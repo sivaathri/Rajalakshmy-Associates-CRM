@@ -363,14 +363,7 @@ export const TelecallingPage = () => {
 
         <div className="flex flex-wrap items-center gap-2.5">
         
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-gold-400 hover:bg-gold-300 text-burgundy-950 px-3.5 py-2 text-xs font-bold transition shadow-md"
-            title="Add a new lead / phone number directly to database"
-          >
-            <Plus className="w-4 h-4 text-burgundy-950" />
-            <span>+ Add Number</span>
-          </button>
+         
           <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
             <span className="text-[10px] text-white/60 block uppercase font-bold">My Added Numbers</span>
             <span className="text-sm font-extrabold text-gold-300">{myAddedCount}</span>
