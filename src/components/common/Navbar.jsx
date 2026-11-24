@@ -77,9 +77,7 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
           <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-burgundy-900 font-corporate truncate max-w-[140px] xs:max-w-[200px] sm:max-w-xs md:max-w-none">
             {pageTitle || 'Rajalakshmy Associates CRM'}
           </h1>
-          <p className="text-[10px] sm:text-xs text-slate-500 hidden sm:block truncate">
-            Corporate Financial Advisory & Field CRM Platform
-          </p>
+         
         </div>
       </div>
 

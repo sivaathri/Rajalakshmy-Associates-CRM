@@ -259,17 +259,10 @@ export const LeadsPage = () => {
     <div className="space-y-6">
       {/* Top Banner Header */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gold-300">
-            <Compass className="w-4 h-4 text-gold-400" />
-            <span>Sales & Client Acquisition Pipeline</span>
-            <span>•</span>
-            <span className="font-mono text-white/80">{filteredLeads.length} Leads Active</span>
-          </div>
+        <div> 
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
-            Lead Management Console
+            Lead Management 
           </h2>
-         
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -725,7 +718,7 @@ export const LeadsPage = () => {
           <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
               <div>
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gold-300 block">Lead Pipeline</span>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-gold-300 block">Lead </span>
                 <h3 className="text-base font-bold text-white">Register New Lead</h3>
               </div>
               <button
