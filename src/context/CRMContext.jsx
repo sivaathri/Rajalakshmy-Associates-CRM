@@ -19,17 +19,17 @@ import { formatDateDDMMYYYY } from '../utils/formatters';
 const CRMContext = createContext();
 
 const STORAGE_KEYS = {
-  CUSTOMERS: 'rajalakshmy_customers_v1',
-  CALLS: 'rajalakshmy_calls_v1',
-  ACTIVITIES: 'rajalakshmy_activities_v1',
-  PERFORMANCE: 'rajalakshmy_performance_v1',
-  RESIGNATIONS: 'rajalakshmy_resignations_v1',
-  ADVANCES: 'rajalakshmy_advances_v1',
-  ATTENDANCE: 'rajalakshmy_attendance_v1',
-  ENQUIRIES: 'rajalakshmy_enquiries_v1',
-  LEADS: 'rajalakshmy_leads_v1',
-  BANK_LOGINS: 'rajalakshmy_bank_logins_v1',
-  LEAVES: 'rajalakshmy_leaves_v1'
+  CUSTOMERS: 'rajalakshmy_customers_v2',
+  CALLS: 'rajalakshmy_calls_v2',
+  ACTIVITIES: 'rajalakshmy_activities_v2',
+  PERFORMANCE: 'rajalakshmy_performance_v2',
+  RESIGNATIONS: 'rajalakshmy_resignations_v2',
+  ADVANCES: 'rajalakshmy_advances_v2',
+  ATTENDANCE: 'rajalakshmy_attendance_v2',
+  ENQUIRIES: 'rajalakshmy_enquiries_v2',
+  LEADS: 'rajalakshmy_leads_v2',
+  BANK_LOGINS: 'rajalakshmy_bank_logins_v2',
+  LEAVES: 'rajalakshmy_leaves_v2'
 };
 
 // Helper to guarantee strictly unique RA-CUST- IDs across all records
@@ -74,111 +74,80 @@ export const ensureUniqueCustomerIds = (customerList) => {
 export const CRMProvider = ({ children }) => {
   const { currentUser, showToast } = useAuth();
 
-  // Load from LocalStorage or mock data
+  // Clear legacy mock data once to ensure clean slate for user's own live data
+  useEffect(() => {
+    try {
+      const legacyKeys = [
+        'rajalakshmy_customers_v1',
+        'rajalakshmy_calls_v1',
+        'rajalakshmy_activities_v1',
+        'rajalakshmy_performance_v1',
+        'rajalakshmy_resignations_v1',
+        'rajalakshmy_advances_v1',
+        'rajalakshmy_attendance_v1',
+        'rajalakshmy_enquiries_v1',
+        'rajalakshmy_leads_v1',
+        'rajalakshmy_bank_logins_v1',
+        'rajalakshmy_leaves_v1'
+      ];
+      legacyKeys.forEach(k => localStorage.removeItem(k));
+    } catch (e) {
+      console.warn('Could not clear legacy keys:', e);
+    }
+  }, []);
+
+  // Load from LocalStorage (defaults to clean [] for user's own live data)
   const [customers, setCustomers] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const c1033 = parsed.find(c => c.id === 'RA-CUST-1033' || c.id === 'CUST-1033');
-        if (c1033 && (!c1033.submittedBy || c1033.name !== 'Annapoorna Caterers & Bakers')) {
-          const updated = parsed.map(c => {
-            const initialMatch = INITIAL_CUSTOMERS.find(ic => ic.id === c.id || ic.id === c.id.replace('CUST-', 'RA-CUST-'));
-            if (initialMatch && initialMatch.submittedBy) {
-              return {
-                ...c,
-                name: initialMatch.name,
-                business: initialMatch.business,
-                submittedBy: initialMatch.submittedBy,
-                submittedByName: initialMatch.submittedByName,
-                referenceFrom: initialMatch.referenceFrom,
-                assignedTo: initialMatch.assignedTo || c.assignedTo
-              };
-            }
-            return c;
-          });
-          return ensureUniqueCustomerIds(updated);
-        }
-        return ensureUniqueCustomerIds(parsed);
-      }
-      return ensureUniqueCustomerIds(INITIAL_CUSTOMERS);
+      return saved ? ensureUniqueCustomerIds(JSON.parse(saved)) : [];
     } catch {
-      return ensureUniqueCustomerIds(INITIAL_CUSTOMERS);
+      return [];
     }
   });
 
   const [calls, setCalls] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.CALLS);
-      const list = saved ? JSON.parse(saved) : INITIAL_CALL_HISTORY;
-      return (list || []).map(call => {
-        if (call.customerId && call.customerId.startsWith('CUST-')) {
-          return { ...call, customerId: call.customerId.replace('CUST-', 'RA-CUST-') };
-        }
-        return call;
-      });
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return INITIAL_CALL_HISTORY;
+      return [];
     }
   });
 
   const [activities, setActivities] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ACTIVITIES);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (!parsed.some(a => a.id === 'ACT-506')) {
-          const emp5Activities = INITIAL_DAILY_ACTIVITIES.filter(a => a.submittedBy === 'EMP005' && a.id !== 'ACT-503');
-          return [...emp5Activities, ...parsed];
-        }
-        return parsed;
-      }
-      return INITIAL_DAILY_ACTIVITIES;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return INITIAL_DAILY_ACTIVITIES;
+      return [];
     }
   });
 
   const [performanceCases, setPerformanceCases] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PERFORMANCE);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (!parsed.some(c => c.id === 'CASE-307')) {
-          const emp5Cases = INITIAL_PERFORMANCE_CASES.filter(c => c.submittedBy === 'EMP005');
-          return [...parsed, ...emp5Cases];
-        }
-        return parsed;
-      }
-      return INITIAL_PERFORMANCE_CASES;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return INITIAL_PERFORMANCE_CASES;
+      return [];
     }
   });
 
   const [resignations, setResignations] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.RESIGNATIONS);
-      return saved ? JSON.parse(saved) : INITIAL_RESIGNATIONS;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return INITIAL_RESIGNATIONS;
+      return [];
     }
   });
 
   const [advanceAmounts, setAdvanceAmounts] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ADVANCES);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (!parsed.some(a => a.id === 'ADV-605')) {
-          const emp5Advances = INITIAL_ADVANCE_AMOUNTS.filter(a => a.employeeId === 'EMP005');
-          return [...parsed, ...emp5Advances];
-        }
-        return parsed;
-      }
-      return INITIAL_ADVANCE_AMOUNTS;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return INITIAL_ADVANCE_AMOUNTS;
+      return [];
     }
   });
 
@@ -186,9 +155,9 @@ export const CRMProvider = ({ children }) => {
   const [attendance, setAttendance] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
-      return saved ? JSON.parse(saved) : INITIAL_ATTENDANCE;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return INITIAL_ATTENDANCE;
+      return [];
     }
   });
 
@@ -196,9 +165,9 @@ export const CRMProvider = ({ children }) => {
   const [enquiries, setEnquiries] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ENQUIRIES);
-      return saved ? JSON.parse(saved) : INITIAL_WEBSITE_ENQUIRIES;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return INITIAL_WEBSITE_ENQUIRIES;
+      return [];
     }
   });
 
@@ -206,9 +175,9 @@ export const CRMProvider = ({ children }) => {
   const [leads, setLeads] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.LEADS);
-      return saved ? JSON.parse(saved) : INITIAL_LEADS;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return INITIAL_LEADS;
+      return [];
     }
   });
 
@@ -216,16 +185,9 @@ export const CRMProvider = ({ children }) => {
   const [bankLogins, setBankLogins] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.BANK_LOGINS);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.map(b => ({
-          ...b,
-          id: (b.id && !b.id.startsWith('LOG-')) ? b.id : (b.customerId || b.id)
-        }));
-      }
-      return INITIAL_BANK_LOGINS;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return INITIAL_BANK_LOGINS;
+      return [];
     }
   });
 
@@ -233,9 +195,9 @@ export const CRMProvider = ({ children }) => {
   const [leaves, setLeaves] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.LEAVES);
-      return saved ? JSON.parse(saved) : INITIAL_LEAVES;
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return INITIAL_LEAVES;
+      return [];
     }
   });
 
@@ -288,19 +250,27 @@ export const CRMProvider = ({ children }) => {
     localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(leaves));
   }, [leaves]);
 
-  // Reset to initial mock data
+  // Reset to clean LocalStorage state
   const resetToFactoryDefaults = () => {
-    setCustomers(INITIAL_CUSTOMERS);
-    setCalls(INITIAL_CALL_HISTORY);
-    setActivities(INITIAL_DAILY_ACTIVITIES);
-    setPerformanceCases(INITIAL_PERFORMANCE_CASES);
-    setResignations(INITIAL_RESIGNATIONS);
-    setAdvanceAmounts(INITIAL_ADVANCE_AMOUNTS);
-    setEnquiries(INITIAL_WEBSITE_ENQUIRIES);
-    setLeads(INITIAL_LEADS);
-    setBankLogins(INITIAL_BANK_LOGINS);
-    setLeaves(INITIAL_LEAVES);
-    showToast('Reset all database tables to initial corporate mock data', 'info');
+    setCustomers([]);
+    setCalls([]);
+    setActivities([]);
+    setPerformanceCases([]);
+    setResignations([]);
+    setAdvanceAmounts([]);
+    setAttendance([]);
+    setEnquiries([]);
+    setLeads([]);
+    setBankLogins([]);
+    setLeaves([]);
+    Object.values(STORAGE_KEYS).forEach(k => {
+      try {
+        localStorage.setItem(k, JSON.stringify([]));
+      } catch (e) {
+        console.warn(e);
+      }
+    });
+    showToast('All tables cleared! Ready for your own data in LocalStorage', 'info');
   };
 
   // ----------------------------------------------------

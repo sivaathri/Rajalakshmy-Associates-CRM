@@ -46,7 +46,7 @@ export const SettingsPage = () => {
   };
 
   const handleResetData = () => {
-    if (confirm('Are you sure you want to reset all prototype records to the initial mock data? Any newly created leads will be cleared.')) {
+    if (confirm('Are you sure you want to clear all data in LocalStorage? All menus and tables will be emptied so you can use your own data.')) {
       resetToFactoryDefaults();
     }
   };
