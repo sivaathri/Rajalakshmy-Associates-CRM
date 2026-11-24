@@ -3,13 +3,20 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
+    "web": "vite --open",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "app": "concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
+    "app:dist": "vite build && electron-builder",
+    "electron:dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
+    "electron:build": "vite build && electron-builder"
   },
   "dependencies": {
     "clsx": "^2.1.1",
+    "electron-updater": "^6.8.11",
     "lucide-react": "^1.16.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -23,8 +30,42 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^10.0.7",
+    "cross-env": "^10.1.0",
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16",
-    "vite": "^6.0.1"
+    "vite": "^6.0.1",
+    "wait-on": "^9.5.1"
+  },
+  "build": {
+    "appId": "com.rajalakshmy.crm",
+    "productName": "Rajalakshmy Associates CRM",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "github_username",
+        "repo": "rajalakshmy-associates-crm"
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/logo.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

@@ -89,11 +89,15 @@ export const LoginPage = () => {
             {/* Logo */}
             <div className="inline-flex items-center gap-3 p-2.5 rounded-2xl bg-white shadow-xl ring-2 ring-gold-400/40 mb-6">
               <img
-                src="/logo.png"
+                src="./logo.png"
                 alt="Rajalakshmy Associates"
                 className="h-9 w-auto object-contain"
                 onError={(e) => {
-                  e.target.style.display = 'none';
+                  if (e.target.src.includes('./logo.png')) {
+                    e.target.src = '/logo.png';
+                  } else {
+                    e.target.style.display = 'none';
+                  }
                 }}
               />
             </div>

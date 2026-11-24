@@ -114,11 +114,15 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-lg ring-1 ring-gold-400">
               <img
-                src="/logo.png"
+                src="./logo.png"
                 alt="Rajalakshmy Associates"
                 className="h-full w-full object-contain"
                 onError={(e) => {
-                  e.target.style.display = 'none';
+                  if (e.target.src.includes('./logo.png')) {
+                    e.target.src = '/logo.png';
+                  } else {
+                    e.target.style.display = 'none';
+                  }
                 }}
               />
             </div>
