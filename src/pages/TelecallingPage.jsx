@@ -1024,7 +1024,7 @@ export const TelecallingPage = () => {
               <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
               <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
                 <tr>
-                  <th className="px-4 py-3">Customer ID</th>
+                  <th className="px-4 py-3">Sl.No</th>
                   <th className="px-4 py-3">Customer Name</th>
                   <th className="px-4 py-3">Mobile Contact</th>
                   <th className="px-4 py-3">Business</th>
@@ -1035,39 +1035,42 @@ export const TelecallingPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {paginatedQueue.map((item, idx) => (
-                  <tr key={item.id} className="hover:bg-[#FAF6EF]/60 transition">
-                    <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{item.id}</td>
-                    <td className="px-4 py-3 font-bold text-slate-900">{item.name}</td>
-                    <td className="px-4 py-3 font-mono font-medium">{item.mobile}</td>
-                    <td className="px-4 py-3">{item.business || 'General Client'}</td>
-                    <td className="px-4 py-3">{item.city || item.state}</td>
-                    <td className="px-4 py-3">
-                      <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                        {item.databaseType} / {item.customerType}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(item.callingStatus)}`}>
-                        {item.callingStatus || 'Pending'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => {
-                          const idx = displayQueue.findIndex(q => q.id === item.id);
-                          if (idx !== -1) setFocusedIndex(idx);
-                          setActiveTab('focused');
-                        }}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
-                        title="View mobile number & enter response"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-gold-300" />
-                        <span>Enter Response</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {paginatedQueue.map((item, idx) => {
+                  const slNo = (queuePage - 1) * itemsPerPage + idx + 1;
+                  return (
+                    <tr key={item.id} className="hover:bg-[#FAF6EF]/60 transition">
+                      <td className="px-4 py-3 font-semibold text-slate-700">{slNo}</td>
+                      <td className="px-4 py-3 font-bold text-slate-900">{item.name}</td>
+                      <td className="px-4 py-3 font-mono font-medium">{item.mobile}</td>
+                      <td className="px-4 py-3">{item.business || 'General Client'}</td>
+                      <td className="px-4 py-3">{item.city || item.state || '-'}</td>
+                      <td className="px-4 py-3">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                          {item.databaseType} / {item.customerType}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(item.callingStatus)}`}>
+                          {item.callingStatus || 'Pending'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => {
+                            const qIdx = displayQueue.findIndex(q => q.id === item.id);
+                            if (qIdx !== -1) setFocusedIndex(qIdx);
+                            setActiveTab('focused');
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
+                          title="View mobile number & enter response"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-gold-300" />
+                          <span>Enter Response</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             </div>
