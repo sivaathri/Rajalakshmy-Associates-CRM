@@ -57,7 +57,16 @@ if (isDev) {
 
 ## 🔄 How the Automatic Update Works
 
-The standalone desktop application includes an integrated automatic background updater powered by **`electron-updater`**. Once you give the client the `.exe`, any future updates pushed to Git can be automatically detected and installed on their PC without manual reinstallations.
+The standalone desktop application includes an integrated automatic background updater powered by **`electron-updater`**. Once you give the client the `.exe`, any future updates pushed to Git can be automatically detected and installed on all client PCs without manual reinstallations.
+
+### ❓ Does `npx electron-builder --publish always` update ALL machines?
+**YES! Absolutely.**
+- Every single machine (whether 1, 10, or 100+ employee PCs) that has your CRM installed will automatically check your GitHub repository.
+- As soon as you publish a new version, **every client computer will receive and prompt for the update automatically**.
+- **What if a client PC is offline?** No problem. As soon as the machine connects to the internet and opens the CRM, it immediately detects the update and downloads it.
+- **Is client data safe?** **100% Yes.** All client database records, leads, telecalling logs, and settings stored in LocalStorage are preserved safely across all updates.
+
+---
 
 ### The Automatic Update Lifecycle
 
@@ -65,48 +74,84 @@ The standalone desktop application includes an integrated automatic background u
 [1. Developer pushes updates & bumps version in package.json] 
                               │
                               ▼
-            [2. Release published to GitHub repository]
+        [2. Developer runs: npx electron-builder --publish always]
                               │
                               ▼
-           [3. Client opens desktop software on their PC]
+            [3. Release published to GitHub repository]
                               │
                               ▼
-       [4. App checks GitHub Releases in the background]
+      [4. Every Client opens desktop software on their PC]
                               │
                               ▼
-         [5. Dialog: "New Update v1.0.1 Available"]
+        [5. App checks GitHub Releases in the background]
                               │
                               ▼
-       [6. Background download finishes & prompts client:]
-         "Update Ready! Restart now to install?"
+          [6. Dialog: "New Update v1.0.1 Available"]
                               │
                               ▼
-   [7. Client clicks Restart -> Installs & opens updated CRM!]
+        [7. Background download finishes & prompts client:]
+          "Update Ready! Restart now to install?"
+                              │
+                              ▼
+   [8. Client clicks Restart -> Installs & opens updated CRM!]
 ```
 
-### Developer Step-by-Step for Future Client Updates:
+---
 
-1. **Make code changes** requested by the client and test locally (`npm run dev` or `npm run app`).
+### 🔑 One-Time Developer Setup (GitHub Token)
+
+To allow `electron-builder` to automatically upload releases to your GitHub repository from your terminal, configure your **GitHub Personal Access Token (`GH_TOKEN`)** once on your computer:
+
+1. Go to GitHub: **Settings** -> **Developer settings** -> **Personal access tokens** -> **Tokens (classic)**.
+   *(Direct URL: https://github.com/settings/tokens)*
+2. Click **Generate new token (classic)**.
+3. Name it (e.g., `CRM-Releases`) and check the **`repo`** scope (full control of private repositories).
+4. Copy the generated token (starts with `ghp_...`).
+5. Set it in your terminal before publishing:
+   - **In PowerShell**:
+     ```powershell
+     $env:GH_TOKEN="ghp_your_actual_token_here"
+     ```
+   - **In Command Prompt (CMD)**:
+     ```cmd
+     set GH_TOKEN=ghp_your_actual_token_here
+     ```
+   *(Tip: To set it permanently on Windows, search "Environment Variables" in Windows Start menu and add a user variable `GH_TOKEN` with your token value).*
+
+---
+
+### 🚀 Complete Developer Step-by-Step for Future Client Updates:
+
+Whenever the client asks for new features or bug fixes, follow these simple steps:
+
+1. **Make code changes** requested by the client and test locally:
+   ```bash
+   npm run dev      # or npm run app
+   ```
 2. **Bump the version** in `package.json`:
    ```json
-   "version": "1.0.1"   // (increment from 1.0.0)
+   "version": "1.0.1"   // (change from 1.0.0 to 1.0.1, 1.0.2, etc.)
    ```
-3. **Commit & Push to Git**:
+3. **Commit & Push code to Git**:
    ```bash
    git add .
-   git commit -m "Client feature updates v1.0.1"
+   git commit -m "Added new features v1.0.1"
    git push
    ```
-4. **Publish the Release**:
-   ```bash
+4. **Publish the Release to All Client Machines**:
+   ```powershell
+   $env:GH_TOKEN="your_token_here"       # (if not set permanently)
    npx electron-builder --publish always
    ```
-   *(Or create a new Release with tag `v1.0.1` on your GitHub repository).*
-5. **Client PC Experience**:
-   * Next time the client launches the software, it automatically detects the update, downloads it in the background, and prompts:
-     > *"Version v1.0.1 has been downloaded. Restart the application now to apply the updates?"*
+5. **What happens on all Client PCs**:
+   * Next time employees launch the desktop app, they receive a notification:
+     > *"New Update Available: Version 1.0.1 is available and is downloading in the background."*
+   * Once the download finishes, a dialog appears:
+     > *"Update Ready: Version 1.0.1 has been downloaded. Restart the application now to apply the updates?"*
      > `[Restart & Install Now]` | `[Later]`
-   * When they click **Restart & Install Now**, it updates silently in seconds and preserves all their existing LocalStorage data intact!
+   * When they click **Restart & Install Now**, the CRM restarts updated to `v1.0.1` in seconds, keeping all existing leads and data intact!
+
+---
 
 ### 🔧 Current GitHub Configuration & How to Change It in Future:
 - **Repository**: [https://github.com/sivaathri/Rajalakshmy-Associates-CRM.git](https://github.com/sivaathri/Rajalakshmy-Associates-CRM.git)
