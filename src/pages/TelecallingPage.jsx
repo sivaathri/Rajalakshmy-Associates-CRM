@@ -592,15 +592,6 @@ export const TelecallingPage = () => {
                         <span className="text-[10px] font-bold uppercase tracking-wider bg-burgundy-50 text-burgundy-900 border border-burgundy-200 px-2 py-0.5 rounded-full">
                           {currentFocusedContact.databaseType} / {currentFocusedContact.customerType}
                         </span>
-                        {(!currentFocusedContact.assignedTo || currentFocusedContact.callingStatus === 'Pending') ? (
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-0.5 rounded-full shadow-sm animate-pulse">
-                            ★ Fresh Number (Available to Action)
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-gold-100 text-amber-950 border border-gold-300 px-2.5 py-0.5 rounded-full">
-                            ✓ Followed by You ({currentFocusedContact.callingStatus})
-                          </span>
-                        )}
                       </div>
                       <div className="text-sm font-semibold text-gold-700 mt-1">
                         {currentFocusedContact.business || 'Commercial Enterprise'}
