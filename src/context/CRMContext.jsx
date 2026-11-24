@@ -181,7 +181,30 @@ export const CRMProvider = ({ children }) => {
   const [leads, setLeads] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.LEADS);
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return parsed.map(l => {
+        let cleanedRemarks = (l.remarks || '')
+          .replace(/\s*\(Converted from telecalling:[^)]*\)/gi, '')
+          .replace(/^Converted to Lead from telecalling.*$/gi, '')
+          .trim();
+        let cleanedCity = l.city === 'Chennai' && !l.address ? '' : (l.city || '');
+        let cleanedState = l.state === 'Tamil Nadu' && !l.address ? '' : (l.state || '');
+        let cleanedService = (l.requiredService === 'Site Inspection / Loan' || l.requiredService === 'Business Loan') && !l.services?.length
+          ? ''
+          : (l.requiredService || '');
+        let cleanedAmount = Number(l.estimatedAmount) === 2000000 && !l.loanRequirement
+          ? 0
+          : (Number(l.estimatedAmount) || 0);
+
+        return {
+          ...l,
+          remarks: cleanedRemarks,
+          city: cleanedCity,
+          state: cleanedState,
+          requiredService: cleanedService,
+          estimatedAmount: cleanedAmount
+        };
+      });
     } catch {
       return [];
     }
@@ -601,9 +624,7 @@ export const CRMProvider = ({ children }) => {
       const cleanCustomerMobile = customer.mobile ? customer.mobile.replace(/\D/g, '') : '';
       const actionUser = currentUser || { id: 'EMP004', name: 'Ananya Subramanian', role: 'RM' };
 
-      const currentLeadRemarks = remarks
-        ? `${remarks} (Converted from telecalling: ${outcome})`
-        : `Converted to Lead from telecalling (${outcome} by ${actionUser.name})`;
+      const currentLeadRemarks = remarks ? remarks.trim() : '';
 
       setLeads(prevLeads => {
         // Check if lead already exists for this customer or mobile number
@@ -623,21 +644,23 @@ export const CRMProvider = ({ children }) => {
             actionedBy: actionUser.id,
             actionedByName: actionUser.name,
             assignedAt: callDate,
-            remarks: currentLeadRemarks
+            remarks: currentLeadRemarks || updated[existingIndex].remarks || ''
           };
           return updated;
         } else {
+          const isUnknown = customer.customerType === 'unknown' || customer.name === 'Unknown / Lead';
           const newLead = {
             id: `LEAD-${Date.now().toString().slice(-4)}`,
             customerId: customer.id,
-            customerName: customer.name || 'Prospect Client',
+            customerName: isUnknown ? 'Unknown / Lead' : (customer.name || 'Prospect Client'),
+            customerType: customer.customerType || (isUnknown ? 'unknown' : 'known'),
             mobile: customer.mobile,
-            business: customer.business || 'General Enterprise',
+            business: customer.business || '',
             city: customer.city || '',
             state: customer.state || '',
-            requiredService: customer.services?.[0]?.name || (outcome === 'Field Visit' ? 'Site Inspection / Loan' : 'Business Loan'),
-            estimatedAmount: Number(customer.loanRequirement) || 2000000,
-            source: customer.source || 'Telecalling',
+            requiredService: customer.services?.[0]?.name || customer.requiredService || '',
+            estimatedAmount: Number(customer.loanRequirement) || Number(customer.estimatedAmount) || 0,
+            source: customer.source || 'Database',
             status: leadStatus,
             assignedToRole: actionUser.role || 'RM',
             assignedToId: actionUser.id,

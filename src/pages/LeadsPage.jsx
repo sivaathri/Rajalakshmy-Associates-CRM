@@ -217,7 +217,7 @@ export const LeadsPage = () => {
     setConvertBankName('State Bank of India');
     setConvertLoanType(lead.requiredService || 'Working Capital (CC/OD)');
     setConvertLoanAmount(lead.estimatedAmount || 2500000);
-    setConvertNotes(`Converted from Lead #${lead.id} by ${currentUser?.name || 'RM'}`);
+    setConvertNotes(`Converted to Bank Login by ${currentUser?.name || 'RM'}`);
   };
 
   const handleConfirmConvert = (e) => {
@@ -266,8 +266,8 @@ export const LeadsPage = () => {
   };
 
   const handleExport = () => {
-    const exportData = filteredLeads.map(l => ({
-      "Lead ID": l.id,
+    const exportData = filteredLeads.map((l, idx) => ({
+      "Sl No": idx + 1,
       "Customer Name": l.customerName,
       "Mobile": l.mobile,
       "Business": l.business,
@@ -583,7 +583,7 @@ export const LeadsPage = () => {
           <table className="w-full text-left text-xs text-slate-700 min-w-[850px]">
             <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3">Lead ID</th>
+                <th className="px-4 py-3">Sl.No</th>
                 <th className="px-4 py-3">Customer / Enterprise</th>
                 <th className="px-4 py-3">Requirement & Value</th>
                 <th className="px-4 py-3">Lead Status</th>
@@ -599,7 +599,8 @@ export const LeadsPage = () => {
                   </td>
                 </tr>
               ) : (
-                paginatedLeads.map(lead => {
+                paginatedLeads.map((lead, idx) => {
+                  const slNo = (currentPage - 1) * itemsPerPage + idx + 1;
                   const isAssignedToMe = lead.assignedToId === currentUser?.id;
                   const isSalesManager = lead.assignedToRole === 'Sales Manager' || lead.assignedToRole === 'Sales Executive';
                   const isAssigned = Boolean(
@@ -609,31 +610,42 @@ export const LeadsPage = () => {
 
                   return (
                     <tr key={lead.id} className="hover:bg-slate-50/80 transition">
-                      {/* ID */}
-                      <td className="px-4 py-3 font-mono font-bold text-burgundy-900">
-                        {lead.id}
+                      {/* Sl.No */}
+                      <td className="px-4 py-3 font-semibold text-slate-700">
+                        {slNo}
                       </td>
 
                       {/* Customer / Business */}
                       <td className="px-4 py-3">
-                        <div className="font-bold text-slate-900">{lead.customerName}</div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                          <Building className="w-3 h-3 text-slate-400" />
-                          <span>{lead.business}</span>
+                        <div className="font-bold text-slate-900">
+                          {lead.customerType === 'unknown' ? 'Unknown / Lead' : (lead.customerName || 'Lead Contact')}
                         </div>
+                        {lead.business && (
+                          <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                            <Building className="w-3 h-3 text-slate-400" />
+                            <span>{lead.business}</span>
+                          </div>
+                        )}
                         <div className="text-[11px] font-mono text-slate-600 mt-0.5">
-                          {lead.mobile} • {lead.city}
+                          {lead.mobile}
+                          {lead.city && lead.city.trim() ? ` • ${lead.city}` : ''}
                         </div>
                       </td>
 
                       {/* Requirement & Amount */}
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-slate-800">{lead.requiredService}</div>
-                        <div className="text-xs font-bold text-emerald-700 mt-0.5">
-                          {formatCurrency(lead.estimatedAmount)}
-                        </div>
+                        {lead.requiredService ? (
+                          <div className="font-semibold text-slate-800">{lead.requiredService}</div>
+                        ) : (
+                          <div className="text-slate-400 text-[11px] italic">-</div>
+                        )}
+                        {lead.estimatedAmount && Number(lead.estimatedAmount) > 0 ? (
+                          <div className="text-xs font-bold text-emerald-700 mt-0.5">
+                            {formatCurrency(lead.estimatedAmount)}
+                          </div>
+                        ) : null}
                         <div className="text-[10px] text-slate-400 mt-0.5">
-                          Source: {lead.source}
+                          Source: {lead.source || 'Database'}
                         </div>
                       </td>
 
@@ -657,11 +669,11 @@ export const LeadsPage = () => {
                             </span>
                           </div>
                         )}
-                        {lead.remarks && (
+                        {lead.remarks ? (
                           <div className="text-[10px] text-slate-500 italic mt-1 line-clamp-1 max-w-xs">
-                            "{lead.remarks}"
+                            "{lead.remarks.replace(/\s*\(Converted from telecalling:[^)]*\)/gi, '')}"
                           </div>
-                        )}
+                        ) : null}
                       </td>
 
                       {/* Assigned Executive */}
@@ -1169,10 +1181,12 @@ export const LeadsPage = () => {
                     <Phone className="w-3.5 h-3.5 text-slate-400" />
                     <span>{viewingLead.mobile}</span>
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{viewingLead.city}, {viewingLead.state}</span>
-                  </div>
+                  {[viewingLead.city, viewingLead.state].filter(Boolean).length > 0 && (
+                    <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{[viewingLead.city, viewingLead.state].filter(Boolean).join(', ')}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="text-right">
@@ -1199,11 +1213,13 @@ export const LeadsPage = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-[10px] uppercase font-bold text-slate-400 block">Requested Service</span>
-                  <span className="text-xs font-bold text-slate-800 block mt-0.5">{viewingLead.requiredService}</span>
+                  <span className="text-xs font-bold text-slate-800 block mt-0.5">{viewingLead.requiredService || '-'}</span>
                 </div>
                 <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
                   <span className="text-[10px] uppercase font-bold text-emerald-800 block">Estimated Amount</span>
-                  <span className="text-sm font-extrabold text-emerald-900 block mt-0.5">{formatCurrency(viewingLead.estimatedAmount)}</span>
+                  <span className="text-sm font-extrabold text-emerald-900 block mt-0.5">
+                    {Number(viewingLead.estimatedAmount) > 0 ? formatCurrency(viewingLead.estimatedAmount) : '-'}
+                  </span>
                 </div>
               </div>
 
