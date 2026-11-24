@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
+import { Pagination } from '../components/common/Pagination';
 import {
   Award,
   CheckCircle,
@@ -24,6 +25,12 @@ export const PerformancePage = () => {
   const { currentUser } = useAuth();
 
   const [statusFilter, setStatusFilter] = useState('All'); // 'All' | 'Pending Approval' | 'Approved' | 'Rejected'
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [rejectingCase, setRejectingCase] = useState(null);
 
@@ -46,6 +53,11 @@ export const PerformancePage = () => {
       return true;
     });
   }, [baseCases, statusFilter]);
+
+  const paginatedCases = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredCases.slice(start, start + itemsPerPage);
+  }, [filteredCases, currentPage, itemsPerPage]);
 
   // Aggregate Metrics (Scoped to logged-in user)
   const totalVolume = baseCases.reduce((sum, c) => sum + (c.caseAmount || 0), 0);
@@ -201,7 +213,7 @@ export const PerformancePage = () => {
                   </td>
                 </tr>
               ) : (
-                filteredCases.map(item => (
+                paginatedCases.map(item => (
                   <tr key={item.id} className="hover:bg-[#FAF6EF]/60 transition">
                     <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{item.id}</td>
                     <td className="px-4 py-3">
@@ -253,6 +265,15 @@ export const PerformancePage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Reusable Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredCases.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          summaryLabel="performance cases"
+        />
       </div>
 
       {/* Modals */}

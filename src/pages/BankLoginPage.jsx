@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
+import { Pagination } from '../components/common/Pagination';
 import {
   FileCheck,
   Building2,
@@ -39,6 +40,14 @@ export const BankLoginPage = () => {
   const [dateRangeType, setDateRangeType] = useState('all'); // 'all' | 'today' | 'week' | 'month' | 'custom'
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+
+  // Pagination (minimum 15 items per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, bankFilter, onlyDueReminders, dateRangeType, customStartDate, customEndDate]);
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -159,6 +168,11 @@ export const BankLoginPage = () => {
   const disbursedLogins = bankLogins.filter(b => b.status === 'Disbursed');
   const disbursedVolume = disbursedLogins.reduce((sum, b) => sum + (b.disbursementDetails?.loanAmount || b.loanAmount || 0), 0);
   const rejectedCount = bankLogins.filter(b => b.status === 'Rejected').length;
+
+  const paginatedLogins = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredLogins.slice(start, start + itemsPerPage);
+  }, [filteredLogins, currentPage, itemsPerPage]);
 
   // Add Login Handler
   const handleCreateLogin = (e) => {
@@ -623,7 +637,7 @@ export const BankLoginPage = () => {
                   </td>
                 </tr>
               ) : (
-                filteredLogins.map(login => {
+                paginatedLogins.map(login => {
                   const isDue = is2DayUpdateDue(login);
                   const lastUpdate = login.updates?.[0];
 
@@ -775,6 +789,15 @@ export const BankLoginPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Reusable Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredLogins.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          summaryLabel="bank files"
+        />
       </div>
 
       {/* ---------------------------------------------------- */}

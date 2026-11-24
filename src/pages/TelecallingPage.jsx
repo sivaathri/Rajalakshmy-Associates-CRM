@@ -38,6 +38,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import { formatDate, formatDateTime, getStatusBadgeClass, exportToCSV } from '../utils/formatters';
+import { Pagination } from '../components/common/Pagination';
 
 export const TelecallingPage = () => {
   const { customers, calls, logCall } = useCRM();
@@ -229,6 +230,31 @@ export const TelecallingPage = () => {
 
   // Calling Metrics
   const totalCallsLogged = filteredCalls.length;
+
+  // Pagination for Queue (minimum 15 items per page)
+  const [queuePage, setQueuePage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setQueuePage(1);
+  }, [queueFilter, searchQueue, dbFilter, custTypeFilter]);
+
+  const paginatedQueue = useMemo(() => {
+    const start = (queuePage - 1) * itemsPerPage;
+    return displayQueue.slice(start, start + itemsPerPage);
+  }, [displayQueue, queuePage, itemsPerPage]);
+
+  // Pagination for Call History (minimum 15 items per page)
+  const [historyPage, setHistoryPage] = useState(1);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [reportDateRange, customStartDate, customEndDate, selectedOutcomeFilter]);
+
+  const paginatedHistory = useMemo(() => {
+    const start = (historyPage - 1) * itemsPerPage;
+    return filteredCalls.slice(start, start + itemsPerPage);
+  }, [filteredCalls, historyPage, itemsPerPage]);
   const todayCallsCount = calls.filter(c => {
     const isToday = c.callDate === '2026-11-16' || c.callDate === new Date().toISOString().split('T')[0];
     return currentUser?.role === 'RM' ? (isToday && c.employeeId === currentUser.id) : isToday;
@@ -1017,7 +1043,7 @@ export const TelecallingPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {displayQueue.map((item, idx) => (
+                {paginatedQueue.map((item, idx) => (
                   <tr key={item.id} className="hover:bg-[#FAF6EF]/60 transition">
                     <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{item.id}</td>
                     <td className="px-4 py-3 font-bold text-slate-900">{item.name}</td>
@@ -1053,6 +1079,15 @@ export const TelecallingPage = () => {
               </tbody>
             </table>
             </div>
+
+            {/* Reusable Pagination for Queue */}
+            <Pagination
+              currentPage={queuePage}
+              totalItems={displayQueue.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setQueuePage}
+              summaryLabel="leads in queue"
+            />
           </div>
         </div>
       )}
@@ -1241,7 +1276,7 @@ export const TelecallingPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredCalls.map(c => (
+                  {paginatedHistory.map(c => (
                     <tr key={c.id} className="hover:bg-[#FAF6EF]/60 transition">
                       <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{c.id}</td>
                       <td className="px-4 py-3 font-bold text-slate-900">{c.customerName}</td>
@@ -1273,6 +1308,15 @@ export const TelecallingPage = () => {
                 </tbody>
               </table>
             </div>
+
+            {/* Reusable Pagination for Call History */}
+            <Pagination
+              currentPage={historyPage}
+              totalItems={filteredCalls.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setHistoryPage}
+              summaryLabel="call history records"
+            />
           </div>
         </div>
       )}

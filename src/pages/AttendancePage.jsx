@@ -22,6 +22,7 @@ import {
   Users
 } from 'lucide-react';
 import { formatDateDDMMYYYY, formatDate, exportToCSV } from '../utils/formatters';
+import { Pagination } from '../components/common/Pagination';
 
 export const AttendancePage = () => {
   const { attendance, punchIn, leaves = [], requestLeave, approveLeave, rejectLeave } = useCRM();
@@ -59,7 +60,7 @@ export const AttendancePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDateFilter, setSelectedDateFilter] = useState(''); // DD-MM-YYYY search
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 15;
 
   // Filtered Personal Attendance Dataset (STRICTLY logged-in user only; other users' records excluded)
   const myAttendanceRecords = useMemo(() => {
@@ -577,34 +578,14 @@ export const AttendancePage = () => {
                 </table>
               </div>
 
-              {/* Pagination Bar */}
-              <div className="flex items-center justify-between px-6 py-3 bg-[#FAF6EF]/50 border-t border-slate-200 text-xs text-slate-500">
-                <div>
-                  Showing <span className="font-bold text-slate-900">{myAttendanceRecords.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * itemsPerPage, myAttendanceRecords.length)}</span> of <span className="font-bold text-slate-900">{myAttendanceRecords.length}</span> records
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs font-semibold"
-                  >
-                    Previous
-                  </button>
-                  <span className="px-2 font-semibold text-slate-800 font-mono">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs font-semibold"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
+              {/* Reusable Pagination */}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={myAttendanceRecords.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                summaryLabel="attendance entries"
+              />
             </div>
           </div>
         </div>

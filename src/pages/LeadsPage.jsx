@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
+import { Pagination } from '../components/common/Pagination';
 import {
   Compass,
   Search,
@@ -39,6 +40,14 @@ export const LeadsPage = () => {
   const [dateRangeType, setDateRangeType] = useState('all'); // 'all' | 'today' | 'week' | 'month' | 'custom'
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+
+  // Pagination (minimum 15 items per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, roleFilter, onlyMyLeads, dateRangeType, customStartDate, customEndDate]);
 
   // Modals
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
@@ -155,6 +164,11 @@ export const LeadsPage = () => {
   const myAssignedCount = accessibleLeads.filter(l => l.assignedToId === currentUser?.id || l.actionedBy === currentUser?.id).length;
   const salesManagerAssignedCount = accessibleLeads.filter(l => l.assignedToRole === 'Sales Manager' || l.assignedToRole === 'Sales Executive').length;
   const readyForLoginCount = accessibleLeads.filter(l => l.status === 'Ready for Login').length;
+
+  const paginatedLeads = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredLeads.slice(start, start + itemsPerPage);
+  }, [filteredLeads, currentPage, itemsPerPage]);
 
   const handleCreateLead = (e) => {
     e.preventDefault();
@@ -585,7 +599,7 @@ export const LeadsPage = () => {
                   </td>
                 </tr>
               ) : (
-                filteredLeads.map(lead => {
+                paginatedLeads.map(lead => {
                   const isAssignedToMe = lead.assignedToId === currentUser?.id;
                   const isSalesManager = lead.assignedToRole === 'Sales Manager' || lead.assignedToRole === 'Sales Executive';
                   const isAssigned = Boolean(
@@ -740,6 +754,15 @@ export const LeadsPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Reusable Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredLeads.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          summaryLabel="leads"
+        />
       </div>
 
       {/* ---------------------------------------------------- */}

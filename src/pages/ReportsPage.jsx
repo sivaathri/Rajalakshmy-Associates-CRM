@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
+import { Pagination } from '../components/common/Pagination';
 import {
   BarChart3,
   Calendar,
@@ -40,6 +41,14 @@ export const ReportsPage = () => {
   const [datePreset, setDatePreset] = useState('this-month'); // 'today' | 'this-week' | 'this-month' | 'custom'
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+
+  // Pagination (minimum 15 items per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [datePreset, customStart, customEnd]);
 
   // Scoped datasets for Sales Manager (only their own created/submitted records)
   const scopedActivities = useMemo(() => {
@@ -128,6 +137,11 @@ export const ReportsPage = () => {
       };
     }).sort((a, b) => b.approvedAmount - a.approvedAmount);
   }, [scopedEmployees, scopedCalls, scopedActivities, scopedCases]);
+
+  const paginatedEmployeeReport = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return employeePerformanceReport.slice(start, start + itemsPerPage);
+  }, [employeePerformanceReport, currentPage, itemsPerPage]);
 
   // Top 6 performers for Chart
   const topPerformersChart = employeePerformanceReport
@@ -339,35 +353,47 @@ export const ReportsPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {employeePerformanceReport.map((emp, idx) => (
-                <tr key={emp.id} className="hover:bg-[#FAF6EF]/60 transition">
-                  <td className="px-4 py-3 font-mono font-bold text-burgundy-900">
-                    #{idx + 1} <span className="text-slate-400 font-normal">({emp.id})</span>
-                  </td>
-                  <td className="px-4 py-3 font-bold text-slate-900">{emp.name}</td>
-                  <td className="px-4 py-3">
-                    <span className="font-semibold text-slate-800">{emp.role}</span>
-                    <span className="text-[10px] text-slate-400 block">{emp.department}</span>
-                  </td>
-                  <td className="px-4 py-3 text-center font-bold text-slate-900">{emp.totalCalls}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                      {emp.okCalls}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center font-semibold text-slate-700">{emp.activitiesCount}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-bold text-emerald-800">{emp.casesApproved}</span>
-                    <span className="text-slate-400"> / {emp.casesSubmitted}</span>
-                  </td>
-                  <td className="px-4 py-3 text-right font-extrabold text-sm text-slate-900">
-                    {formatCurrency(emp.approvedAmount)}
-                  </td>
-                </tr>
-              ))}
+              {paginatedEmployeeReport.map((emp, idx) => {
+                const rank = (currentPage - 1) * itemsPerPage + idx + 1;
+                return (
+                  <tr key={emp.id} className="hover:bg-[#FAF6EF]/60 transition">
+                    <td className="px-4 py-3 font-mono font-bold text-burgundy-900">
+                      #{rank} <span className="text-slate-400 font-normal">({emp.id})</span>
+                    </td>
+                    <td className="px-4 py-3 font-bold text-slate-900">{emp.name}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-semibold text-slate-800">{emp.role}</span>
+                      <span className="text-[10px] text-slate-400 block">{emp.department}</span>
+                    </td>
+                    <td className="px-4 py-3 text-center font-bold text-slate-900">{emp.totalCalls}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        {emp.okCalls}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center font-semibold text-slate-700">{emp.activitiesCount}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="font-bold text-emerald-800">{emp.casesApproved}</span>
+                      <span className="text-slate-400"> / {emp.casesSubmitted}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-extrabold text-sm text-slate-900">
+                      {formatCurrency(emp.approvedAmount)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+
+        {/* Reusable Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={employeePerformanceReport.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          summaryLabel="staff performance rankings"
+        />
       </div>
     </div>
   );

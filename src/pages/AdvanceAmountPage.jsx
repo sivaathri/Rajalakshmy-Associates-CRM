@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import { CreditCard, Plus, CheckCircle, XCircle, IndianRupee, Clock } from 'lucide-react';
 import { formatCurrency, formatDate, getStatusBadgeClass } from '../utils/formatters';
+import { Pagination } from '../components/common/Pagination';
 
 export const AdvanceAmountPage = () => {
   const { advanceAmounts, submitAdvance, updateAdvanceStatus } = useCRM();
@@ -32,6 +33,15 @@ export const AdvanceAmountPage = () => {
 
   // Strictly show only the logged-in user's personal advance requests
   const displayedAdvances = advanceAmounts.filter(a => a.employeeId === currentUser?.id);
+
+  // Pagination (minimum 15 items per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  const paginatedAdvances = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return displayedAdvances.slice(start, start + itemsPerPage);
+  }, [displayedAdvances, currentPage, itemsPerPage]);
 
   const totalAdvanceApproved = displayedAdvances
     .filter(a => a.status === 'Approved')
@@ -103,7 +113,7 @@ export const AdvanceAmountPage = () => {
                   </td>
                 </tr>
               ) : (
-                displayedAdvances.map(a => (
+                paginatedAdvances.map(a => (
                   <tr key={a.id} className="hover:bg-[#FAF6EF]/60 transition">
                     <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{a.id}</td>
                     <td className="px-4 py-3">
@@ -144,6 +154,15 @@ export const AdvanceAmountPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Reusable Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={displayedAdvances.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          summaryLabel="advance requests"
+        />
       </div>
 
       {/* Modal */}

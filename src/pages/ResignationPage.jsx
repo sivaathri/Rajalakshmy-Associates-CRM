@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import { UserX, Plus, CheckCircle, XCircle, Clock, Calendar, AlertCircle } from 'lucide-react';
 import { formatDate, getStatusBadgeClass } from '../utils/formatters';
+import { Pagination } from '../components/common/Pagination';
 
 export const ResignationPage = () => {
   const { resignations, submitResignation, updateResignationStatus } = useCRM();
@@ -17,6 +18,15 @@ export const ResignationPage = () => {
 
   // Strictly show only the logged-in user's personal resignation details
   const displayedResignations = resignations.filter(r => r.employeeId === currentUser?.id);
+
+  // Pagination (minimum 15 items per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  const paginatedResignations = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return displayedResignations.slice(start, start + itemsPerPage);
+  }, [displayedResignations, currentPage, itemsPerPage]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -93,7 +103,7 @@ export const ResignationPage = () => {
                   </td>
                 </tr>
               ) : (
-                displayedResignations.map(r => (
+                paginatedResignations.map(r => (
                   <tr key={r.id} className="hover:bg-[#FAF6EF]/60 transition">
                     <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{r.id}</td>
                     <td className="px-4 py-3">
@@ -136,6 +146,15 @@ export const ResignationPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Reusable Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={displayedResignations.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          summaryLabel="resignation records"
+        />
       </div>
 
       {/* Modal */}
