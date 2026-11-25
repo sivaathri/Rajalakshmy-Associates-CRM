@@ -20,7 +20,6 @@ import {
   Briefcase,
   Layers,
   FileCheck,
-  Download,
   X,
   PhoneCall,
   Eye,
@@ -30,7 +29,7 @@ import {
   Upload,
   Trash2
 } from 'lucide-react';
-import { formatCurrency, formatDate, exportToCSV } from '../utils/formatters';
+import { formatCurrency, formatDate } from '../utils/formatters';
 
 export const LeadsPage = () => {
   const { leads, addLead, assignLead, updateLead, convertLeadToLogin, employees, startCallingCustomer } = useCRM();
@@ -340,23 +339,6 @@ export const LeadsPage = () => {
     setCurrentPage(1);
   };
 
-  const handleExport = () => {
-    const exportData = filteredLeads.map((l, idx) => ({
-      "Sl No": idx + 1,
-      "Customer Name": l.customerName,
-      "Mobile": l.mobile,
-      "Business": l.business,
-      "Location": `${l.city}, ${l.state}`,
-      "Required Service": l.requiredService,
-      "Estimated Amount": l.estimatedAmount,
-      "Status": l.status,
-      "Assigned To": `${l.assignedToName} (${l.assignedToRole})`,
-      "Assigned At": formatDate(l.assignedAt),
-      "Remarks": l.remarks
-    }));
-    exportToCSV(exportData, 'rajalakshmy_leads_pipeline.csv');
-  };
-
   return (
     <div className="space-y-6">
       {/* Top Action Bar */}
@@ -367,13 +349,6 @@ export const LeadsPage = () => {
         >
           <Plus className="w-4 h-4" />
           <span>Add New Lead</span>
-        </button>
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-700 transition shadow-sm"
-        >
-          <Download className="w-3.5 h-3.5" />
-          <span>Export CSV</span>
         </button>
       </div>
 
