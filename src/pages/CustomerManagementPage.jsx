@@ -41,10 +41,10 @@ export const CustomerManagementPage = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   // Scoped customers for Customer Directory
-  // Note: Customer menu is strictly separated from Database. Only actual verified/converted clients with client profiles, KYC documents, or active services appear in Customer Management Directory. Raw database telecalling leads remain exclusively in the Database menu.
+  // Only actual verified/converted customers (converted from Lead -> Bank Login or added directly as Customers) appear here.
   const scopedCustomers = useMemo(() => {
     const verifiedCustomersOnly = customers.filter(
-      c => c.isCustomer || (c.documents && c.documents.length > 0) || (c.services && c.services.length > 0) || c.callingStatus === 'OK'
+      c => c.isCustomer || (c.services && c.services.length > 0)
     );
 
     if (isSalesManager) {
@@ -83,7 +83,7 @@ export const CustomerManagementPage = () => {
 
   const handleExport = () => {
     const data = filteredCustomers.map(c => ({
-      "Customer ID": c.id,
+      "Customer ID": c.customerId || c.id,
       "Name": c.name,
       "Mobile Contact": c.mobile,
       "Alt Mobile": c.altMobile || '-',
@@ -233,7 +233,7 @@ export const CustomerManagementPage = () => {
                         </span>
                       </td>
 
-                      <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{c.id}</td>
+                      <td className="px-4 py-3 font-mono font-bold text-burgundy-900">{c.customerId || c.id}</td>
 
                       <td className="px-4 py-3">
                         <div className="font-bold text-slate-900">{c.name}</div>

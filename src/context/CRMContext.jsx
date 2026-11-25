@@ -494,23 +494,47 @@ export const CRMProvider = ({ children }) => {
     showToast('All tables cleared! Ready for your own data in LocalStorage', 'info');
   };
 
-  // ----------------------------------------------------
-  // CUSTOMER MANAGEMENT
-  // ----------------------------------------------------
-  const addCustomer = (customerData) => {
-    let newId = customerData.id;
-    if (!newId || customers.some(c => c.id === newId)) {
-      let maxNum = 1000;
-      customers.forEach(c => {
-        if (c.id && typeof c.id === 'string') {
-          const match = c.id.match(/\d+/);
+  // Helper to generate next sequential official Customer ID (RA-CUST-XXXX) strictly for verified/converted customers
+  const generateOfficialCustomerId = (customerList) => {
+    let maxNum = 1000;
+    (customerList || []).forEach(c => {
+      if (c.isCustomer || (c.services && c.services.length > 0)) {
+        const refId = c.customerId || c.id;
+        if (refId && typeof refId === 'string') {
+          const match = refId.match(/\d+/);
           if (match) {
             const num = parseInt(match[0], 10);
             if (!isNaN(num) && num > maxNum) maxNum = num;
           }
         }
+      }
+    });
+    return `RA-CUST-${maxNum + 1}`;
+  };
+
+  // ----------------------------------------------------
+  // CUSTOMER MANAGEMENT
+  // ----------------------------------------------------
+  const addCustomer = (customerData) => {
+    const isOfficialCustomer = Boolean(customerData.isCustomer);
+    let newId = customerData.id;
+
+    if (isOfficialCustomer) {
+      if (!newId || customers.some(c => c.id === newId || c.customerId === newId)) {
+        newId = generateOfficialCustomerId(customers);
+      }
+    } else if (!newId || customers.some(c => c.id === newId)) {
+      let maxDbNum = 1000;
+      customers.forEach(c => {
+        if (c.id && typeof c.id === 'string') {
+          const match = c.id.match(/\d+/);
+          if (match) {
+            const num = parseInt(match[0], 10);
+            if (!isNaN(num) && num > maxDbNum) maxDbNum = num;
+          }
+        }
       });
-      newId = `RA-CUST-${maxNum + 1}`;
+      newId = `DB-${maxDbNum + 1}`;
     }
 
     const isSalesMgr = currentUser?.role === 'Sales Manager' || customerData.submittedBy === 'EMP005';
@@ -518,6 +542,8 @@ export const CRMProvider = ({ children }) => {
 
     const newCustomer = {
       id: newId,
+      isCustomer: isOfficialCustomer,
+      customerId: isOfficialCustomer ? (customerData.customerId || newId) : '',
       name: customerData.name || (customerData.customerType === 'unknown' ? 'Unknown / Lead' : 'Customer'),
       mobile: customerData.mobile,
       altMobile: customerData.altMobile || '',
@@ -803,6 +829,7 @@ export const CRMProvider = ({ children }) => {
       setLeads(prevLeads => {
         // Check if lead already exists for this customer or mobile number
         const existingIndex = prevLeads.findIndex(l =>
+          (l.sourceCustomerId && l.sourceCustomerId === customerId) ||
           (l.customerId && l.customerId === customerId) ||
           (cleanCustomerMobile && l.mobile && l.mobile.replace(/\D/g, '') === cleanCustomerMobile)
         );
@@ -811,6 +838,7 @@ export const CRMProvider = ({ children }) => {
           const updated = [...prevLeads];
           updated[existingIndex] = {
             ...updated[existingIndex],
+            sourceCustomerId: updated[existingIndex].sourceCustomerId || customer.id,
             status: leadStatus,
             assignedToId: actionUser.id,
             assignedToName: actionUser.name,
@@ -825,7 +853,8 @@ export const CRMProvider = ({ children }) => {
           const isUnknown = customer.customerType === 'unknown' || customer.name === 'Unknown / Lead';
           const newLead = {
             id: `LEAD-${Date.now().toString().slice(-4)}`,
-            customerId: customer.id,
+            sourceCustomerId: customer.id,
+            customerId: customer.isCustomer ? (customer.customerId || customer.id) : '',
             customerName: isUnknown ? 'Unknown / Lead' : (customer.name || 'Prospect Client'),
             customerType: customer.customerType || (isUnknown ? 'unknown' : 'known'),
             mobile: customer.mobile,
@@ -1389,7 +1418,8 @@ export const CRMProvider = ({ children }) => {
     const existingLead = leads.find(l => l.id === leadId);
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, ...updates } : l));
 
-    if (existingLead?.customerId) {
+    const linkedCustId = existingLead?.sourceCustomerId || existingLead?.customerId;
+    if (linkedCustId) {
       const custUpdates = {};
       if (updates.customerName !== undefined) custUpdates.name = updates.customerName;
       if (updates.mobile !== undefined) custUpdates.mobile = updates.mobile;
@@ -1403,7 +1433,7 @@ export const CRMProvider = ({ children }) => {
       if (updates.documents !== undefined) custUpdates.documents = updates.documents;
 
       if (Object.keys(custUpdates).length > 0) {
-        setCustomers(prev => prev.map(c => c.id === existingLead.customerId ? { ...c, ...custUpdates } : c));
+        setCustomers(prev => prev.map(c => (c.id === linkedCustId || c.customerId === linkedCustId) ? { ...c, ...custUpdates } : c));
       }
     }
 
@@ -1426,39 +1456,31 @@ export const CRMProvider = ({ children }) => {
     // Ensure customer exists in Customer Directory (Req 6: Login persons all are as a customers)
     let custId = loginData.customerId;
     const existingCust = customers.find(c =>
-      (custId && c.id === custId) ||
+      (loginData.sourceCustomerId && c.id === loginData.sourceCustomerId) ||
+      (custId && (c.id === custId || c.customerId === custId)) ||
       (loginData.mobile && c.mobile?.replace(/\D/g, '').slice(-10) === loginData.mobile?.replace(/\D/g, '').slice(-10))
     );
 
     if (existingCust) {
-      custId = existingCust.id;
-      setCustomers(prev => prev.map(c => c.id === custId ? {
+      custId = (existingCust.isCustomer && (existingCust.customerId || existingCust.id))
+        ? (existingCust.customerId || existingCust.id)
+        : (custId || generateOfficialCustomerId(customers));
+
+      setCustomers(prev => prev.map(c => c.id === existingCust.id ? {
         ...c,
         isCustomer: true,
-        name: lead.customerName || c.name,
-        business: lead.business || c.business,
-        city: lead.city || c.city,
-        state: lead.state || c.state,
-        altMobile: lead.altMobile || c.altMobile || '',
-        address: lead.address || c.address || '',
-        documents: (lead.documents && lead.documents.length > 0) ? lead.documents : (c.documents || [])
+        customerId: custId,
+        name: loginData.customerName || c.name,
+        business: loginData.business || c.business,
+        city: loginData.city || c.city
       } : c));
     } else {
-      // Auto-generate Customer ID (RA-CUST-XXXX)
-      let maxNum = 1000;
-      customers.forEach(c => {
-        if (c.id && typeof c.id === 'string') {
-          const match = c.id.match(/\d+/);
-          if (match) {
-            const num = parseInt(match[0], 10);
-            if (!isNaN(num) && num > maxNum) maxNum = num;
-          }
-        }
-      });
-      custId = `RA-CUST-${maxNum + 1}`;
+      custId = custId || generateOfficialCustomerId(customers);
 
       addCustomer({
         id: custId,
+        customerId: custId,
+        isCustomer: true,
         name: loginData.customerName || 'New Loan Client',
         mobile: loginData.mobile,
         business: loginData.business || 'General Client',
@@ -1508,18 +1530,23 @@ export const CRMProvider = ({ children }) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
 
-    // Check if customer already exists or auto-generate RA-CUST- ID
+    // Check if customer already exists or auto-generate official RA-CUST- ID
     let custId = lead.customerId;
     const existingCust = customers.find(c =>
-      (custId && c.id === custId) ||
+      (lead.sourceCustomerId && c.id === lead.sourceCustomerId) ||
+      (custId && (c.id === custId || c.customerId === custId)) ||
       (lead.mobile && c.mobile?.replace(/\D/g, '').slice(-10) === lead.mobile?.replace(/\D/g, '').slice(-10))
     );
 
     if (existingCust) {
-      custId = existingCust.id;
-      setCustomers(prev => prev.map(c => c.id === custId ? {
+      custId = (existingCust.isCustomer && (existingCust.customerId || existingCust.id))
+        ? (existingCust.customerId || existingCust.id)
+        : generateOfficialCustomerId(customers);
+
+      setCustomers(prev => prev.map(c => c.id === existingCust.id ? {
         ...c,
         isCustomer: true,
+        customerId: custId,
         name: lead.customerName || c.name,
         business: lead.business || c.business,
         city: lead.city || c.city,
@@ -1529,27 +1556,21 @@ export const CRMProvider = ({ children }) => {
         documents: (lead.documents && lead.documents.length > 0) ? lead.documents : (c.documents || [])
       } : c));
     } else {
-      // Auto-generate Customer ID (RA-CUST-XXXX)
-      let maxNum = 1000;
-      customers.forEach(c => {
-        if (c.id && typeof c.id === 'string') {
-          const match = c.id.match(/\d+/);
-          if (match) {
-            const num = parseInt(match[0], 10);
-            if (!isNaN(num) && num > maxNum) maxNum = num;
-          }
-        }
-      });
-      custId = `RA-CUST-${maxNum + 1}`;
+      custId = generateOfficialCustomerId(customers);
 
       // Automatically register into Customer Management directory
       addCustomer({
         id: custId,
+        customerId: custId,
+        isCustomer: true,
         name: lead.customerName || 'Customer',
         mobile: lead.mobile,
         business: lead.business || 'General Business',
         city: lead.city || 'Chennai',
         state: lead.state || 'Tamil Nadu',
+        altMobile: lead.altMobile || '',
+        address: lead.address || '',
+        documents: lead.documents || [],
         customerType: 'known',
         databaseType: 'new',
         source: lead.source || 'Lead Pipeline'
@@ -1559,6 +1580,7 @@ export const CRMProvider = ({ children }) => {
     const createdLogin = addBankLogin({
       id: custId,
       customerId: custId,
+      sourceCustomerId: existingCust?.id || lead.sourceCustomerId || custId,
       customerName: lead.customerName,
       mobile: lead.mobile,
       business: lead.business,

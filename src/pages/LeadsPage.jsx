@@ -102,13 +102,17 @@ export const LeadsPage = () => {
   const [convertLoanAmount, setConvertLoanAmount] = useState('');
   const [convertNotes, setConvertNotes] = useState('');
 
-  // Filter Sales Managers and RMs from employees
-  const salesManagers = useMemo(() => {
-    return employees.filter(e => e.role === 'Sales Manager' || e.role === 'Sales Executive');
-  }, [employees]);
-
-  const relationshipManagers = useMemo(() => {
-    return employees.filter(e => e.role === 'RM');
+  // Group all active employees by role so leads can be assigned to any role
+  const activeEmployeesByRole = useMemo(() => {
+    const groups = {};
+    (employees || [])
+      .filter(e => e.status !== 'Inactive')
+      .forEach(emp => {
+        const roleLabel = emp.role || 'Other';
+        if (!groups[roleLabel]) groups[roleLabel] = [];
+        groups[roleLabel].push(emp);
+      });
+    return Object.entries(groups);
   }, [employees]);
 
   // Base accessible leads:
@@ -611,7 +615,7 @@ export const LeadsPage = () => {
                 <th className="px-4 py-3">Sl.No</th>
                 <th className="px-4 py-3">Customer / Enterprise</th>
                 <th className="px-4 py-3">Requirement & Value</th>
-                <th className="px-4 py-3">Lead Status</th>
+                <th className="px-4 py-3">Customer Response</th>
                 <th className="px-4 py-3">Assigned Executive </th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
@@ -674,31 +678,15 @@ export const LeadsPage = () => {
                         </div>
                       </td>
 
-                      {/* Status */}
+                      {/* Customer Response */}
                       <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                          lead.status === 'Ready for Login'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-500/20'
-                            : lead.status === 'Converted to Login'
-                            ? 'bg-blue-50 text-blue-800 border-blue-300 ring-1 ring-blue-500/20'
-                            : lead.status === 'Field Visit Scheduled'
-                            ? 'bg-purple-50 text-purple-800 border-purple-300 ring-1 ring-purple-500/20'
-                            : 'bg-amber-50 text-amber-800 border-amber-300 ring-1 ring-amber-500/20'
-                        }`}>
-                          {lead.status}
-                        </span>
-                        {lead.status === 'Converted to Login' && (
-                          <div className="mt-1 flex items-center gap-1">
-                            <span className="text-[10px] font-mono font-bold text-burgundy-900 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
-                              {lead.customerId || 'Customer Registered'}
-                            </span>
-                          </div>
-                        )}
                         {lead.remarks ? (
-                          <div className="text-[10px] text-slate-500 italic mt-1 line-clamp-1 max-w-xs">
-                            "{lead.remarks.replace(/\s*\(Converted from telecalling:[^)]*\)/gi, '')}"
+                          <div className="text-xs text-slate-700 font-medium line-clamp-2 max-w-xs">
+                            {lead.remarks.replace(/\s*\(Converted from telecalling:[^)]*\)/gi, '')}
                           </div>
-                        ) : null}
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">-</span>
+                        )}
                       </td>
 
                       {/* Assigned Executive */}
@@ -734,8 +722,8 @@ export const LeadsPage = () => {
                       {/* Actions */}
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {/* Assign Lead Button: Only visible if lead is NOT yet assigned to anyone or myself */}
-                          {!isAssigned && (
+                          {/* Assign / Reassign Lead Button (Available for any non-converted lead) */}
+                          {lead.status !== 'Converted to Login' && (
                             <button
                               type="button"
                               onClick={() => {
@@ -743,9 +731,9 @@ export const LeadsPage = () => {
                                 setSelectedAssigneeId(lead.assignedToId || currentUser?.id || '');
                               }}
                               className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition"
-                              title="Assign to RM or Sales Manager"
+                              title="Assign or reassign to any staff member"
                             >
-                              Assign Lead
+                              {isAssigned ? 'Reassign' : 'Assign Lead'}
                             </button>
                           )}
 
@@ -909,20 +897,15 @@ export const LeadsPage = () => {
                   onChange={(e) => setNewLeadAssigneeId(e.target.value)}
                   className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800"
                 >
-                  <optgroup label="Relationship Managers (RM)">
-                    {relationshipManagers.map(rm => (
-                      <option key={rm.id} value={rm.id}>
-                        {rm.name} (RM - {rm.location})
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Sales Managers (Field Sales)">
-                    {salesManagers.map(sm => (
-                      <option key={sm.id} value={sm.id}>
-                        {sm.name} ({sm.role} - {sm.location})
-                      </option>
-                    ))}
-                  </optgroup>
+                  {activeEmployeesByRole.map(([roleName, members]) => (
+                    <optgroup key={roleName} label={roleName}>
+                      {members.map(emp => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.name} ({emp.role} - {emp.location || 'Head Office'})
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
                 </select>
               </div>
 
@@ -1016,21 +999,16 @@ export const LeadsPage = () => {
                     onChange={(e) => setSelectedAssigneeId(e.target.value)}
                     className="w-full text-xs rounded-xl border border-slate-300 py-2.5 px-3 bg-white focus:outline-none focus:border-burgundy-800"
                   >
-                    <option value="">-- Or Choose Another Person --</option>
-                    <optgroup label="Sales Managers (Field Sales)">
-                      {salesManagers.map(sm => (
-                        <option key={sm.id} value={sm.id}>
-                          {sm.name} (Sales Manager / Field Sales - {sm.location})
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Relationship Managers (RM)">
-                      {relationshipManagers.map(rm => (
-                        <option key={rm.id} value={rm.id}>
-                          {rm.name} (RM - {rm.location})
-                        </option>
-                      ))}
-                    </optgroup>
+                    <option value="">-- Or Choose Another Person (Any Role) --</option>
+                    {activeEmployeesByRole.map(([roleName, members]) => (
+                      <optgroup key={roleName} label={roleName}>
+                        {members.map(emp => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.name} ({emp.role} - {emp.location || 'Head Office'})
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -1082,20 +1060,35 @@ export const LeadsPage = () => {
               This will move <strong className="text-slate-800">{confirmConvertLead.customerName}</strong> ({confirmConvertLead.mobile}) to Bank Login and generate an official Customer ID.
             </p>
 
-            <div className="flex items-center justify-center gap-3 mt-6">
+            <div className="space-y-2.5 mt-6">
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setConfirmConvertLead(null)}
+                  className="w-1/2 py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => proceedToConvertModal(confirmConvertLead)}
+                  className="w-1/2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-burgundy-800 to-burgundy-950 hover:from-burgundy-900 hover:to-burgundy-950 text-white font-bold text-xs transition shadow-md active:scale-95"
+                >
+                  Yes, Proceed
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={() => setConfirmConvertLead(null)}
-                className="w-1/2 py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition"
+                onClick={() => {
+                  const target = confirmConvertLead;
+                  setConfirmConvertLead(null);
+                  setAssigningLead(target);
+                  setSelectedAssigneeId(target.assignedToId || currentUser?.id || '');
+                }}
+                className="w-full py-2.5 px-4 rounded-xl border border-burgundy-200 bg-burgundy-50/70 hover:bg-burgundy-100 text-burgundy-900 font-bold text-xs transition flex items-center justify-center gap-1.5"
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => proceedToConvertModal(confirmConvertLead)}
-                className="w-1/2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-burgundy-800 to-burgundy-950 hover:from-burgundy-900 hover:to-burgundy-950 text-white font-bold text-xs transition shadow-md active:scale-95"
-              >
-                Yes, Proceed
+                <UserCheck className="w-3.5 h-3.5 text-burgundy-800" />
+                <span>Assign to Another Person (Any Role)</span>
               </button>
             </div>
           </div>
@@ -1641,15 +1634,32 @@ export const LeadsPage = () => {
                 </div>
 
                 {/* Quick Actions Footer */}
-                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => enterLeadEditMode(viewingLead)}
-                    className="px-3.5 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
-                  >
-                    <Edit className="w-3.5 h-3.5 text-burgundy-800" />
-                    <span>Edit</span>
-                  </button>
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => enterLeadEditMode(viewingLead)}
+                      className="px-3.5 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
+                    >
+                      <Edit className="w-3.5 h-3.5 text-burgundy-800" />
+                      <span>Edit</span>
+                    </button>
+                    {viewingLead.status !== 'Converted to Login' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target = viewingLead;
+                          closeLeadDetailsModal();
+                          setAssigningLead(target);
+                          setSelectedAssigneeId(target.assignedToId || currentUser?.id || '');
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl border border-burgundy-200 bg-burgundy-50/70 hover:bg-burgundy-100 text-burgundy-900 text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
+                      >
+                        <UserCheck className="w-3.5 h-3.5 text-burgundy-800" />
+                        <span>Assign</span>
+                      </button>
+                    )}
+                  </div>
 
                   <div className="flex items-center gap-2">
                     {viewingLead.status !== 'Converted to Login' && (

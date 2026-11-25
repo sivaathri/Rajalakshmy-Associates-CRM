@@ -54,9 +54,9 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
     a => a.employeeId === currentUser?.id && a.date === todayFormatted
   );
 
-  // Customer menu badge count (strictly verified customers, completely separated from raw database numbers)
+  // Customer menu badge count (strictly verified/converted customers)
   const customerOnlyList = customers.filter(
-    c => c.isCustomer || (c.documents && c.documents.length > 0) || (c.services && c.services.length > 0) || c.callingStatus === 'OK'
+    c => c.isCustomer || (c.services && c.services.length > 0)
   );
   const scopedCustomerMenuCount = isSalesManager
     ? customerOnlyList.filter(c => c.submittedBy === currentUser?.id || c.referenceFrom?.includes(currentUser?.name) || c.assignedTo === currentUser?.id).length

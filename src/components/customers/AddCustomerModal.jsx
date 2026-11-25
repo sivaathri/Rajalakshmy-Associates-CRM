@@ -64,12 +64,15 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
   const nextCustomerId = React.useMemo(() => {
     let maxNum = 1000;
     (customers || []).forEach(c => {
-      if (c.id && typeof c.id === 'string') {
-        const match = c.id.match(/\d+/);
-        if (match) {
-          const num = parseInt(match[0], 10);
-          if (!isNaN(num) && num > maxNum) {
-            maxNum = num;
+      if (c.isCustomer || (c.services && c.services.length > 0)) {
+        const refId = c.customerId || c.id;
+        if (refId && typeof refId === 'string') {
+          const match = refId.match(/\d+/);
+          if (match) {
+            const num = parseInt(match[0], 10);
+            if (!isNaN(num) && num > maxNum) {
+              maxNum = num;
+            }
           }
         }
       }
@@ -218,13 +221,15 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
     const formattedMobile = `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
 
     const finalId = (customerId && customerId.trim()) ? customerId.trim().toUpperCase() : nextCustomerId;
-    if (customers.some(c => c.id?.toLowerCase() === finalId.toLowerCase())) {
+    if (customers.some(c => c.id?.toLowerCase() === finalId.toLowerCase() || c.customerId?.toLowerCase() === finalId.toLowerCase())) {
       alert(`Customer ID "${finalId}" is already taken. Please choose a unique ID.`);
       return;
     }
 
     addCustomer({
       id: finalId,
+      customerId: finalId,
+      isCustomer: true,
       name: customerType === 'known' ? name : 'Unknown / Lead',
       mobile: formattedMobile,
       altMobile,
