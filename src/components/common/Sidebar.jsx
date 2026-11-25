@@ -80,7 +80,25 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
     b => b.status === 'In Progress' && (!b.nextFollowUpDate || b.nextFollowUpDate <= todayIso)
   ).length;
 
-  const NavContent = ({ isExpanded = true, isMobile = false }) => (
+  const NavContent = ({ isExpanded = true, isMobile = false }) => {
+    const dailyActivitiesMenu = canAccessRoute('daily-activities') && (
+      <NavLink
+        to="/daily-activities"
+        onClick={() => isMobile && setIsOpen(false)}
+        className={({ isActive }) =>
+          `flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition ${
+            isActive
+              ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
+              : 'text-white/80 hover:bg-white/10 hover:text-white'
+          }`
+        }
+      >
+        <CalendarCheck className="w-4 h-4 shrink-0 text-cyan-300" />
+        {isExpanded && <span>Daily Activities</span>}
+      </NavLink>
+    );
+
+    return (
     <>
       {/* Brand Header */}
       <div className={`flex h-16 shrink-0 items-center ${isExpanded ? 'justify-between px-3' : 'justify-center px-1'} border-b border-white/10 bg-[#4c0210]/40`}>
@@ -159,6 +177,9 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
             {isExpanded && <span>Dashboard</span>}
           </NavLink>
         )}
+
+        {/* For Sales Manager, place Daily Activities immediately after Dashboard */}
+        {isSalesManager && dailyActivitiesMenu}
 
         {/* Dedicated RM Telecalling view */}
         {canAccessRoute('telecalling') && (
@@ -262,23 +283,8 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
           </NavLink>
         )}
 
-        {/* 5. Daily Activities */}
-        {canAccessRoute('daily-activities') && (
-          <NavLink
-            to="/daily-activities"
-            onClick={() => isMobile && setIsOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition ${
-                isActive
-                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
-                  : 'text-white/80 hover:bg-white/10 hover:text-white'
-              }`
-            }
-          >
-            <CalendarCheck className="w-4 h-4 shrink-0 text-cyan-300" />
-            {isExpanded && <span>Daily Activities</span>}
-          </NavLink>
-        )}
+        {/* 5. Daily Activities (for non-Sales Manager roles) */}
+        {!isSalesManager && dailyActivitiesMenu}
 
         {/* 4. Performance (Case Disposition) */}
         {canAccessRoute('performance') && (
@@ -484,7 +490,8 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         )}
       </div>
     </>
-  );
+    );
+  };
 
   return (
     <>
