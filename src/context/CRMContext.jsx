@@ -1577,6 +1577,10 @@ export const CRMProvider = ({ children }) => {
       });
     }
 
+    const targetAssigneeId = loginData.assignedRMId || currentUser?.id || lead.assignedToId;
+    const targetAssigneeName = loginData.assignedRMName || currentUser?.name || lead.assignedToName;
+    const targetAssigneeRole = loginData.assignedToRole || currentUser?.role || lead.assignedToRole || 'RM';
+
     const createdLogin = addBankLogin({
       id: custId,
       customerId: custId,
@@ -1589,14 +1593,17 @@ export const CRMProvider = ({ children }) => {
       loanType: loginData.loanType || lead.requiredService,
       loanAmount: loginData.loanAmount || lead.estimatedAmount,
       loginDate: loginData.loginDate || new Date().toISOString().split('T')[0],
-      assignedRMId: currentUser?.id || lead.assignedToId,
-      assignedRMName: currentUser?.name || lead.assignedToName,
+      assignedRMId: targetAssigneeId,
+      assignedRMName: targetAssigneeName,
       notes: loginData.notes || `Converted from Lead #${lead.id}`
     });
 
     setLeads(prev => prev.map(l => l.id === leadId ? {
       ...l,
       customerId: custId, // Auto-assign the generated Customer ID to the lead!
+      assignedToId: targetAssigneeId,
+      assignedToName: targetAssigneeName,
+      assignedToRole: targetAssigneeRole,
       status: 'Converted to Login',
       remarks: `${l.remarks ? l.remarks + ' | ' : ''}Customer ID: ${custId} (Bank Login with ${loginData.bankName})`
     } : l));

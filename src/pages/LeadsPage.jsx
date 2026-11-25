@@ -55,8 +55,11 @@ export const LeadsPage = () => {
   // Modals
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
   const [assigningLead, setAssigningLead] = useState(null);
-  const [confirmConvertLead, setConfirmConvertLead] = useState(null);
-  const [convertingLead, setConvertingLead] = useState(null);
+  const [loginAssignLead, setLoginAssignLead] = useState(null);
+  const [loginAssignMode, setLoginAssignMode] = useState(''); // '' | 'self' | 'other'
+  const [loginAssigneeId, setLoginAssigneeId] = useState('');
+  const [confirmConvertData, setConfirmConvertData] = useState(null); // { lead, assignee }
+  const [convertingLeadData, setConvertingLeadData] = useState(null); // { lead, assignee }
   const [viewingLeadId, setViewingLeadId] = useState(null);
   const [isLeadEditMode, setIsLeadEditMode] = useState(false);
 
@@ -222,31 +225,68 @@ export const LeadsPage = () => {
   };
 
   const handleOpenConvertModal = (lead) => {
-    setConfirmConvertLead(lead);
+    setLoginAssignLead(lead);
+    setLoginAssignMode('');
+    setLoginAssigneeId('');
   };
 
-  const proceedToConvertModal = (lead) => {
-    if (!lead) return;
-    setConfirmConvertLead(null);
-    setConvertingLead(lead);
+  const selectedLoginAssignee = useMemo(() => {
+    if (!loginAssigneeId) return null;
+    if (loginAssigneeId === currentUser?.id) return currentUser;
+    return employees.find(e => e.id === loginAssigneeId) || null;
+  }, [loginAssigneeId, currentUser, employees]);
+
+  const handleAssignOnlyFromLoginStep = () => {
+    if (!loginAssignLead || !selectedLoginAssignee) return;
+    assignLead(
+      loginAssignLead.id,
+      selectedLoginAssignee.id,
+      selectedLoginAssignee.name,
+      selectedLoginAssignee.role
+    );
+    setLoginAssignLead(null);
+    setLoginAssignMode('');
+    setLoginAssigneeId('');
+  };
+
+  const handleProceedFromAssignToConfirm = () => {
+    if (!loginAssignLead || !selectedLoginAssignee) return;
+    setConfirmConvertData({
+      lead: loginAssignLead,
+      assignee: selectedLoginAssignee
+    });
+    setLoginAssignLead(null);
+    setLoginAssignMode('');
+    setLoginAssigneeId('');
+  };
+
+  const proceedToConvertModal = (data) => {
+    if (!data?.lead) return;
+    const { lead, assignee } = data;
+    setConfirmConvertData(null);
+    setConvertingLeadData({ lead, assignee });
     setConvertBankName('State Bank of India');
     setConvertLoanType(lead.requiredService || 'Working Capital (CC/OD)');
     setConvertLoanAmount(lead.estimatedAmount || 2500000);
-    setConvertNotes(`Converted to Bank Login by ${currentUser?.name || 'RM'}`);
+    setConvertNotes(`Converted to Bank Login by ${assignee?.name || currentUser?.name || 'RM'}`);
   };
 
   const handleConfirmConvert = (e) => {
     e.preventDefault();
-    if (!convertingLead) return;
+    if (!convertingLeadData?.lead) return;
+    const { lead, assignee } = convertingLeadData;
 
-    convertLeadToLogin(convertingLead.id, {
+    convertLeadToLogin(lead.id, {
       bankName: convertBankName,
       loanType: convertLoanType,
       loanAmount: Number(convertLoanAmount),
-      notes: convertNotes
+      notes: convertNotes,
+      assignedRMId: assignee?.id || currentUser?.id,
+      assignedRMName: assignee?.name || currentUser?.name,
+      assignedToRole: assignee?.role || currentUser?.role
     });
 
-    setConvertingLead(null);
+    setConvertingLeadData(null);
   };
 
   const enterLeadEditMode = (lead) => {
@@ -722,8 +762,8 @@ export const LeadsPage = () => {
                       {/* Actions */}
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {/* Assign / Reassign Lead Button (Available for any non-converted lead) */}
-                          {lead.status !== 'Converted to Login' && (
+                          {/* Assign Lead Button: Shown if lead is not yet assigned */}
+                          {!isAssigned && lead.status !== 'Converted to Login' && (
                             <button
                               type="button"
                               onClick={() => {
@@ -731,9 +771,9 @@ export const LeadsPage = () => {
                                 setSelectedAssigneeId(lead.assignedToId || currentUser?.id || '');
                               }}
                               className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 transition"
-                              title="Assign or reassign to any staff member"
+                              title="Assign to any staff member"
                             >
-                              {isAssigned ? 'Reassign' : 'Assign Lead'}
+                              Assign Lead
                             </button>
                           )}
 
@@ -1035,14 +1075,171 @@ export const LeadsPage = () => {
       )}
 
       {/* ---------------------------------------------------- */}
-      {/* MODAL 3A: CONFIRM LOGIN CONVERSION                   */}
+      {/* MODAL 3A-1: STEP 1 - ASSIGN BEFORE LOGIN             */}
       {/* ---------------------------------------------------- */}
-      {confirmConvertLead && (
+      {loginAssignLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
+              <div>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-gold-300 block">
+                  Step 1 • Select Assignee
+                </span>
+                <h3 className="text-base font-bold text-white">
+                  Assign Before Login
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginAssignLead(null);
+                  setLoginAssignMode('');
+                  setLoginAssigneeId('');
+                }}
+                className="rounded-lg p-1 text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-[#FAF6EF] p-3 rounded-xl border border-gold-200/70 text-xs">
+                <div className="font-bold text-slate-900">{loginAssignLead.customerName}</div>
+                <div className="text-slate-600 font-mono mt-0.5">
+                  {loginAssignLead.mobile}
+                  {loginAssignLead.business ? ` • ${loginAssignLead.business}` : ''}
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Assign To <span className="text-rose-500">*</span>
+                </label>
+
+                {/* Choice 1: Assign to Myself */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginAssignMode('self');
+                    setLoginAssigneeId(currentUser?.id || '');
+                  }}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border-2 text-xs font-bold transition ${
+                    loginAssignMode === 'self'
+                      ? 'border-burgundy-900 bg-burgundy-50 text-burgundy-950 ring-2 ring-burgundy-900/15'
+                      : 'border-slate-200 hover:border-burgundy-300 hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <UserCheck className={`w-4 h-4 ${loginAssignMode === 'self' ? 'text-burgundy-900' : 'text-slate-400'}`} />
+                    <span>Assign to Myself ({currentUser?.name})</span>
+                  </div>
+                  <span className="text-[10px] bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-semibold">
+                    {currentUser?.role}
+                  </span>
+                </button>
+
+                {/* Choice 2: Assign to Any Other User */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginAssignMode('other');
+                    if (loginAssigneeId === currentUser?.id) {
+                      setLoginAssigneeId('');
+                    }
+                  }}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border-2 text-xs font-bold transition ${
+                    loginAssignMode === 'other'
+                      ? 'border-burgundy-900 bg-burgundy-50 text-burgundy-950 ring-2 ring-burgundy-900/15'
+                      : 'border-slate-200 hover:border-burgundy-300 hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <ShieldCheck className={`w-4 h-4 ${loginAssignMode === 'other' ? 'text-burgundy-900' : 'text-slate-400'}`} />
+                    <span>Assign to Any Other User</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-semibold">Any Role</span>
+                </button>
+
+                {loginAssignMode === 'other' && (
+                  <div className="pt-1 animate-fade-in">
+                    <select
+                      value={loginAssigneeId}
+                      onChange={(e) => setLoginAssigneeId(e.target.value)}
+                      className="w-full text-xs rounded-xl border border-slate-300 py-2.5 px-3 bg-white focus:outline-none focus:border-burgundy-800"
+                    >
+                      <option value="">-- Select Staff Member (Any Role) --</option>
+                      {activeEmployeesByRole.map(([roleName, members]) => {
+                        const filteredMembers = members.filter(m => m.id !== currentUser?.id);
+                        if (filteredMembers.length === 0) return null;
+                        return (
+                          <optgroup key={roleName} label={roleName}>
+                            {filteredMembers.map(emp => (
+                              <option key={emp.id} value={emp.id}>
+                                {emp.name} ({emp.role} - {emp.location || 'Head Office'})
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      })}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginAssignLead(null);
+                    setLoginAssignMode('');
+                    setLoginAssigneeId('');
+                  }}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {loginAssignMode === 'other' && selectedLoginAssignee && (
+                    <button
+                      type="button"
+                      onClick={handleAssignOnlyFromLoginStep}
+                      className="px-4 py-2 rounded-xl border border-burgundy-200 bg-burgundy-50 hover:bg-burgundy-100 text-burgundy-900 text-xs font-bold transition"
+                    >
+                      Assign Only
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={!selectedLoginAssignee}
+                    onClick={handleProceedFromAssignToConfirm}
+                    title={!selectedLoginAssignee ? 'Select Myself or another user first to enable Login' : 'Proceed to Bank Login'}
+                    className={`px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
+                      selectedLoginAssignee
+                        ? 'bg-burgundy-900 hover:bg-burgundy-800 text-white shadow-md cursor-pointer'
+                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <FileCheck className={`w-3.5 h-3.5 ${selectedLoginAssignee ? 'text-gold-400' : 'text-slate-400'}`} />
+                    <span>Login</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* MODAL 3A-2: STEP 2 - CONFIRM LOGIN CONVERSION        */}
+      {/* ---------------------------------------------------- */}
+      {confirmConvertData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden p-6 text-center">
             <button
               type="button"
-              onClick={() => setConfirmConvertLead(null)}
+              onClick={() => setConfirmConvertData(null)}
               className="absolute top-3.5 right-3.5 p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
             >
               <X className="w-4 h-4" />
@@ -1057,38 +1254,24 @@ export const LeadsPage = () => {
             </h3>
 
             <p className="text-xs text-slate-500 mt-1.5 max-w-xs mx-auto leading-relaxed">
-              This will move <strong className="text-slate-800">{confirmConvertLead.customerName}</strong> ({confirmConvertLead.mobile}) to Bank Login and generate an official Customer ID.
+              This will move <strong className="text-slate-800">{confirmConvertData.lead.customerName}</strong> ({confirmConvertData.lead.mobile}) to Bank Login under{' '}
+              <strong className="text-burgundy-900">{confirmConvertData.assignee?.name} ({confirmConvertData.assignee?.role})</strong> and generate an official Customer ID.
             </p>
 
-            <div className="space-y-2.5 mt-6">
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setConfirmConvertLead(null)}
-                  className="w-1/2 py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => proceedToConvertModal(confirmConvertLead)}
-                  className="w-1/2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-burgundy-800 to-burgundy-950 hover:from-burgundy-900 hover:to-burgundy-950 text-white font-bold text-xs transition shadow-md active:scale-95"
-                >
-                  Yes, Proceed
-                </button>
-              </div>
+            <div className="flex items-center justify-center gap-3 mt-6">
               <button
                 type="button"
-                onClick={() => {
-                  const target = confirmConvertLead;
-                  setConfirmConvertLead(null);
-                  setAssigningLead(target);
-                  setSelectedAssigneeId(target.assignedToId || currentUser?.id || '');
-                }}
-                className="w-full py-2.5 px-4 rounded-xl border border-burgundy-200 bg-burgundy-50/70 hover:bg-burgundy-100 text-burgundy-900 font-bold text-xs transition flex items-center justify-center gap-1.5"
+                onClick={() => setConfirmConvertData(null)}
+                className="w-1/2 py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition"
               >
-                <UserCheck className="w-3.5 h-3.5 text-burgundy-800" />
-                <span>Assign to Another Person (Any Role)</span>
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => proceedToConvertModal(confirmConvertData)}
+                className="w-1/2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-burgundy-800 to-burgundy-950 hover:from-burgundy-900 hover:to-burgundy-950 text-white font-bold text-xs transition shadow-md active:scale-95"
+              >
+                Yes, Proceed
               </button>
             </div>
           </div>
@@ -1098,7 +1281,7 @@ export const LeadsPage = () => {
       {/* ---------------------------------------------------- */}
       {/* MODAL 3: CONVERT LEAD TO BANK LOGIN                  */}
       {/* ---------------------------------------------------- */}
-      {convertingLead && (
+      {convertingLeadData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-emerald-800 to-emerald-950 px-6 py-4 text-white flex items-center justify-between">
@@ -1107,7 +1290,7 @@ export const LeadsPage = () => {
                 <h3 className="text-base font-bold text-white">Convert to Bank Login File</h3>
               </div>
               <button
-                onClick={() => setConvertingLead(null)}
+                onClick={() => setConvertingLeadData(null)}
                 className="rounded-lg p-1 text-white/70 hover:bg-white/10 hover:text-white"
               >
                 <X className="w-5 h-5" />
@@ -1117,14 +1300,20 @@ export const LeadsPage = () => {
             <form onSubmit={handleConfirmConvert} className="p-6 space-y-3.5">
               <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-200 text-xs space-y-1">
                 <div className="flex items-center justify-between">
-                  <div className="font-bold text-emerald-950">{convertingLead.customerName}</div>
+                  <div className="font-bold text-emerald-950">{convertingLeadData.lead.customerName}</div>
                   <span className="font-mono text-[10px] font-bold text-burgundy-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded">
-                    {convertingLead.status === 'Converted to Login' && convertingLead.customerId
-                      ? convertingLead.customerId
+                    {convertingLeadData.lead.status === 'Converted to Login' && convertingLeadData.lead.customerId
+                      ? convertingLeadData.lead.customerId
                       : 'Auto-Generates RA-CUST-'}
                   </span>
                 </div>
-                <div className="text-emerald-800 font-mono">{convertingLead.mobile} • {convertingLead.business}</div>
+                <div className="text-emerald-800 font-mono">
+                  {convertingLeadData.lead.mobile}
+                  {convertingLeadData.lead.business ? ` • ${convertingLeadData.lead.business}` : ''}
+                </div>
+                <div className="text-[10px] text-emerald-800 font-semibold">
+                  Handler: {convertingLeadData.assignee?.name} ({convertingLeadData.assignee?.role})
+                </div>
                 <div className="text-[10px] text-emerald-700 font-semibold pt-1 border-t border-emerald-200/60">
                   ✓ Automatically generates official Customer ID (RA-CUST-) upon Bank Login registration (No Login ID)
                 </div>
@@ -1197,7 +1386,7 @@ export const LeadsPage = () => {
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setConvertingLead(null)}
+                  onClick={() => setConvertingLeadData(null)}
                   className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800"
                 >
                   Cancel
