@@ -391,6 +391,7 @@ export const UserManagementPage = () => {
             <table className="w-full text-left text-xs">
               <thead className="bg-[#FAF6EF] text-slate-600 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200">
                 <tr>
+                  <th className="py-3 px-4 text-center w-14">Sl.No</th>
                   <th className="py-3 px-4">Staff Member</th>
                   <th className="py-3 px-4">Employee ID</th>
                   <th className="py-3 px-4">Role & Permissions</th>
@@ -402,7 +403,8 @@ export const UserManagementPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {paginatedEmployees.map((emp) => {
+                {paginatedEmployees.map((emp, index) => {
+                  const slNo = (currentPage - 1) * itemsPerPage + index + 1;
                   const isCurrent = currentUser?.id === emp.id;
                   const initials = (emp.name || 'U')
                     .split(' ')
@@ -418,6 +420,11 @@ export const UserManagementPage = () => {
                         isCurrent ? 'bg-gold-50/40' : ''
                       }`}
                     >
+                      {/* Sl.No */}
+                      <td className="py-3 px-4 text-center font-bold text-slate-700">
+                        {slNo}
+                      </td>
+
                       {/* Name & Avatar */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
