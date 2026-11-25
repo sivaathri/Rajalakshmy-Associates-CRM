@@ -301,18 +301,11 @@ export const BankLoginPage = () => {
       {/* Top Banner Header */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gold-300">
-            <Building2 className="w-4 h-4 text-gold-400" />
-            <span>Bank Syndication & File Processing</span>
-            <span>•</span>
-            <span className="font-mono text-white/80">{filteredLogins.length} Files</span>
-          </div>
+          
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
-            Bank Login & Disbursement Console
+             Login
           </h2>
-          <p className="text-xs text-white/70 mt-1 max-w-2xl">
-            Track bank submissions with mandatory 2-day routine follow-up updates. Convert files to Disbursement ("Disposement") or record Bank Rejection with remarks.
-          </p>
+         
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
