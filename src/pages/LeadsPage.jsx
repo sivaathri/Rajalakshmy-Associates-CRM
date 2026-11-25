@@ -802,16 +802,6 @@ export const LeadsPage = () => {
                             </div>
                           )}
 
-                          {/* Add / Edit Lead Details Button */}
-                          <button
-                            type="button"
-                            onClick={() => enterLeadEditMode(lead)}
-                            className="p-1.5 text-slate-500 hover:text-burgundy-900 rounded-lg hover:bg-slate-100 transition"
-                            title="Add / Edit Lead Details"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-
                           {/* View Lead Details Eye Button */}
                           <button
                             type="button"
