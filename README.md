@@ -344,4 +344,20 @@ rajalakshmy-associates-crm/
 
 ---
 
+## 🔌 Future Node.js Backend Migration Reminder (RM Telecalling)
+
+When migrating from `localStorage` to the **Node.js backend**:
+
+1. **Real-Time Sync with Socket.IO** *(replaces browser `storage` events & `beforeunload`)*:
+   - Broadcast `lead:locked`, `lead:released`, and `lead:saved` events via **Socket.IO** so all connected RMs' **Queue Leads** lists update immediately.
+   - Auto-release any active lock held by an RM on `socket.on('disconnect')`.
+2. **Atomic Lock on Server**:
+   - Store `locked_by` and `lock_expires_at` in DB (or `SET lock:customer:<id> <rmId> NX EX 45` in Redis) with an atomic conditional check (`locked_by IS NULL OR lock_expires_at < NOW()`) returning `409 Conflict` if already claimed.
+3. **Heartbeat + TTL Auto-Expiry**:
+   - Keep the **15-second heartbeat** extending `lock_expires_at` by **45 seconds** so abrupt disconnects/crashes return un-saved contacts to other RMs.
+4. **Server-Side Per-RM Queue Ordering**:
+   - Move the per-RM round-robin bucketing and unlocked filter into `GET /api/telecalling/queue`.
+
+---
+
 © Rajalakshmy Associates. Corporate Financial Advisory & Field CRM Platform.

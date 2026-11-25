@@ -34,6 +34,10 @@ const STORAGE_KEYS = {
   CALL_LOCKS: 'rajalakshmy_call_locks_v1'
 };
 
+// TODO (Node.js Backend Migration): Replace localStorage call locks + storage event sync with:
+// 1. Atomic DB/Redis lock (e.g. locked_by + lock_expires_at, 45s TTL) on contact selection
+// 2. Socket.IO real-time sync (lead:locked, lead:released, lead:saved) & socket disconnect auto-release
+// 3. 15s server heartbeat & server-side per-RM round-robin queue ordering
 const CALL_LOCK_TTL_MS = 45000; // 45s auto-expiry if app closes unexpectedly without firing beforeunload
 const SESSION_ID = `SES-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
