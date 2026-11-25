@@ -797,7 +797,7 @@ export const BankLoginPage = () => {
       {/* MODAL 1: ADD BANK LOGIN (Req 4, 6)                   */}
       {/* ---------------------------------------------------- */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
               <div>
@@ -988,7 +988,7 @@ export const BankLoginPage = () => {
       {/* MODAL 2: 2-DAY UPDATE & NEXT ACTION (Req 4)          */}
       {/* ---------------------------------------------------- */}
       {updatingLogin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-amber-600 to-amber-800 px-6 py-4 text-white flex items-center justify-between">
               <div>
@@ -1054,7 +1054,7 @@ export const BankLoginPage = () => {
       {/* MODAL 3: CONVERT TO DISBURSEMENT (Req 5)             */}
       {/* ---------------------------------------------------- */}
       {disbursingLogin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-emerald-800 to-emerald-950 px-6 py-4 text-white flex items-center justify-between">
               <div>
@@ -1168,7 +1168,7 @@ export const BankLoginPage = () => {
       {/* MODAL 4: REJECT LOGIN WITH REMARKS (Req 5)          */}
       {/* ---------------------------------------------------- */}
       {rejectingLogin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-rose-800 to-rose-950 px-6 py-4 text-white flex items-center justify-between">
               <div>
@@ -1227,7 +1227,7 @@ export const BankLoginPage = () => {
       {/* MODAL 5: VIEW 2-DAY UPDATE TIMELINE HISTORY          */}
       {/* ---------------------------------------------------- */}
       {viewHistoryLogin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
               <div>

@@ -837,7 +837,7 @@ export const LeadsPage = () => {
       {/* MODAL 1: ADD NEW LEAD                                */}
       {/* ---------------------------------------------------- */}
       {isAddLeadModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
               <div>
@@ -986,7 +986,7 @@ export const LeadsPage = () => {
       {/* MODAL 2: ASSIGN LEAD (Req 7)                          */}
       {/* ---------------------------------------------------- */}
       {assigningLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
               <div>
@@ -1078,7 +1078,7 @@ export const LeadsPage = () => {
       {/* MODAL 3A-1: STEP 1 - ASSIGN BEFORE LOGIN             */}
       {/* ---------------------------------------------------- */}
       {loginAssignLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
               <div>
@@ -1242,7 +1242,7 @@ export const LeadsPage = () => {
       {/* MODAL 3A-2: STEP 2 - CONFIRM LOGIN CONVERSION        */}
       {/* ---------------------------------------------------- */}
       {confirmConvertData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden p-6 text-center">
             <button
               type="button"
@@ -1289,7 +1289,7 @@ export const LeadsPage = () => {
       {/* MODAL 3: CONVERT LEAD TO BANK LOGIN                  */}
       {/* ---------------------------------------------------- */}
       {convertingLeadData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-emerald-800 to-emerald-950 px-6 py-4 text-white flex items-center justify-between">
               <div>
@@ -1415,7 +1415,7 @@ export const LeadsPage = () => {
       {/* MODAL 4: LEAD DETAILS (VIEW & INLINE EDIT MODE)      */}
       {/* ---------------------------------------------------- */}
       {viewingLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
               <div>
