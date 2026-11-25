@@ -1370,7 +1370,27 @@ export const CRMProvider = ({ children }) => {
   };
 
   const updateLead = (leadId, updates) => {
+    const existingLead = leads.find(l => l.id === leadId);
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, ...updates } : l));
+
+    if (existingLead?.customerId) {
+      const custUpdates = {};
+      if (updates.customerName !== undefined) custUpdates.name = updates.customerName;
+      if (updates.mobile !== undefined) custUpdates.mobile = updates.mobile;
+      if (updates.altMobile !== undefined) custUpdates.altMobile = updates.altMobile;
+      if (updates.business !== undefined) custUpdates.business = updates.business;
+      if (updates.city !== undefined) custUpdates.city = updates.city;
+      if (updates.state !== undefined) custUpdates.state = updates.state;
+      if (updates.address !== undefined) custUpdates.address = updates.address;
+      if (updates.requiredService !== undefined) custUpdates.requiredService = updates.requiredService;
+      if (updates.estimatedAmount !== undefined) custUpdates.loanRequirement = updates.estimatedAmount;
+      if (updates.documents !== undefined) custUpdates.documents = updates.documents;
+
+      if (Object.keys(custUpdates).length > 0) {
+        setCustomers(prev => prev.map(c => c.id === existingLead.customerId ? { ...c, ...custUpdates } : c));
+      }
+    }
+
     showToast('Lead details updated', 'success');
   };
 
@@ -1396,6 +1416,17 @@ export const CRMProvider = ({ children }) => {
 
     if (existingCust) {
       custId = existingCust.id;
+      setCustomers(prev => prev.map(c => c.id === custId ? {
+        ...c,
+        isCustomer: true,
+        name: lead.customerName || c.name,
+        business: lead.business || c.business,
+        city: lead.city || c.city,
+        state: lead.state || c.state,
+        altMobile: lead.altMobile || c.altMobile || '',
+        address: lead.address || c.address || '',
+        documents: (lead.documents && lead.documents.length > 0) ? lead.documents : (c.documents || [])
+      } : c));
     } else {
       // Auto-generate Customer ID (RA-CUST-XXXX)
       let maxNum = 1000;
@@ -1470,6 +1501,17 @@ export const CRMProvider = ({ children }) => {
 
     if (existingCust) {
       custId = existingCust.id;
+      setCustomers(prev => prev.map(c => c.id === custId ? {
+        ...c,
+        isCustomer: true,
+        name: lead.customerName || c.name,
+        business: lead.business || c.business,
+        city: lead.city || c.city,
+        state: lead.state || c.state,
+        altMobile: lead.altMobile || c.altMobile || '',
+        address: lead.address || c.address || '',
+        documents: (lead.documents && lead.documents.length > 0) ? lead.documents : (c.documents || [])
+      } : c));
     } else {
       // Auto-generate Customer ID (RA-CUST-XXXX)
       let maxNum = 1000;

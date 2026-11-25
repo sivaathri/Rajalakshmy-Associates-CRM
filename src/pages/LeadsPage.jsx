@@ -25,7 +25,10 @@ import {
   PhoneCall,
   Eye,
   Edit,
-  RotateCcw
+  RotateCcw,
+  FileText,
+  Upload,
+  Trash2
 } from 'lucide-react';
 import { formatCurrency, formatDate, exportToCSV } from '../utils/formatters';
 
@@ -54,18 +57,31 @@ export const LeadsPage = () => {
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
   const [assigningLead, setAssigningLead] = useState(null);
   const [convertingLead, setConvertingLead] = useState(null);
-  const [viewingLead, setViewingLead] = useState(null);
-  const [editingLead, setEditingLead] = useState(null);
+  const [viewingLeadId, setViewingLeadId] = useState(null);
+  const [isLeadEditMode, setIsLeadEditMode] = useState(false);
 
-  // Edit Lead Form State
+  const viewingLead = useMemo(() => {
+    if (!viewingLeadId) return null;
+    return leads.find(l => l.id === viewingLeadId) || null;
+  }, [leads, viewingLeadId]);
+
+  // Edit / Add Lead Details Form State
   const [editLeadName, setEditLeadName] = useState('');
   const [editLeadMobile, setEditLeadMobile] = useState('');
+  const [editLeadAltMobile, setEditLeadAltMobile] = useState('');
   const [editLeadBusiness, setEditLeadBusiness] = useState('');
   const [editLeadCity, setEditLeadCity] = useState('');
+  const [editLeadState, setEditLeadState] = useState('');
+  const [editLeadAddress, setEditLeadAddress] = useState('');
   const [editLeadService, setEditLeadService] = useState('');
   const [editLeadAmount, setEditLeadAmount] = useState('');
   const [editLeadStatus, setEditLeadStatus] = useState('');
+  const [editLeadSource, setEditLeadSource] = useState('');
   const [editLeadRemarks, setEditLeadRemarks] = useState('');
+  const [editLeadDocuments, setEditLeadDocuments] = useState([]);
+  const [editDocCategory, setEditDocCategory] = useState('KYC 1');
+  const [editDocName, setEditDocName] = useState('');
+  const [editDocFileObj, setEditDocFileObj] = useState(null);
 
   // Add Lead Form State
   const [newLeadName, setNewLeadName] = useState('');
@@ -224,35 +240,91 @@ export const LeadsPage = () => {
     setConvertingLead(null);
   };
 
-  const handleOpenEditModal = (lead) => {
-    setEditingLead(lead);
+  const enterLeadEditMode = (lead) => {
+    if (!lead) return;
+    setViewingLeadId(lead.id);
     setEditLeadName(lead.customerName || '');
     setEditLeadMobile(lead.mobile || '');
+    setEditLeadAltMobile(lead.altMobile || '');
     setEditLeadBusiness(lead.business || '');
-    setEditLeadCity(lead.city || 'Chennai');
-    setEditLeadService(lead.requiredService || 'Working Capital (CC/OD)');
+    setEditLeadCity(lead.city || '');
+    setEditLeadState(lead.state || '');
+    setEditLeadAddress(lead.address || '');
+    setEditLeadService(lead.requiredService || '');
     setEditLeadAmount(lead.estimatedAmount || '');
     setEditLeadStatus(lead.status || 'New Lead');
+    setEditLeadSource(lead.source || 'Direct');
     setEditLeadRemarks(lead.remarks || '');
-    setViewingLead(null);
+    setEditLeadDocuments(Array.isArray(lead.documents) ? lead.documents : []);
+    setEditDocCategory('KYC 1');
+    setEditDocName('');
+    setEditDocFileObj(null);
+    setIsLeadEditMode(true);
+  };
+
+  const closeLeadDetailsModal = () => {
+    setViewingLeadId(null);
+    setIsLeadEditMode(false);
+  };
+
+  const handleAddLeadDocument = () => {
+    if (editDocCategory === 'Other' && !editDocName.trim()) {
+      alert('Please enter the document name for "Other" category');
+      return;
+    }
+    if (!editDocName.trim() && !editDocFileObj) {
+      alert('Please enter a document name or select a file');
+      return;
+    }
+
+    const fileName = editDocFileObj
+      ? editDocFileObj.name
+      : `${editDocName.trim()}.pdf`;
+    const fileSize = editDocFileObj
+      ? `${(editDocFileObj.size / (1024 * 1024)).toFixed(2)} MB`
+      : '1.2 MB';
+    const categoryLabel = editDocCategory === 'Other' && editDocName.trim()
+      ? `Other: ${editDocName.trim()}`
+      : editDocCategory;
+
+    const newDoc = {
+      id: `DOC-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 100)}`,
+      category: categoryLabel,
+      name: fileName,
+      size: fileSize,
+      uploadDate: new Date().toISOString().split('T')[0]
+    };
+
+    setEditLeadDocuments(prev => [...prev, newDoc]);
+    setEditDocName('');
+    setEditDocFileObj(null);
+  };
+
+  const handleRemoveLeadDocument = (docId) => {
+    setEditLeadDocuments(prev => prev.filter(d => d.id !== docId));
   };
 
   const handleSaveEditLead = (e) => {
     e.preventDefault();
-    if (!editingLead) return;
+    if (!viewingLead) return;
 
-    updateLead(editingLead.id, {
-      customerName: editLeadName.trim() || editingLead.customerName,
-      mobile: editLeadMobile.trim() || editingLead.mobile,
-      business: editLeadBusiness.trim() || editingLead.business,
-      city: editLeadCity.trim() || editingLead.city,
+    updateLead(viewingLead.id, {
+      customerName: editLeadName.trim() || viewingLead.customerName,
+      mobile: editLeadMobile.trim() || viewingLead.mobile,
+      altMobile: editLeadAltMobile.trim(),
+      business: editLeadBusiness.trim(),
+      city: editLeadCity.trim(),
+      state: editLeadState.trim(),
+      address: editLeadAddress.trim(),
       requiredService: editLeadService,
-      estimatedAmount: Number(editLeadAmount) || editingLead.estimatedAmount,
+      estimatedAmount: Number(editLeadAmount) || 0,
       status: editLeadStatus,
-      remarks: editLeadRemarks.trim()
+      source: editLeadSource.trim() || viewingLead.source,
+      remarks: editLeadRemarks.trim(),
+      documents: editLeadDocuments
     });
 
-    setEditingLead(null);
+    setIsLeadEditMode(false);
   };
 
   const handleResetFilters = () => {
@@ -730,10 +802,23 @@ export const LeadsPage = () => {
                             </div>
                           )}
 
+                          {/* Add / Edit Lead Details Button */}
+                          <button
+                            type="button"
+                            onClick={() => enterLeadEditMode(lead)}
+                            className="p-1.5 text-slate-500 hover:text-burgundy-900 rounded-lg hover:bg-slate-100 transition"
+                            title="Add / Edit Lead Details"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+
                           {/* View Lead Details Eye Button */}
                           <button
                             type="button"
-                            onClick={() => setViewingLead(lead)}
+                            onClick={() => {
+                              setViewingLeadId(lead.id);
+                              setIsLeadEditMode(false);
+                            }}
                             className="p-1.5 text-slate-500 hover:text-burgundy-900 rounded-lg hover:bg-slate-100 transition"
                             title="View Lead Details"
                           >
@@ -1034,7 +1119,9 @@ export const LeadsPage = () => {
                 <div className="flex items-center justify-between">
                   <div className="font-bold text-emerald-950">{convertingLead.customerName}</div>
                   <span className="font-mono text-[10px] font-bold text-burgundy-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded">
-                    {convertingLead.customerId || 'Auto-Generates RA-CUST-'}
+                    {convertingLead.status === 'Converted to Login' && convertingLead.customerId
+                      ? convertingLead.customerId
+                      : 'Auto-Generates RA-CUST-'}
                   </span>
                 </div>
                 <div className="text-emerald-800 font-mono">{convertingLead.mobile} • {convertingLead.business}</div>
@@ -1129,303 +1216,476 @@ export const LeadsPage = () => {
       )}
 
       {/* ---------------------------------------------------- */}
-      {/* MODAL 4: VIEW LEAD DETAILS (Eye Icon)                */}
+      {/* MODAL 4: LEAD DETAILS (VIEW & INLINE EDIT MODE)      */}
       {/* ---------------------------------------------------- */}
       {viewingLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+          <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-gold-300 block">Lead Details</span>
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-gold-300 block">
+                    {isLeadEditMode ? 'Edit Lead Details' : 'Lead Details'}
+                  </span>
                   <span className="text-[10px] font-mono bg-white/20 text-white px-1.5 py-0.5 rounded">{viewingLead.id}</span>
+                  {isLeadEditMode && (
+                    <span className="text-[10px] font-bold bg-gold-400 text-burgundy-950 px-2 py-0.5 rounded-full">
+                      Edit Mode
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-base font-bold text-white mt-0.5">{viewingLead.customerName}</h3>
               </div>
               <button
-                onClick={() => setViewingLead(null)}
+                type="button"
+                onClick={closeLeadDetailsModal}
                 className="rounded-lg p-1 text-white/70 hover:bg-white/10 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              {/* Top Summary Card */}
-              <div className="bg-[#FAF6EF] p-4 rounded-xl border border-gold-200/60 flex items-start justify-between">
-                <div>
-                  <div className="text-sm font-bold text-slate-900">{viewingLead.customerName}</div>
-                  <div className="text-xs text-slate-600 flex items-center gap-1 mt-0.5">
-                    <Building className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{viewingLead.business}</span>
-                  </div>
-                  <div className="text-xs font-mono text-slate-700 mt-1 flex items-center gap-1">
-                    <Phone className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{viewingLead.mobile}</span>
-                  </div>
-                  {[viewingLead.city, viewingLead.state].filter(Boolean).length > 0 && (
-                    <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{[viewingLead.city, viewingLead.state].filter(Boolean).join(', ')}</span>
+            {isLeadEditMode ? (
+              <form onSubmit={handleSaveEditLead} className="p-6 space-y-4 max-h-[78vh] overflow-y-auto">
+                {/* Editable Top Profile Card */}
+                <div className="bg-[#FAF6EF] p-4 rounded-xl border border-gold-200/80 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+                        Client Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={editLeadName}
+                        onChange={(e) => setEditLeadName(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-burgundy-800 font-semibold"
+                      />
                     </div>
-                  )}
-                </div>
-
-                <div className="text-right">
-                  <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold border ${
-                    viewingLead.status === 'Ready for Login'
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                      : viewingLead.status === 'Converted to Login'
-                      ? 'bg-blue-50 text-blue-800 border-blue-300'
-                      : viewingLead.status === 'Field Visit Scheduled'
-                      ? 'bg-purple-50 text-purple-800 border-purple-300'
-                      : 'bg-amber-50 text-amber-800 border-amber-300'
-                  }`}>
-                    {viewingLead.status}
-                  </span>
-                  {viewingLead.customerId && (
-                    <div className="text-[11px] font-mono font-bold text-burgundy-900 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded mt-2">
-                      Cust ID: {viewingLead.customerId}
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+                        Mobile Number <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={editLeadMobile}
+                        onChange={(e) => setEditLeadMobile(e.target.value)}
+                        className="w-full text-xs font-mono rounded-lg border border-slate-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-burgundy-800"
+                      />
                     </div>
-                  )}
-                </div>
-              </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+                        Alternate Mobile
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="Optional backup number"
+                        value={editLeadAltMobile}
+                        onChange={(e) => setEditLeadAltMobile(e.target.value)}
+                        className="w-full text-xs font-mono rounded-lg border border-slate-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-burgundy-800"
+                      />
+                    </div>
+                  </div>
 
-              {/* Requirement & Value */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Requested Service</span>
-                  <span className="text-xs font-bold text-slate-800 block mt-0.5">{viewingLead.requiredService || '-'}</span>
-                </div>
-                <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
-                  <span className="text-[10px] uppercase font-bold text-emerald-800 block">Estimated Amount</span>
-                  <span className="text-sm font-extrabold text-emerald-900 block mt-0.5">
-                    {Number(viewingLead.estimatedAmount) > 0 ? formatCurrency(viewingLead.estimatedAmount) : '-'}
-                  </span>
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+                        Business / Occupation
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Textiles, Rice Mill"
+                        value={editLeadBusiness}
+                        onChange={(e) => setEditLeadBusiness(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-burgundy-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+                        City / District
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Chennai"
+                        value={editLeadCity}
+                        onChange={(e) => setEditLeadCity(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-burgundy-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+                        State
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Tamil Nadu"
+                        value={editLeadState}
+                        onChange={(e) => setEditLeadState(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-burgundy-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+                        Lead Status
+                      </label>
+                      <select
+                        value={editLeadStatus}
+                        onChange={(e) => setEditLeadStatus(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-burgundy-800 font-semibold"
+                      >
+                        <option value="New Lead">New Lead</option>
+                        <option value="Discussion in Progress">Discussion in Progress</option>
+                        <option value="Field Visit Scheduled">Field Visit Scheduled</option>
+                        <option value="Ready for Login">Ready for Login</option>
+                        <option value="Converted to Login">Converted to Login</option>
+                      </select>
+                    </div>
+                  </div>
 
-              {/* Lead Origin & Assignment */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Lead Source</span>
-                  <span className="text-xs font-semibold text-slate-700 block mt-0.5">{viewingLead.source}</span>
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
+                      Address / Location Details
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Door No, Street Name, Area, Pincode"
+                      value={editLeadAddress}
+                      onChange={(e) => setEditLeadAddress(e.target.value)}
+                      className="w-full text-xs rounded-lg border border-slate-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-burgundy-800"
+                    />
+                  </div>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Assigned Executive</span>
-                  <span className="text-xs font-bold text-slate-800 block mt-0.5">
-                    {viewingLead.assignedToName} ({viewingLead.assignedToRole})
-                  </span>
-                  <span className="text-[10px] text-slate-500 block mt-0.5">
-                    Assigned on: {viewingLead.assignedAt ? formatDate(viewingLead.assignedAt) : 'Recent'}
-                  </span>
-                  {viewingLead.actionedByName && (
-                    <span className="text-[10px] text-emerald-700 font-semibold block mt-0.5">
-                      Actioned by: {viewingLead.actionedByName}
+
+                {/* Editable Service & Estimated Amount */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">
+                      Requested Service
+                    </label>
+                    <select
+                      value={editLeadService}
+                      onChange={(e) => setEditLeadService(e.target.value)}
+                      className="w-full text-xs rounded-lg border border-slate-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-burgundy-800 font-semibold"
+                    >
+                      <option value="">Select Financial Service</option>
+                      <option value="Working Capital (CC/OD)">Working Capital (CC/OD)</option>
+                      <option value="Term Loan for Machinery">Term Loan for Machinery</option>
+                      <option value="Business Loan">Business Loan</option>
+                      <option value="Commercial Vehicle Finance">Commercial Vehicle Finance</option>
+                      <option value="LAP (Loan Against Property)">LAP (Loan Against Property)</option>
+                      <option value="Solar Project Finance">Solar Project Finance</option>
+                      <option value="Home Loan">Home Loan</option>
+                    </select>
+                  </div>
+                  <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
+                    <label className="text-[10px] uppercase font-bold text-emerald-800 block mb-1">
+                      Estimated Amount (₹)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 2500000"
+                      value={editLeadAmount}
+                      onChange={(e) => setEditLeadAmount(e.target.value)}
+                      className="w-full text-xs font-bold rounded-lg border border-emerald-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-emerald-700"
+                    />
+                  </div>
+                </div>
+
+                {/* Editable Source & Read-only Executive */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">
+                      Lead Source
+                    </label>
+                    <input
+                      type="text"
+                      value={editLeadSource}
+                      onChange={(e) => setEditLeadSource(e.target.value)}
+                      className="w-full text-xs rounded-lg border border-slate-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-burgundy-800"
+                    />
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Assigned Executive</span>
+                    <span className="text-xs font-bold text-slate-800 block mt-0.5">
+                      {viewingLead.assignedToName} ({viewingLead.assignedToRole})
                     </span>
-                  )}
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                      Assigned on: {viewingLead.assignedAt ? formatDate(viewingLead.assignedAt) : 'Recent'}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Remarks & Discussion Notes */}
-              <div>
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Discussion Notes & Remarks
-                </h4>
-                <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed shadow-xs">
-                  {viewingLead.remarks || 'No discussion remarks recorded yet.'}
-                </div>
-              </div>
+                {/* Editable Attached Documents */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 space-y-2.5">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Attached Documents ({editLeadDocuments.length})
+                  </span>
 
-              {/* Quick Actions Footer */}
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => handleOpenEditModal(viewingLead)}
-                  className="px-3.5 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
-                >
-                  <Edit className="w-3.5 h-3.5 text-burgundy-800" />
-                  <span>Edit Lead</span>
-                </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                    <select
+                      value={editDocCategory}
+                      onChange={(e) => setEditDocCategory(e.target.value)}
+                      className="sm:col-span-3 text-xs rounded-lg border border-slate-300 py-1.5 px-2 bg-white focus:outline-none focus:border-burgundy-800"
+                    >
+                      <option value="KYC 1">KYC 1</option>
+                      <option value="KYC 2">KYC 2</option>
+                      <option value="KYC 3">KYC 3</option>
+                      <option value="Other">Other</option>
+                    </select>
 
-                <div className="flex items-center gap-2">
-                  {viewingLead.status !== 'Converted to Login' && (
+                    <input
+                      type="text"
+                      placeholder={editDocCategory === 'Other' ? 'Document name *' : 'Doc label (optional)'}
+                      value={editDocName}
+                      onChange={(e) => setEditDocName(e.target.value)}
+                      className="sm:col-span-4 text-xs rounded-lg border border-slate-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-burgundy-800"
+                    />
+
+                    <label className="sm:col-span-3 flex items-center justify-center gap-1.5 text-[11px] font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg py-1.5 px-2 cursor-pointer hover:bg-slate-50 truncate">
+                      <Upload className="w-3.5 h-3.5 text-burgundy-800 shrink-0" />
+                      <span className="truncate">{editDocFileObj ? editDocFileObj.name : 'Choose File'}</span>
+                      <input
+                        type="file"
+                        onChange={(e) => setEditDocFileObj(e.target.files?.[0] || null)}
+                        className="hidden"
+                      />
+                    </label>
+
                     <button
                       type="button"
-                      onClick={() => {
-                        const target = viewingLead;
-                        setViewingLead(null);
-                        handleOpenConvertModal(target);
-                      }}
-                      className="px-3 py-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition"
+                      onClick={handleAddLeadDocument}
+                      className="sm:col-span-2 py-1.5 px-2.5 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 text-white text-xs font-bold transition"
                     >
-                      <FileCheck className="w-3.5 h-3.5 text-gold-400" />
-                      <span>Convert to Bank Login</span>
+                      Add Doc
                     </button>
+                  </div>
+
+                  {editLeadDocuments.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      {editLeadDocuments.map(doc => (
+                        <div key={doc.id} className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="w-3.5 h-3.5 text-burgundy-800 shrink-0" />
+                            <span className="font-bold text-slate-700 shrink-0">{doc.category}:</span>
+                            <span className="text-slate-600 truncate">{doc.name}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveLeadDocument(doc.id)}
+                            className="text-rose-500 hover:text-rose-700 p-1 shrink-0"
+                            title="Remove document"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
+                </div>
+
+                {/* Editable Remarks */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Discussion Notes & Remarks
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={editLeadRemarks}
+                    onChange={(e) => setEditLeadRemarks(e.target.value)}
+                    placeholder="Enter discussion summary, requirements, follow-up notes..."
+                    className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+
+                {/* Edit Mode Footer: Cancel & Update */}
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                   <button
                     type="button"
-                    onClick={() => setViewingLead(null)}
-                    className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-100"
+                    onClick={() => setIsLeadEditMode(false)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-100"
                   >
-                    Close
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 text-xs font-bold text-white bg-burgundy-900 hover:bg-burgundy-800 rounded-xl shadow-md transition flex items-center gap-1.5"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-gold-300" />
+                    <span>Update</span>
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+              </form>
+            ) : (
+              <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                {/* Top Summary Card */}
+                <div className="bg-[#FAF6EF] p-4 rounded-xl border border-gold-200/60 flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="text-sm font-bold text-slate-900">{viewingLead.customerName}</div>
+                    <div className="text-xs text-slate-600 flex items-center gap-1">
+                      <Building className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{viewingLead.business || '-'}</span>
+                    </div>
+                    <div className="text-xs font-mono text-slate-700 flex items-center gap-2 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{viewingLead.mobile}</span>
+                      </span>
+                      {viewingLead.altMobile && (
+                        <span className="text-[11px] text-slate-500">• Alt: {viewingLead.altMobile}</span>
+                      )}
+                    </div>
+                    {[viewingLead.city, viewingLead.state].filter(Boolean).length > 0 && (
+                      <div className="text-xs text-slate-500 flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{[viewingLead.city, viewingLead.state].filter(Boolean).join(', ')}</span>
+                      </div>
+                    )}
+                    {viewingLead.address && (
+                      <div className="text-[11px] text-slate-500">
+                        Address: {viewingLead.address}
+                      </div>
+                    )}
+                  </div>
 
-      {/* ---------------------------------------------------- */}
-      {/* MODAL 5: EDIT LEAD DETAILS                           */}
-      {/* ---------------------------------------------------- */}
-      {editingLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
-              <div>
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gold-300 block">Edit Lead Record</span>
-                <h3 className="text-base font-bold text-white">Edit: {editingLead.customerName} ({editingLead.id})</h3>
-              </div>
-              <button
-                onClick={() => setEditingLead(null)}
-                className="rounded-lg p-1 text-white/70 hover:bg-white/10 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+                  <div className="text-right shrink-0">
+                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold border ${
+                      viewingLead.status === 'Ready for Login'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                        : viewingLead.status === 'Converted to Login'
+                        ? 'bg-blue-50 text-blue-800 border-blue-300'
+                        : viewingLead.status === 'Field Visit Scheduled'
+                        ? 'bg-purple-50 text-purple-800 border-purple-300'
+                        : 'bg-amber-50 text-amber-800 border-amber-300'
+                    }`}>
+                      {viewingLead.status}
+                    </span>
+                    {viewingLead.status === 'Converted to Login' && viewingLead.customerId && (
+                      <div className="text-[11px] font-mono font-bold text-burgundy-900 bg-amber-100/70 border border-amber-300 px-2 py-0.5 rounded mt-2">
+                        Cust ID: {viewingLead.customerId}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-            <form onSubmit={handleSaveEditLead} className="p-6 space-y-3.5 max-h-[75vh] overflow-y-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Client Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editLeadName}
-                    onChange={(e) => setEditLeadName(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                  />
+                {/* Requirement & Value */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Requested Service</span>
+                    <span className="text-xs font-bold text-slate-800 block mt-0.5">{viewingLead.requiredService || '-'}</span>
+                  </div>
+                  <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
+                    <span className="text-[10px] uppercase font-bold text-emerald-800 block">Estimated Amount</span>
+                    <span className="text-sm font-extrabold text-emerald-900 block mt-0.5">
+                      {Number(viewingLead.estimatedAmount) > 0 ? formatCurrency(viewingLead.estimatedAmount) : '-'}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Mobile Number <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={editLeadMobile}
-                    onChange={(e) => setEditLeadMobile(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Business / Enterprise
-                  </label>
-                  <input
-                    type="text"
-                    value={editLeadBusiness}
-                    onChange={(e) => setEditLeadBusiness(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                  />
+                {/* Lead Origin & Assignment */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Lead Source</span>
+                    <span className="text-xs font-semibold text-slate-700 block mt-0.5">{viewingLead.source || '-'}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Assigned Executive</span>
+                    <span className="text-xs font-bold text-slate-800 block mt-0.5">
+                      {viewingLead.assignedToName} ({viewingLead.assignedToRole})
+                    </span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                      Assigned on: {viewingLead.assignedAt ? formatDate(viewingLead.assignedAt) : 'Recent'}
+                    </span>
+                    {viewingLead.actionedByName && (
+                      <span className="text-[10px] text-emerald-700 font-semibold block mt-0.5">
+                        Actioned by: {viewingLead.actionedByName}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    City / Location
-                  </label>
-                  <input
-                    type="text"
-                    value={editLeadCity}
-                    onChange={(e) => setEditLeadCity(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Attached Documents */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Financial Service
-                  </label>
-                  <select
-                    value={editLeadService}
-                    onChange={(e) => setEditLeadService(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800"
+                  <div className="flex items-center justify-between mb-1.5">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Attached Documents ({viewingLead.documents?.length || 0})
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => enterLeadEditMode(viewingLead)}
+                      className="text-[11px] font-bold text-burgundy-800 hover:underline flex items-center gap-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Document / Details</span>
+                    </button>
+                  </div>
+                  {viewingLead.documents && viewingLead.documents.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {viewingLead.documents.map(doc => (
+                        <div key={doc.id} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 text-xs">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="w-4 h-4 text-burgundy-800 shrink-0" />
+                            <span className="font-bold text-slate-700 shrink-0">{doc.category}:</span>
+                            <span className="text-slate-600 truncate">{doc.name}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 shrink-0 ml-2">{doc.size}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-xs text-slate-400 italic">
+                      No documents attached yet. Click "Edit" to add service, amount, address, or KYC documents.
+                    </div>
+                  )}
+                </div>
+
+                {/* Remarks & Discussion Notes */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Discussion Notes & Remarks
+                  </h4>
+                  <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed shadow-xs">
+                    {viewingLead.remarks || 'No discussion remarks recorded yet.'}
+                  </div>
+                </div>
+
+                {/* Quick Actions Footer */}
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => enterLeadEditMode(viewingLead)}
+                    className="px-3.5 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
                   >
-                    <option value="Working Capital (CC/OD)">Working Capital (CC/OD)</option>
-                    <option value="Term Loan for Machinery">Term Loan for Machinery</option>
-                    <option value="Business Loan">Business Loan</option>
-                    <option value="Commercial Vehicle Finance">Commercial Vehicle Finance</option>
-                    <option value="LAP (Loan Against Property)">LAP (Loan Against Property)</option>
-                    <option value="Solar Project Finance">Solar Project Finance</option>
-                    <option value="Home Loan">Home Loan</option>
-                  </select>
+                    <Edit className="w-3.5 h-3.5 text-burgundy-800" />
+                    <span>Edit</span>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {viewingLead.status !== 'Converted to Login' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target = viewingLead;
+                          closeLeadDetailsModal();
+                          handleOpenConvertModal(target);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition"
+                      >
+                        <FileCheck className="w-3.5 h-3.5 text-gold-400" />
+                        <span>Convert to Bank Login</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={closeLeadDetailsModal}
+                      className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-100"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Loan Requirement (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={editLeadAmount}
-                    onChange={(e) => setEditLeadAmount(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                  />
-                </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Lead Status
-                </label>
-                <select
-                  value={editLeadStatus}
-                  onChange={(e) => setEditLeadStatus(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800 font-medium"
-                >
-                  <option value="New Lead">New Lead</option>
-                  <option value="Discussion in Progress">Discussion in Progress</option>
-                  <option value="Field Visit Scheduled">Field Visit Scheduled</option>
-                  <option value="Ready for Login">Ready for Login</option>
-                  <option value="Converted to Login">Converted to Login</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Discussion Remarks & Notes
-                </label>
-                <textarea
-                  rows={3}
-                  value={editLeadRemarks}
-                  onChange={(e) => setEditLeadRemarks(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:outline-none focus:border-burgundy-800"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setEditingLead(null)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-burgundy-900 hover:bg-burgundy-800 rounded-xl shadow-md transition"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
+            )}
           </div>
         </div>
       )}
