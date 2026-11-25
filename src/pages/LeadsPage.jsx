@@ -56,6 +56,7 @@ export const LeadsPage = () => {
   // Modals
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
   const [assigningLead, setAssigningLead] = useState(null);
+  const [confirmConvertLead, setConfirmConvertLead] = useState(null);
   const [convertingLead, setConvertingLead] = useState(null);
   const [viewingLeadId, setViewingLeadId] = useState(null);
   const [isLeadEditMode, setIsLeadEditMode] = useState(false);
@@ -218,6 +219,12 @@ export const LeadsPage = () => {
   };
 
   const handleOpenConvertModal = (lead) => {
+    setConfirmConvertLead(lead);
+  };
+
+  const proceedToConvertModal = (lead) => {
+    if (!lead) return;
+    setConfirmConvertLead(null);
     setConvertingLead(lead);
     setConvertBankName('State Bank of India');
     setConvertLoanType(lead.requiredService || 'Working Capital (CC/OD)');
@@ -1077,6 +1084,52 @@ export const LeadsPage = () => {
                   Confirm Assignment
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* MODAL 3A: CONFIRM LOGIN CONVERSION                   */}
+      {/* ---------------------------------------------------- */}
+      {confirmConvertLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden p-6 text-center">
+            <button
+              type="button"
+              onClick={() => setConfirmConvertLead(null)}
+              className="absolute top-3.5 right-3.5 p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-12 h-12 rounded-full bg-burgundy-50 text-burgundy-900 flex items-center justify-center mx-auto mb-3.5 border border-burgundy-200 shadow-sm">
+              <FileCheck className="w-6 h-6 text-burgundy-800" />
+            </div>
+
+            <h3 className="text-base font-bold text-slate-900 font-corporate">
+              Are you sure you want to proceed to Login?
+            </h3>
+
+            <p className="text-xs text-slate-500 mt-1.5 max-w-xs mx-auto leading-relaxed">
+              This will move <strong className="text-slate-800">{confirmConvertLead.customerName}</strong> ({confirmConvertLead.mobile}) to Bank Login and generate an official Customer ID.
+            </p>
+
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setConfirmConvertLead(null)}
+                className="w-1/2 py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => proceedToConvertModal(confirmConvertLead)}
+                className="w-1/2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-burgundy-800 to-burgundy-950 hover:from-burgundy-900 hover:to-burgundy-950 text-white font-bold text-xs transition shadow-md active:scale-95"
+              >
+                Yes, Proceed
+              </button>
             </div>
           </div>
         </div>
