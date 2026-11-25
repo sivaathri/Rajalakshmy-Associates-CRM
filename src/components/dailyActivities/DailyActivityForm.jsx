@@ -12,7 +12,7 @@ export const DailyActivityForm = () => {
   const [customerName, setCustomerName] = useState('');
   const [mobile, setMobile] = useState('');
   const [business, setBusiness] = useState('');
-  const [source, setSource] = useState('Bills'); // 'Bills' | 'Open Source' | 'Reference'
+  const [source, setSource] = useState(''); // '' | 'Bills' | 'Open Source' | 'Reference'
   const [referenceFrom, setReferenceFrom] = useState('');
 
   // Bulk Excel Upload state for Open Source
@@ -104,6 +104,11 @@ export const DailyActivityForm = () => {
       return;
     }
 
+    if (!source) {
+      alert('Please select a Database Source');
+      return;
+    }
+
     if (source === 'Reference' && !referenceFrom.trim()) {
       alert('Please specify "Reference From / Who?" for reference sourced leads');
       return;
@@ -127,6 +132,7 @@ export const DailyActivityForm = () => {
     setCustomerName('');
     setMobile('');
     setBusiness('');
+    setSource('');
     setReferenceFrom('');
   };
 
@@ -251,13 +257,17 @@ export const DailyActivityForm = () => {
               Database Source <span className="text-rose-500">*</span>
             </label>
             <select
+              required
               value={source}
               onChange={(e) => setSource(e.target.value)}
-              className="w-full h-11 text-xs md:text-sm rounded-xl border border-slate-300 py-2.5 px-3.5 focus:outline-none focus:border-burgundy-800 focus:ring-1 focus:ring-burgundy-800 transition bg-white text-slate-800 cursor-pointer"
+              className={`w-full h-11 text-xs md:text-sm rounded-xl border border-slate-300 py-2.5 px-3.5 focus:outline-none focus:border-burgundy-800 focus:ring-1 focus:ring-burgundy-800 transition bg-white cursor-pointer ${
+                source ? 'text-slate-800' : 'text-slate-400'
+              }`}
             >
-              <option value="Bills">1. Bills</option>
-              <option value="Open Source">2. Open Source</option>
-              <option value="Reference">3. Reference</option>
+              <option value="" className="text-slate-400">Select</option>
+              <option value="Bills" className="text-slate-800">1. Bills</option>
+              <option value="Open Source" className="text-slate-800">2. Open Source</option>
+              <option value="Reference" className="text-slate-800">3. Reference</option>
             </select>
           </div>
 
