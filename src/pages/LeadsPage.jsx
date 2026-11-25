@@ -75,7 +75,6 @@ export const LeadsPage = () => {
   const [editLeadAddress, setEditLeadAddress] = useState('');
   const [editLeadService, setEditLeadService] = useState('');
   const [editLeadAmount, setEditLeadAmount] = useState('');
-  const [editLeadStatus, setEditLeadStatus] = useState('');
   const [editLeadSource, setEditLeadSource] = useState('');
   const [editLeadRemarks, setEditLeadRemarks] = useState('');
   const [editLeadDocuments, setEditLeadDocuments] = useState([]);
@@ -252,7 +251,6 @@ export const LeadsPage = () => {
     setEditLeadAddress(lead.address || '');
     setEditLeadService(lead.requiredService || '');
     setEditLeadAmount(lead.estimatedAmount || '');
-    setEditLeadStatus(lead.status || 'New Lead');
     setEditLeadSource(lead.source || 'Direct');
     setEditLeadRemarks(lead.remarks || '');
     setEditLeadDocuments(Array.isArray(lead.documents) ? lead.documents : []);
@@ -318,7 +316,6 @@ export const LeadsPage = () => {
       address: editLeadAddress.trim(),
       requiredService: editLeadService,
       estimatedAmount: Number(editLeadAmount) || 0,
-      status: editLeadStatus,
       source: editLeadSource.trim() || viewingLead.source,
       remarks: editLeadRemarks.trim(),
       documents: editLeadDocuments
@@ -1278,7 +1275,7 @@ export const LeadsPage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
                         Business / Occupation
@@ -1314,22 +1311,6 @@ export const LeadsPage = () => {
                         onChange={(e) => setEditLeadState(e.target.value)}
                         className="w-full text-xs rounded-lg border border-slate-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-burgundy-800"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">
-                        Lead Status
-                      </label>
-                      <select
-                        value={editLeadStatus}
-                        onChange={(e) => setEditLeadStatus(e.target.value)}
-                        className="w-full text-xs rounded-lg border border-slate-300 py-1.5 px-2.5 bg-white focus:outline-none focus:border-burgundy-800 font-semibold"
-                      >
-                        <option value="New Lead">New Lead</option>
-                        <option value="Discussion in Progress">Discussion in Progress</option>
-                        <option value="Field Visit Scheduled">Field Visit Scheduled</option>
-                        <option value="Ready for Login">Ready for Login</option>
-                        <option value="Converted to Login">Converted to Login</option>
-                      </select>
                     </div>
                   </div>
 
