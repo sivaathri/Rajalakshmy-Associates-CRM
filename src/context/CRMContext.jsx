@@ -859,6 +859,22 @@ export const CRMProvider = ({ children }) => {
   // DAILY ACTIVITIES & BULK EXCEL UPLOAD
   // ----------------------------------------------------
   const addDailyActivity = (activity) => {
+    const cleanMobile = String(activity.mobile || '').replace(/\D/g, '').slice(-10);
+    if (cleanMobile.length === 10) {
+      const existingCust = customers.find(
+        c =>
+          (c.mobile && c.mobile.replace(/\D/g, '').slice(-10) === cleanMobile) ||
+          (c.altMobile && c.altMobile.replace(/\D/g, '').slice(-10) === cleanMobile)
+      );
+      if (existingCust) {
+        showToast(
+          `Mobile number already exists in ${existingCust.databaseType ? existingCust.databaseType.toUpperCase() + ' ' : ''}Database (${existingCust.name || 'Unknown'})`,
+          'error'
+        );
+        return null;
+      }
+    }
+
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });

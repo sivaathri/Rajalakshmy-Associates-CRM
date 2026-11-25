@@ -4,8 +4,10 @@ import { useCRM } from '../../context/CRMContext';
 import { useAuth } from '../../context/AuthContext';
 import { PlusCircle, Building2, User, Phone, MapPin, Tag, Share2, UploadCloud, FileSpreadsheet, Download, CheckCircle, AlertTriangle } from 'lucide-react';
 
+const getClean10Digits = (num) => String(num || '').replace(/\D/g, '').slice(-10);
+
 export const DailyActivityForm = () => {
-  const { addDailyActivity, processBulkExcelImport } = useCRM();
+  const { addDailyActivity, processBulkExcelImport, customers = [], activities = [], leads = [] } = useCRM();
   const { currentUser, showToast } = useAuth();
 
   const [customerType, setCustomerType] = useState('known'); // 'known' | 'unknown'
@@ -91,11 +93,54 @@ export const DailyActivityForm = () => {
     reader.readAsBinaryString(file);
   };
 
+  const cleanEnteredMobile = getClean10Digits(mobile);
+  const duplicateMatch = (() => {
+    if (cleanEnteredMobile.length !== 10) return null;
+
+    const existingCust = customers.find(
+      c => getClean10Digits(c.mobile) === cleanEnteredMobile || getClean10Digits(c.altMobile) === cleanEnteredMobile
+    );
+    if (existingCust) {
+      return {
+        location: `${existingCust.databaseType ? existingCust.databaseType.toUpperCase() + ' ' : ''}Database`,
+        name: existingCust.name || 'Unknown',
+        mobile: existingCust.mobile || existingCust.altMobile
+      };
+    }
+
+    const existingAct = activities.find(a => getClean10Digits(a.mobile) === cleanEnteredMobile);
+    if (existingAct) {
+      return {
+        location: 'Daily Activities',
+        name: existingAct.customerName || 'Unknown',
+        mobile: existingAct.mobile
+      };
+    }
+
+    const existingLead = leads.find(
+      l => getClean10Digits(l.mobile) === cleanEnteredMobile || getClean10Digits(l.altMobile) === cleanEnteredMobile
+    );
+    if (existingLead) {
+      return {
+        location: 'Lead Pipeline',
+        name: existingLead.customerName || 'Unknown',
+        mobile: existingLead.mobile || existingLead.altMobile
+      };
+    }
+
+    return null;
+  })();
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!mobile.trim() || mobile.replace(/\D/g, '').length < 10) {
+    if (!mobile.trim() || cleanEnteredMobile.length < 10) {
       alert('Please enter a valid 10-digit mobile number');
+      return;
+    }
+
+    if (duplicateMatch) {
+      alert(`Mobile number ${duplicateMatch.mobile} already exists in ${duplicateMatch.location} (${duplicateMatch.name}). Duplicate entries cannot be saved!`);
       return;
     }
 
@@ -114,10 +159,9 @@ export const DailyActivityForm = () => {
       return;
     }
 
-    const digits = mobile.replace(/\D/g, '').slice(-10);
-    const formattedMobile = `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+    const formattedMobile = `+91 ${cleanEnteredMobile.slice(0, 5)} ${cleanEnteredMobile.slice(5)}`;
 
-    addDailyActivity({
+    const saved = addDailyActivity({
       customerName: customerType === 'known' ? customerName : 'Unknown / Lead',
       mobile: formattedMobile,
       business: business.trim(),
@@ -127,6 +171,8 @@ export const DailyActivityForm = () => {
       source,
       referenceFrom
     });
+
+    if (!saved) return;
 
     // Reset form
     setCustomerName('');
@@ -228,9 +274,21 @@ export const DailyActivityForm = () => {
                 placeholder="10-digit mobile (e.g. 98401 23456)"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
-                className="w-full h-11 text-xs md:text-sm rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 focus:outline-none focus:border-burgundy-800 focus:ring-1 focus:ring-burgundy-800 transition bg-white"
+                className={`w-full h-11 text-xs md:text-sm rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-1 transition bg-white ${
+                  duplicateMatch
+                    ? 'border-rose-500 focus:border-rose-600 focus:ring-rose-500'
+                    : 'border-slate-300 focus:border-burgundy-800 focus:ring-burgundy-800'
+                }`}
               />
             </div>
+            {duplicateMatch && (
+              <div className="flex items-center gap-1.5 text-[11px] text-rose-700 font-semibold mt-1">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  Number already exists in {duplicateMatch.location} ({duplicateMatch.name})
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Business / Occupation */}
