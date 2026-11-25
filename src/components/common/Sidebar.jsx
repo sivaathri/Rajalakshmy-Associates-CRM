@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCRM } from '../../context/CRMContext';
 import {
@@ -12,10 +12,7 @@ import {
   CalendarCheck,
   BarChart3,
   Settings,
-  ChevronDown,
-  ChevronRight,
   PhoneCall,
-  Database,
   Building2,
   ChevronLeft,
   Clock,
@@ -31,19 +28,6 @@ import { formatDateDDMMYYYY } from '../../utils/formatters';
 export const Sidebar = ({ isOpen, setIsOpen }) => {
   const { currentUser, canAccessRoute, logout, confirmAndLogout } = useAuth();
   const { customers, performanceCases, advanceAmounts, resignations, attendance = [], leads = [], bankLogins = [], leaves = [], employees = [] } = useCRM();
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  // Collapsible sub-menus
-  const [customerMenuOpen, setCustomerMenuOpen] = useState(
-    location.pathname.startsWith('/customers')
-  );
-  const [oldDbOpen, setOldDbOpen] = useState(
-    location.pathname.includes('/old/')
-  );
-  const [newDbOpen, setNewDbOpen] = useState(
-    location.pathname.includes('/new/')
-  );
 
   const isSalesManager = currentUser?.role === 'Sales Manager';
 
@@ -95,23 +79,6 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
   const loginUpdatesDueCount = bankLogins.filter(
     b => b.status === 'In Progress' && (!b.nextFollowUpDate || b.nextFollowUpDate <= todayIso)
   ).length;
-
-  // Database sub-menu counts
-  // RM sees fresh un-actioned numbers + numbers actioned by/assigned to themselves
-  const databaseScopedCustomers = isSalesManager
-    ? customers.filter(c => c.submittedBy === currentUser?.id || c.referenceFrom?.includes(currentUser?.name) || c.assignedTo === currentUser?.id)
-    : (currentUser?.role === 'RM'
-        ? customers.filter(c => {
-            const isFresh = c.callingStatus === 'Pending' && (!c.assignedTo || c.assignedTo === currentUser.id);
-            const isMine = c.assignedTo === currentUser.id || c.actionedBy === currentUser.id;
-            return isFresh || isMine;
-          })
-        : customers);
-
-  const oldKnownCount = databaseScopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
-  const oldUnknownCount = databaseScopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;
-  const newKnownCount = databaseScopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'known').length;
-  const newUnknownCount = databaseScopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown').length;
 
   const NavContent = ({ isExpanded = true, isMobile = false }) => (
     <>
@@ -237,132 +204,6 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
               </span>
             )}
           </NavLink>
-        )}
-
-        {/* Database Tree (Old & New) - Fully accessible to RM, Admin, Manager, Ops */}
-        {canAccessRoute('database') && (
-          <div>
-            <button
-              onClick={() => {
-                if (isExpanded) {
-                  setCustomerMenuOpen(!customerMenuOpen);
-                } else {
-                  setIsOpen(true);
-                  setCustomerMenuOpen(true);
-                }
-              }}
-              className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition ${
-                location.pathname.includes('/customers/old') || location.pathname.includes('/customers/new')
-                  ? 'bg-white/15 text-gold-300 font-bold'
-                  : 'text-white/80 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Database className="w-4 h-4 shrink-0 text-amber-300" />
-                {isExpanded && <span>Database</span>}
-              </div>
-              {isExpanded && (
-                <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform ${customerMenuOpen ? 'rotate-180' : ''}`}
-                />
-              )}
-            </button>
-
-            {/* Sub-menu */}
-            {isExpanded && customerMenuOpen && (
-              <div className="mt-1 ml-4 space-y-1 border-l border-white/20 pl-2">
-                {/* Old Database */}
-                <div>
-                  <button
-                    onClick={() => setOldDbOpen(!oldDbOpen)}
-                    className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-[11px] font-semibold text-white/70 hover:text-white"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <ChevronRight className={`w-3 h-3 transition-transform ${oldDbOpen ? 'rotate-90' : ''}`} />
-                      Old Database
-                    </span>
-                  </button>
-                  {oldDbOpen && (
-                    <div className="ml-4 space-y-1 mt-0.5">
-                      <NavLink
-                        to="/customers/old/known"
-                        onClick={() => isMobile && setIsOpen(false)}
-                        className={({ isActive }) =>
-                          `flex items-center justify-between rounded-lg px-2 py-1 text-[11px] transition ${
-                            isActive
-                              ? 'bg-gold-400/20 text-gold-300 font-bold'
-                              : 'text-white/70 hover:bg-white/5 hover:text-white'
-                          }`
-                        }
-                      >
-                        <span>• Known</span>
-                        <span className="text-[10px] text-white/60">{oldKnownCount}</span>
-                      </NavLink>
-                      <NavLink
-                        to="/customers/old/unknown"
-                        onClick={() => isMobile && setIsOpen(false)}
-                        className={({ isActive }) =>
-                          `flex items-center justify-between rounded-lg px-2 py-1 text-[11px] transition ${
-                            isActive
-                              ? 'bg-gold-400/20 text-gold-300 font-bold'
-                              : 'text-white/70 hover:bg-white/5 hover:text-white'
-                          }`
-                        }
-                      >
-                        <span>• Unknown</span>
-                        <span className="text-[10px] text-white/60">{oldUnknownCount}</span>
-                      </NavLink>
-                    </div>
-                  )}
-                </div>
-
-                {/* New Database */}
-                <div>
-                  <button
-                    onClick={() => setNewDbOpen(!newDbOpen)}
-                    className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-[11px] font-semibold text-white/70 hover:text-white"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <ChevronRight className={`w-3 h-3 transition-transform ${newDbOpen ? 'rotate-90' : ''}`} />
-                      New Database
-                    </span>
-                  </button>
-                  {newDbOpen && (
-                    <div className="ml-4 space-y-1 mt-0.5">
-                      <NavLink
-                        to="/customers/new/known"
-                        onClick={() => isMobile && setIsOpen(false)}
-                        className={({ isActive }) =>
-                          `flex items-center justify-between rounded-lg px-2 py-1 text-[11px] transition ${
-                            isActive
-                              ? 'bg-gold-400/20 text-gold-300 font-bold'
-                              : 'text-white/70 hover:bg-white/5 hover:text-white'
-                          }`
-                        }
-                      >
-                        <span>• Known</span>
-                        <span className="text-[10px] text-white/60">{newKnownCount}</span>
-                      </NavLink>
-                      <NavLink
-                        to="/customers/new/unknown"
-                        onClick={() => isMobile && setIsOpen(false)}
-                        className={({ isActive }) =>
-                          `flex items-center justify-between rounded-lg px-2 py-1 text-[11px] transition ${
-                            isActive
-                              ? 'bg-gold-400/20 text-gold-300 font-bold'
-                              : 'text-white/70 hover:bg-white/5 hover:text-white'
-                          }`
-                        }
-                      >
-                        <span>• Unknown</span>
-                        <span className="text-[10px] text-white/60">{newUnknownCount}</span>
-                      </NavLink>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
         )}
 
         {/* Lead Management Menu (Req 2) */}

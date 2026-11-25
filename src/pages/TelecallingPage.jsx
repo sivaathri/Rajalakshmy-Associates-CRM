@@ -44,14 +44,24 @@ import { formatDate, formatDateTime, getStatusBadgeClass, exportToCSV } from '..
 import { Pagination } from '../components/common/Pagination';
 
 export const TelecallingPage = () => {
-  const { customers, calls, logCall } = useCRM();
-  const { currentUser } = useAuth();
+  const {
+    customers,
+    calls,
+    logCall,
+    employees = [],
+    callLocks,
+    claimCallLock,
+    releaseCallLock,
+    refreshCallLock,
+    isLockedByOther
+  } = useCRM();
+  const { currentUser, showToast } = useAuth();
 
   // State
   const [activeTab, setActiveTab] = useState('focused'); // 'focused' | 'queue' | 'my-numbers' | 'history' | 'analytics'
   const [queueFilter, setQueueFilter] = useState('reminders'); // 'reminders' | 'completed'
   const [searchQueue, setSearchQueue] = useState('');
-  const [focusedIndex, setFocusedIndex] = useState(0);
+  const [selectedContactId, setSelectedContactId] = useState(null);
 
   // Added Numbers Tracking State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -75,9 +85,12 @@ export const TelecallingPage = () => {
   const [selectedDb, setSelectedDb] = useState(null); // 'old' | 'new' | null
   const [selectedType, setSelectedType] = useState(null); // 'known' | 'unknown' | null
 
-  // Helper: check if a customer is a fresh, un-actioned number (excludes converted leads and actioned numbers)
+  // Helper: check if a customer is a fresh, un-actioned number (excludes converted leads, actioned numbers, and numbers currently locked by another RM)
   const isFreshNumber = (c) => {
     const isPending = (c.callingStatus === 'Pending' || !c.callingStatus) && !c.actionedBy && c.status !== 'Lead' && c.callingStatus !== 'OK' && c.callingStatus !== 'Field Visit';
+    if (isLockedByOther(c.id)) {
+      return false;
+    }
     if (currentUser?.role === 'RM') {
       return isPending && (!c.assignedTo || c.assignedTo === currentUser.id);
     }
@@ -96,24 +109,24 @@ export const TelecallingPage = () => {
       }
       return true;
     });
-  }, [customers, currentUser]);
+  }, [customers, currentUser, callLocks]);
 
   // Fresh number counts for Step 1 and Step 2 selections
   const oldKnownFreshCount = useMemo(() => 
     customers.filter(c => c.databaseType === 'old' && c.customerType === 'known' && isFreshNumber(c)).length,
-    [customers, currentUser]
+    [customers, currentUser, callLocks]
   );
   const oldUnknownFreshCount = useMemo(() => 
     customers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown' && isFreshNumber(c)).length,
-    [customers, currentUser]
+    [customers, currentUser, callLocks]
   );
   const newKnownFreshCount = useMemo(() => 
     customers.filter(c => c.databaseType === 'new' && c.customerType === 'known' && isFreshNumber(c)).length,
-    [customers, currentUser]
+    [customers, currentUser, callLocks]
   );
   const newUnknownFreshCount = useMemo(() => 
     customers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown' && isFreshNumber(c)).length,
-    [customers, currentUser]
+    [customers, currentUser, callLocks]
   );
 
   const oldTotalCount = oldKnownFreshCount + oldUnknownFreshCount;
@@ -137,11 +150,50 @@ export const TelecallingPage = () => {
     return assignedCustomers.filter(c => ['OK', 'Not Attend', 'No Need', 'Field Visit'].includes(c.callingStatus) && c.actionedBy === currentUser?.id).length;
   }, [assignedCustomers, currentUser]);
 
+  // Active RMs sorted deterministically so each RM gets a distinct Queue Leads order
+  // and concurrent RMs don't dial the same #1 contact at the same time
+  const rmQueueInfo = useMemo(() => {
+    const activeRMs = (employees || [])
+      .filter(e => e.role === 'RM' && e.status !== 'Inactive')
+      .sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+
+    const rmCount = Math.max(activeRMs.length, 1);
+    let rmIndex = currentUser?.id
+      ? activeRMs.findIndex(e => e.id === currentUser.id)
+      : -1;
+
+    if (rmIndex === -1 && currentUser?.id) {
+      let hash = 0;
+      const uid = String(currentUser.id);
+      for (let i = 0; i < uid.length; i++) {
+        hash = (hash * 31 + uid.charCodeAt(i)) >>> 0;
+      }
+      rmIndex = hash % rmCount;
+    }
+
+    return { rmCount, rmIndex: Math.max(rmIndex, 0) };
+  }, [employees, currentUser?.id]);
+
+  // Stable bucket index per customer ID so actioning a lead doesn't reshuffle other RMs' queues
+  const getCustomerBucket = (customer, rmCount) => {
+    const rawKey = String(customer.id || customer.mobile || customer.name || '');
+    const trailingDigits = rawKey.match(/\d+$/);
+    if (trailingDigits) {
+      return parseInt(trailingDigits[0], 10) % rmCount;
+    }
+    let hash = 2166136261;
+    for (let i = 0; i < rawKey.length; i++) {
+      hash ^= rawKey.charCodeAt(i);
+      hash = Math.imul(hash, 16777619) >>> 0;
+    }
+    return hash % rmCount;
+  };
+
   // Queue filtered items:
-  // In Focused Telecalling Mode: STRICTLY show ONLY fresh numbers!
+  // In Focused Telecalling Mode: STRICTLY show ONLY fresh numbers, partitioned/rotated per RM!
   // In Assigned Queue Table: Toggle between My Due Reminders and My Actioned Calls
   const displayQueue = useMemo(() => {
-    return assignedCustomers.filter(c => {
+    const filtered = assignedCustomers.filter(c => {
       if (activeTab === 'focused') {
         // Focused Calling strictly shows fresh numbers
         if (!isFreshNumber(c)) return false;
@@ -163,19 +215,90 @@ export const TelecallingPage = () => {
       }
       return true;
     });
-  }, [assignedCustomers, activeTab, queueFilter, searchQueue, currentUser]);
 
-  // Auto-clamp focusedIndex if queue shrinks after actioning a number
-  useEffect(() => {
-    if (displayQueue.length === 0) {
-      setFocusedIndex(0);
-    } else if (focusedIndex >= displayQueue.length) {
-      setFocusedIndex(displayQueue.length - 1);
+    if (activeTab === 'focused' && currentUser?.role === 'RM') {
+      const { rmCount, rmIndex } = rmQueueInfo;
+      return filtered
+        .map((item, originalIdx) => {
+          const isDirectlyAssigned = item.assignedTo === currentUser.id ? 0 : 1;
+          const bucket = getCustomerBucket(item, rmCount);
+          const rotatedBucket = (bucket - rmIndex + rmCount) % rmCount;
+          return { item, originalIdx, isDirectlyAssigned, rotatedBucket };
+        })
+        .sort((a, b) => {
+          if (a.isDirectlyAssigned !== b.isDirectlyAssigned) {
+            return a.isDirectlyAssigned - b.isDirectlyAssigned;
+          }
+          if (a.rotatedBucket !== b.rotatedBucket) {
+            return a.rotatedBucket - b.rotatedBucket;
+          }
+          return a.originalIdx - b.originalIdx;
+        })
+        .map(entry => entry.item);
     }
-  }, [displayQueue.length, focusedIndex]);
 
-  // Current focused contact
-  const currentFocusedContact = displayQueue[focusedIndex] || displayQueue[0] || null;
+    return filtered;
+  }, [assignedCustomers, activeTab, queueFilter, searchQueue, currentUser, rmQueueInfo, callLocks]);
+
+  // Derived focused contact from explicit selectedContactId
+  const focusedIndex = useMemo(() => {
+    if (!selectedContactId) return -1;
+    return displayQueue.findIndex(c => c.id === selectedContactId);
+  }, [displayQueue, selectedContactId]);
+
+  const currentFocusedContact = focusedIndex >= 0 ? displayQueue[focusedIndex] : null;
+
+  const selectContactForCall = (contact) => {
+    if (!contact) return;
+    const res = claimCallLock(contact.id);
+    if (!res.ok) {
+      showToast(`This contact is currently selected by ${res.lockedByName} for calling.`, 'info');
+      return;
+    }
+    setSelectedContactId(contact.id);
+  };
+
+  const clearSelectedContact = () => {
+    setSelectedContactId(null);
+    releaseCallLock();
+  };
+
+  // Heartbeat to keep the lock alive while the RM is actively viewing/dialing the contact
+  useEffect(() => {
+    if (!selectedContactId || activeTab !== 'focused') return;
+    const interval = setInterval(() => {
+      refreshCallLock(selectedContactId);
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [selectedContactId, activeTab]);
+
+  // Release call lock when leaving the Telecalling page
+  useEffect(() => {
+    return () => {
+      releaseCallLock();
+    };
+  }, []);
+
+  // Release selection if user switches accounts, leaves Focused tab, or changes DB/classification
+  useEffect(() => {
+    setSelectedContactId(null);
+    releaseCallLock();
+  }, [currentUser?.id, selectedDb, selectedType]);
+
+  useEffect(() => {
+    if (activeTab !== 'focused' && selectedContactId) {
+      setSelectedContactId(null);
+      releaseCallLock();
+    }
+  }, [activeTab]);
+
+  // Clear selectedContactId if it disappears from displayQueue (e.g., after action or external update)
+  useEffect(() => {
+    if (selectedContactId && focusedIndex === -1) {
+      setSelectedContactId(null);
+      releaseCallLock(selectedContactId);
+    }
+  }, [selectedContactId, focusedIndex]);
 
   // Sync manual response form with current selected contact
   useEffect(() => {
@@ -198,6 +321,9 @@ export const TelecallingPage = () => {
       return;
     }
 
+    const currentIdx = focusedIndex;
+    const remainingContacts = displayQueue.filter(c => c.id !== currentFocusedContact.id);
+
     logCall({
       customerId: currentFocusedContact.id,
       outcome,
@@ -211,8 +337,13 @@ export const TelecallingPage = () => {
     setReminderDate('');
     setOutcome('OK');
 
-    // Note: since this contact is now actioned, it automatically leaves displayQueue.
-    // The next fresh number in line will automatically be at current focusedIndex.
+    if (andNext && remainingContacts.length > 0) {
+      const nextCandidate = remainingContacts[Math.min(Math.max(currentIdx, 0), remainingContacts.length - 1)] || remainingContacts[0];
+      const res = claimCallLock(nextCandidate.id);
+      setSelectedContactId(res.ok ? nextCandidate.id : null);
+    } else {
+      clearSelectedContact();
+    }
   };
 
   // Filtered Call History for Reports
@@ -397,7 +528,7 @@ export const TelecallingPage = () => {
               onClick={() => {
                 setSelectedDb(null);
                 setSelectedType(null);
-                setFocusedIndex(0);
+                clearSelectedContact();
               }}
               className="text-xs font-semibold text-burgundy-900 hover:text-burgundy-700 underline self-start sm:self-auto"
             >
@@ -427,7 +558,7 @@ export const TelecallingPage = () => {
                 type="button"
                 onClick={() => {
                   setSelectedDb('old');
-                  setFocusedIndex(0);
+                  clearSelectedContact();
                 }}
                 className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between ${
                   selectedDb === 'old'
@@ -449,7 +580,7 @@ export const TelecallingPage = () => {
                 type="button"
                 onClick={() => {
                   setSelectedDb('new');
-                  setFocusedIndex(0);
+                  clearSelectedContact();
                 }}
                 className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between ${
                   selectedDb === 'new'
@@ -494,7 +625,7 @@ export const TelecallingPage = () => {
                 disabled={!selectedDb}
                 onClick={() => {
                   setSelectedType('known');
-                  setFocusedIndex(0);
+                  clearSelectedContact();
                 }}
                 className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between disabled:opacity-40 disabled:cursor-not-allowed ${
                   selectedType === 'known'
@@ -517,7 +648,7 @@ export const TelecallingPage = () => {
                 disabled={!selectedDb}
                 onClick={() => {
                   setSelectedType('unknown');
-                  setFocusedIndex(0);
+                  clearSelectedContact();
                 }}
                 className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between disabled:opacity-40 disabled:cursor-not-allowed ${
                   selectedType === 'unknown'
@@ -629,18 +760,27 @@ export const TelecallingPage = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <button
-                      onClick={() => setFocusedIndex(p => Math.max(p - 1, 0))}
-                      disabled={focusedIndex === 0}
+                      type="button"
+                      onClick={clearSelectedContact}
+                      className="flex items-center gap-1 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition"
+                      title="Release this contact without saving so other RMs can see and call it"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Release</span>
+                    </button>
+                    <button
+                      onClick={() => selectContactForCall(displayQueue[focusedIndex - 1])}
+                      disabled={focusedIndex <= 0}
                       className="flex items-center gap-1 text-xs font-semibold text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <ChevronLeft className="w-3.5 h-3.5" />
                       <span>Previous</span>
                     </button>
                     <button
-                      onClick={() => setFocusedIndex(p => Math.min(p + 1, displayQueue.length - 1))}
-                      disabled={focusedIndex >= displayQueue.length - 1}
+                      onClick={() => selectContactForCall(displayQueue[focusedIndex + 1])}
+                      disabled={focusedIndex < 0 || focusedIndex >= displayQueue.length - 1}
                       className="flex items-center gap-1 text-xs font-semibold text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <span>Next Lead</span>
@@ -954,6 +1094,28 @@ export const TelecallingPage = () => {
                   )}
                 </div>
               </div>
+            ) : displayQueue.length > 0 ? (
+              <div className="text-center py-16 px-4 space-y-4">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-burgundy-50 text-burgundy-900 border border-burgundy-200 shadow-sm">
+                  <PhoneCall className="w-7 h-7 text-burgundy-800" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-slate-800 font-corporate">
+                    Select a Contact from Queue Leads
+                  </h4>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto mt-1 leading-relaxed">
+                    Click any contact in the <strong>Queue Leads</strong> panel to open its mobile number and dial. Once selected, that contact is hidden from other RMs until you save or release it.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => selectContactForCall(displayQueue[0])}
+                  className="inline-flex items-center gap-2 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 px-5 py-2.5 text-xs font-bold text-white shadow-md transition"
+                >
+                  <PhoneCall className="w-4 h-4 text-gold-300" />
+                  <span>Select First Available Lead</span>
+                </button>
+              </div>
             ) : (
               <div className="text-center py-16 px-4">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 mb-3 shadow-sm">
@@ -997,20 +1159,24 @@ export const TelecallingPage = () => {
                   No fresh numbers pending in queue.
                 </div>
               ) : (
-                displayQueue.map((item, idx) => (
+                displayQueue.map((item) => (
                   <div
                     key={item.id}
-                    onClick={() => setFocusedIndex(idx)}
+                    onClick={() => selectContactForCall(item)}
                     className={`p-3 rounded-xl border text-xs cursor-pointer transition ${
-                      idx === focusedIndex
+                      item.id === selectedContactId
                         ? 'border-burgundy-800 bg-burgundy-50/60 ring-2 ring-burgundy-800/15'
                         : 'border-slate-200 hover:bg-[#FAF6EF]/60'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-slate-900">{item.name}</span>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold border border-emerald-300 bg-emerald-50 text-emerald-800">
-                        ★ Fresh Number
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                        item.id === selectedContactId
+                          ? 'border-burgundy-300 bg-burgundy-50 text-burgundy-900'
+                          : 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                      }`}>
+                        {item.id === selectedContactId ? '● Selected' : '★ Fresh Number'}
                       </span>
                     </div>
                     <div className="font-mono text-slate-600 text-[11px] mt-0.5">{item.mobile}</div>

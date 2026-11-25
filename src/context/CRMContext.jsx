@@ -30,7 +30,39 @@ const STORAGE_KEYS = {
   LEADS: 'rajalakshmy_leads_v2',
   BANK_LOGINS: 'rajalakshmy_bank_logins_v2',
   LEAVES: 'rajalakshmy_leaves_v2',
-  EMPLOYEES: 'rajalakshmy_employees_v2'
+  EMPLOYEES: 'rajalakshmy_employees_v2',
+  CALL_LOCKS: 'rajalakshmy_call_locks_v1'
+};
+
+const CALL_LOCK_TTL_MS = 45000; // 45s auto-expiry if app closes unexpectedly without firing beforeunload
+const SESSION_ID = `SES-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const pruneExpiredCallLocks = (locksObj) => {
+  const now = Date.now();
+  const cleaned = {};
+  Object.entries(locksObj || {}).forEach(([custId, lock]) => {
+    if (lock && lock.userId && typeof lock.lockedAt === 'number' && (now - lock.lockedAt) < CALL_LOCK_TTL_MS) {
+      cleaned[custId] = lock;
+    }
+  });
+  return cleaned;
+};
+
+const readCallLocksFromStorage = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEYS.CALL_LOCKS);
+    return saved ? pruneExpiredCallLocks(JSON.parse(saved)) : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeCallLocksToStorage = (locksObj) => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CALL_LOCKS, JSON.stringify(locksObj));
+  } catch (e) {
+    console.warn('Could not persist call locks:', e);
+  }
 };
 
 // Helper to guarantee strictly unique RA-CUST- IDs across all records
@@ -247,6 +279,142 @@ export const CRMProvider = ({ children }) => {
   // Active call state for RM telecalling
   const [activeCallContact, setActiveCallContact] = useState(null);
   const [isCallingModalOpen, setIsCallingModalOpen] = useState(false);
+  const [callLocks, setCallLocks] = useState(() => readCallLocksFromStorage());
+
+  // Sync call locks with localStorage & clean up session locks on close / user switch
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const current = readCallLocksFromStorage();
+      let changed = false;
+      Object.keys(current).forEach(custId => {
+        if (current[custId]?.sessionId === SESSION_ID) {
+          delete current[custId];
+          changed = true;
+        }
+      });
+      if (changed) {
+        writeCallLocksToStorage(current);
+      }
+    };
+
+    const handleStorageChange = (e) => {
+      if (e.key === STORAGE_KEYS.CALL_LOCKS) {
+        setCallLocks(readCallLocksFromStorage());
+      } else if (e.key === STORAGE_KEYS.CUSTOMERS && e.newValue) {
+        try {
+          setCustomers(ensureUniqueCustomerIds(JSON.parse(e.newValue)));
+        } catch (err) {
+          console.warn(err);
+        }
+      }
+    };
+
+    const expiryInterval = setInterval(() => {
+      const latest = readCallLocksFromStorage();
+      setCallLocks(prev => {
+        const prevKeys = Object.keys(prev);
+        const nextKeys = Object.keys(latest);
+        if (prevKeys.length === nextKeys.length && prevKeys.every(k => prev[k]?.lockedAt === latest[k]?.lockedAt)) {
+          return prev;
+        }
+        writeCallLocksToStorage(latest);
+        return latest;
+      });
+    }, 15000);
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(expiryInterval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  // Release any lock held by this window session whenever user logs out or switches accounts
+  useEffect(() => {
+    const current = readCallLocksFromStorage();
+    let changed = false;
+    Object.keys(current).forEach(custId => {
+      if (current[custId]?.sessionId === SESSION_ID && current[custId]?.userId !== currentUser?.id) {
+        delete current[custId];
+        changed = true;
+      }
+    });
+    if (changed) {
+      writeCallLocksToStorage(current);
+      setCallLocks(current);
+    }
+  }, [currentUser?.id]);
+
+  const claimCallLock = (customerId) => {
+    if (!customerId || !currentUser?.id) return { ok: true };
+    const latest = readCallLocksFromStorage();
+    const existing = latest[customerId];
+    if (existing && existing.userId !== currentUser.id) {
+      setCallLocks(latest);
+      return { ok: false, lockedByName: existing.userName || 'another RM' };
+    }
+
+    // Release any previous lock held by this session before claiming the new one
+    Object.keys(latest).forEach(id => {
+      if (latest[id]?.sessionId === SESSION_ID && id !== customerId) {
+        delete latest[id];
+      }
+    });
+
+    latest[customerId] = {
+      userId: currentUser.id,
+      userName: currentUser.name || 'RM',
+      sessionId: SESSION_ID,
+      lockedAt: Date.now()
+    };
+    writeCallLocksToStorage(latest);
+    setCallLocks(latest);
+    return { ok: true };
+  };
+
+  const releaseCallLock = (customerId = null) => {
+    const latest = readCallLocksFromStorage();
+    let changed = false;
+    if (customerId) {
+      if (latest[customerId] && (latest[customerId].sessionId === SESSION_ID || latest[customerId].userId === currentUser?.id)) {
+        delete latest[customerId];
+        changed = true;
+      }
+    } else {
+      Object.keys(latest).forEach(id => {
+        if (latest[id]?.sessionId === SESSION_ID) {
+          delete latest[id];
+          changed = true;
+        }
+      });
+    }
+    if (changed) {
+      writeCallLocksToStorage(latest);
+      setCallLocks(latest);
+    }
+  };
+
+  const refreshCallLock = (customerId) => {
+    if (!customerId || !currentUser?.id) return;
+    const latest = readCallLocksFromStorage();
+    if (latest[customerId] && latest[customerId].sessionId === SESSION_ID && latest[customerId].userId === currentUser.id) {
+      latest[customerId] = { ...latest[customerId], lockedAt: Date.now() };
+      writeCallLocksToStorage(latest);
+      setCallLocks(latest);
+    }
+  };
+
+  const isLockedByOther = (customerId) => {
+    const lock = callLocks[customerId];
+    if (!lock) return false;
+    if ((Date.now() - lock.lockedAt) >= CALL_LOCK_TTL_MS) return false;
+    return lock.userId !== currentUser?.id;
+  };
 
   // Sync to localStorage
   useEffect(() => {
@@ -311,6 +479,7 @@ export const CRMProvider = ({ children }) => {
     setLeads([]);
     setBankLogins([]);
     setLeaves([]);
+    setCallLocks({});
     Object.values(STORAGE_KEYS).forEach(k => {
       try {
         localStorage.setItem(k, JSON.stringify([]));
@@ -617,6 +786,7 @@ export const CRMProvider = ({ children }) => {
     }
 
     setCustomers(prev => prev.map(c => c.id === customerId ? { ...c, ...customerUpdates } : c));
+    releaseCallLock(customerId);
 
     // Automatic conversion into Lead when OK or Field Visit is selected
     if (outcome === 'OK' || outcome === 'Field Visit') {
@@ -1512,7 +1682,12 @@ export const CRMProvider = ({ children }) => {
         setActiveCallContact,
         isCallingModalOpen,
         setIsCallingModalOpen,
-        startCallingCustomer
+        startCallingCustomer,
+        callLocks,
+        claimCallLock,
+        releaseCallLock,
+        refreshCallLock,
+        isLockedByOther
       }}
     >
       {children}
