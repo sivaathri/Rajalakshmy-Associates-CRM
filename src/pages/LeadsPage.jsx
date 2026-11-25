@@ -1200,30 +1200,37 @@ export const LeadsPage = () => {
                 </button>
 
                 <div className="flex items-center gap-2">
-                  {loginAssignMode === 'other' && selectedLoginAssignee && (
+                  {loginAssignMode === 'other' ? (
                     <button
                       type="button"
+                      disabled={!selectedLoginAssignee}
                       onClick={handleAssignOnlyFromLoginStep}
-                      className="px-4 py-2 rounded-xl border border-burgundy-200 bg-burgundy-50 hover:bg-burgundy-100 text-burgundy-900 text-xs font-bold transition"
+                      title={!selectedLoginAssignee ? 'Select a user first' : 'Assign lead to selected user'}
+                      className={`px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
+                        selectedLoginAssignee
+                          ? 'bg-burgundy-900 hover:bg-burgundy-800 text-white shadow-md cursor-pointer'
+                          : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      }`}
                     >
-                      Assign Only
+                      <UserCheck className={`w-3.5 h-3.5 ${selectedLoginAssignee ? 'text-gold-400' : 'text-slate-400'}`} />
+                      <span>Assign Only</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={!selectedLoginAssignee}
+                      onClick={handleProceedFromAssignToConfirm}
+                      title={!selectedLoginAssignee ? 'Select Myself first to enable Login' : 'Proceed to Bank Login'}
+                      className={`px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
+                        selectedLoginAssignee
+                          ? 'bg-burgundy-900 hover:bg-burgundy-800 text-white shadow-md cursor-pointer'
+                          : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <FileCheck className={`w-3.5 h-3.5 ${selectedLoginAssignee ? 'text-gold-400' : 'text-slate-400'}`} />
+                      <span>Login</span>
                     </button>
                   )}
-
-                  <button
-                    type="button"
-                    disabled={!selectedLoginAssignee}
-                    onClick={handleProceedFromAssignToConfirm}
-                    title={!selectedLoginAssignee ? 'Select Myself or another user first to enable Login' : 'Proceed to Bank Login'}
-                    className={`px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
-                      selectedLoginAssignee
-                        ? 'bg-burgundy-900 hover:bg-burgundy-800 text-white shadow-md cursor-pointer'
-                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    }`}
-                  >
-                    <FileCheck className={`w-3.5 h-3.5 ${selectedLoginAssignee ? 'text-gold-400' : 'text-slate-400'}`} />
-                    <span>Login</span>
-                  </button>
                 </div>
               </div>
             </div>
