@@ -130,17 +130,6 @@ export const DailyActivitiesPage = () => {
     });
   }, [unifiedActivities, isSalesManager, selectedEmp, selectedSource, dateFilterMode, startDate, endDate]);
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const currentMonth = todayStr.slice(0, 7);
-
-  const todayRecordsCount = unifiedActivities.filter(
-    a => a.submissionDate === todayStr
-  ).length;
-
-  const monthlyRecordsCount = unifiedActivities.filter(
-    a => a.submissionDate?.startsWith(currentMonth)
-  ).length;
-
   const sourceCounts = {
     Bills: filteredActivities.filter(a => a.source === 'Bills').length,
     OpenSource: filteredActivities.filter(a => a.source === 'Open Source').length,
@@ -172,32 +161,6 @@ export const DailyActivitiesPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          
-          <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
-            Daily  Activities
-          </h2>
-         
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="rounded-xl bg-gold-400/20 border border-gold-400/40 px-3.5 py-1.5 text-center">
-            <span className="text-[10px] text-gold-200 block uppercase font-bold">Added by You</span>
-            <span className="text-sm font-extrabold text-gold-300">{myTotalContactsCount}</span>
-          </div>
-          <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
-            <span className="text-[10px] text-white/60 block uppercase font-bold">Entered Today</span>
-            <span className="text-sm font-extrabold text-emerald-300">{todayRecordsCount}</span>
-          </div>
-          <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
-            <span className="text-[10px] text-white/60 block uppercase font-bold">Entered This Month</span>
-            <span className="text-sm font-extrabold text-gold-300">{monthlyRecordsCount}</span>
-          </div>
-        </div>
-      </div>
-
       {/* Tab Switcher */}
       <div className="flex border-b border-slate-200 bg-white rounded-2xl px-2 sm:px-4 text-xs font-bold shadow-sm overflow-x-auto whitespace-nowrap">
         <button
@@ -381,7 +344,13 @@ export const DailyActivitiesPage = () => {
                             <span className="text-[10px] text-slate-500 block">{act.submissionTime}</span>
                           </td>
                           <td className="px-4 py-3">
-                            <span className="inline-block text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            <span
+                              className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                act.customerType === 'unknown' || act.classifiedTo?.toLowerCase().includes('unknown')
+                                  ? 'text-amber-800 bg-amber-50 border-amber-200'
+                                  : 'text-emerald-800 bg-emerald-50 border-emerald-200'
+                              }`}
+                            >
                               {act.classifiedTo}
                             </span>
                           </td>

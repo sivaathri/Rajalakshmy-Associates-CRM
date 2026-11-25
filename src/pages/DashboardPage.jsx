@@ -487,7 +487,13 @@ export const DashboardPage = () => {
                     <div className="text-[11px] text-slate-500 mt-0.5">
                       {act.mobile} • By <span className="font-semibold text-slate-700">{act.submittedByName}</span>
                     </div>
-                    <div className="text-[10px] text-emerald-800 font-medium">
+                    <div
+                      className={`text-[10px] font-medium ${
+                        act.customerType === 'unknown' || act.classifiedTo?.toLowerCase().includes('unknown')
+                          ? 'text-amber-700'
+                          : 'text-emerald-800'
+                      }`}
+                    >
                       Auto Classified: {act.classifiedTo}
                     </div>
                   </div>

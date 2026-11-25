@@ -51,11 +51,11 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
   const rolesList = ['Admin', 'Manager', 'Ops', 'RM', 'Sales Manager'];
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#E8E1D5] bg-white/95 px-3 sm:px-4 md:px-6 backdrop-blur shadow-sm">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-burgundy-950/40 bg-gradient-to-r from-[#600516] via-[#79091D] to-[#45020F] text-white px-3 sm:px-4 md:px-6 shadow-md">
       {/* Left: Page Title */}
       <div className="flex items-center min-w-0">
         <div className="min-w-0">
-          <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-burgundy-900 font-corporate truncate max-w-[140px] xs:max-w-[200px] sm:max-w-xs md:max-w-none">
+          <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white font-corporate truncate max-w-[140px] xs:max-w-[200px] sm:max-w-xs md:max-w-none">
             {pageTitle || 'Rajalakshmy Associates CRM'}
           </h1>
          
@@ -71,13 +71,13 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
               setRoleSwitcherOpen(prev => !prev);
               setProfileOpen(false);
             }}
-            className="flex items-center gap-1 rounded-xl border border-gold-300 bg-gold-50/70 px-2 sm:px-2.5 py-1.5 text-xs font-medium text-amber-950 hover:bg-gold-100 transition shadow-sm"
+            className="flex items-center gap-1 rounded-xl border border-white/25 bg-white/10 px-2 sm:px-2.5 py-1.5 text-xs font-medium text-white hover:bg-white/20 transition shadow-sm"
             title="Switch Prototype Role"
           >
-            <Shield className="w-3.5 h-3.5 text-gold-700 hidden xs:inline" />
-            <span className="font-semibold hidden md:inline">Role:</span>
-            <span className="font-bold text-burgundy-900 text-[11px] sm:text-xs">{currentUser?.role || 'Role'}</span>
-            <ChevronDown className="w-3 h-3 text-slate-500" />
+            <Shield className="w-3.5 h-3.5 text-gold-300 hidden xs:inline" />
+            <span className="font-semibold text-white/80 hidden md:inline">Role:</span>
+            <span className="font-bold text-white text-[11px] sm:text-xs">{currentUser?.role || 'Role'}</span>
+            <ChevronDown className="w-3 h-3 text-white/80" />
           </button>
 
           {roleSwitcherOpen && (
@@ -115,20 +115,20 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
               setProfileOpen(prev => !prev);
               setRoleSwitcherOpen(false);
             }}
-            className="flex items-center gap-1.5 rounded-xl p-1 hover:bg-slate-100 transition"
+            className="flex items-center gap-1.5 rounded-xl p-1 hover:bg-white/10 transition"
           >
-            <div className="w-8 h-8 rounded-full bg-burgundy-900 text-gold-300 font-bold flex items-center justify-center border border-gold-400 ring-2 ring-burgundy-800/10 shadow-sm shrink-0">
+            <div className="w-8 h-8 rounded-full bg-white/15 text-gold-300 font-bold flex items-center justify-center border border-gold-400/80 ring-2 ring-white/10 shadow-sm shrink-0">
               <User className="w-4 h-4 text-gold-300" />
             </div>
             <div className="text-left hidden xl:block">
-              <div className="text-xs font-bold text-slate-800 leading-tight">
+              <div className="text-xs font-bold text-white leading-tight">
                 {currentUser?.name || 'User'}
               </div>
-              <div className="text-[10px] text-slate-500 font-medium">
+              <div className="text-[10px] text-white/75 font-medium">
                 {currentUser?.id} • {currentUser?.role}
               </div>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden xl:block" />
+            <ChevronDown className="w-3.5 h-3.5 text-white/80 hidden xl:block" />
           </button>
 
           {profileOpen && (
@@ -177,9 +177,9 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
         <button
           onClick={() => confirmAndLogout()}
           title="Sign out of CRM session"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50/80 hover:bg-rose-100 text-rose-800 font-bold text-xs transition shadow-2xs active:scale-95 shrink-0"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/25 bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition shadow-2xs active:scale-95 shrink-0"
         >
-          <LogOut className="w-3.5 h-3.5 text-rose-600" />
+          <LogOut className="w-3.5 h-3.5 text-white" />
           <span className="hidden sm:inline">Logout</span>
         </button>
       </div>
