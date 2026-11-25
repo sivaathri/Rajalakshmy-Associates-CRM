@@ -99,6 +99,11 @@ export const DailyActivityForm = () => {
       return;
     }
 
+    if (!business.trim()) {
+      alert('Please enter Business / Occupation');
+      return;
+    }
+
     if (source === 'Reference' && !referenceFrom.trim()) {
       alert('Please specify "Reference From / Who?" for reference sourced leads');
       return;
@@ -110,7 +115,7 @@ export const DailyActivityForm = () => {
     addDailyActivity({
       customerName: customerType === 'known' ? customerName : 'Unknown / Lead',
       mobile: formattedMobile,
-      business,
+      business: business.trim(),
       customerType,
       state: '',
       city: '',
@@ -225,12 +230,13 @@ export const DailyActivityForm = () => {
           {/* Business / Occupation */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Business / Occupation
+              Business / Occupation <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
                 type="text"
+                required
                 placeholder="e.g. Textiles, Rice Mill, Pharmacy"
                 value={business}
                 onChange={(e) => setBusiness(e.target.value)}
