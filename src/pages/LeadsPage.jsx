@@ -1830,56 +1830,23 @@ export const LeadsPage = () => {
                 </div>
 
                 {/* Quick Actions Footer */}
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => enterLeadEditMode(viewingLead)}
-                      className="px-3.5 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
-                    >
-                      <Edit className="w-3.5 h-3.5 text-burgundy-800" />
-                      <span>Edit</span>
-                    </button>
-                    {viewingLead.status !== 'Converted to Login' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const target = viewingLead;
-                          closeLeadDetailsModal();
-                          setAssigningLead(target);
-                          setSelectedAssigneeId(target.assignedToId || currentUser?.id || '');
-                        }}
-                        className="px-3.5 py-1.5 rounded-xl border border-burgundy-200 bg-burgundy-50/70 hover:bg-burgundy-100 text-burgundy-900 text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
-                      >
-                        <UserCheck className="w-3.5 h-3.5 text-burgundy-800" />
-                        <span>Assign</span>
-                      </button>
-                    )}
-                  </div>
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => enterLeadEditMode(viewingLead)}
+                    className="px-3.5 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition shadow-xs"
+                  >
+                    <Edit className="w-3.5 h-3.5 text-burgundy-800" />
+                    <span>Edit</span>
+                  </button>
 
-                  <div className="flex items-center gap-2">
-                    {viewingLead.status !== 'Converted to Login' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const target = viewingLead;
-                          closeLeadDetailsModal();
-                          handleOpenConvertModal(target);
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition"
-                      >
-                        <FileCheck className="w-3.5 h-3.5 text-gold-400" />
-                        <span>Convert to Bank Login</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={closeLeadDetailsModal}
-                      className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-100"
-                    >
-                      Close
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={closeLeadDetailsModal}
+                    className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-100"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             )}
