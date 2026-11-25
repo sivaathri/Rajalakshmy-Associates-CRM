@@ -69,7 +69,7 @@ export const TelecallingPage = () => {
   const [myNumbersPage, setMyNumbersPage] = useState(1);
 
   // Manual Response Entry State for Focused Mode
-  const [outcome, setOutcome] = useState('OK');
+  const [outcome, setOutcome] = useState('');
   const [remarks, setRemarks] = useState('');
   const [reminderDate, setReminderDate] = useState('');
 
@@ -306,7 +306,7 @@ export const TelecallingPage = () => {
       setOutcome(
         ['OK', 'Not Attend', 'No Need', 'Reminder', 'Field Visit'].includes(currentFocusedContact.callingStatus)
           ? currentFocusedContact.callingStatus
-          : 'OK'
+          : ''
       );
       setRemarks(currentFocusedContact.reminderRemark || '');
       setReminderDate(currentFocusedContact.reminderDate || '');
@@ -315,6 +315,11 @@ export const TelecallingPage = () => {
 
   const handleSaveResponse = (andNext = false) => {
     if (!currentFocusedContact) return;
+
+    if (!outcome) {
+      alert('Please select a Call Outcome');
+      return;
+    }
 
     if (outcome === 'Reminder' && !reminderDate) {
       alert('Please select a Follow-up Date for Reminder');
@@ -335,7 +340,7 @@ export const TelecallingPage = () => {
     // Reset remarks for the next lead
     setRemarks('');
     setReminderDate('');
-    setOutcome('OK');
+    setOutcome('');
 
     if (andNext && remainingContacts.length > 0) {
       const nextCandidate = remainingContacts[Math.min(Math.max(currentIdx, 0), remainingContacts.length - 1)] || remainingContacts[0];

@@ -172,16 +172,6 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
             </div>
           )}
         </div>
-
-        {/* Direct One-Click Logout Button */}
-        <button
-          onClick={() => confirmAndLogout()}
-          title="Sign out of CRM session"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/25 bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition shadow-2xs active:scale-95 shrink-0"
-        >
-          <LogOut className="w-3.5 h-3.5 text-white" />
-          <span className="hidden sm:inline">Logout</span>
-        </button>
       </div>
     </header>
   );
