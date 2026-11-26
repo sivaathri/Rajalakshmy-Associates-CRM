@@ -79,7 +79,7 @@ export const getSystemNotifications = ({
       l.assignmentType === 'collect_docs' &&
       (l.docCollectionAssigneeId === currentUser.id || l.assignedToId === currentUser.id) &&
       l.docCollectionAssignedById !== currentUser.id &&
-      l.docCollectionStatus !== 'Documents Collected';
+      !['Documents Collected', 'Not Collected'].includes(l.docCollectionStatus);
 
     const cleanMob = String(l.mobile || '').replace(/\D/g, '').slice(-10);
     const hasMyBankLogin = bankLogins.some(

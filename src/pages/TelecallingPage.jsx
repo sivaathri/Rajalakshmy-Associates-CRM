@@ -244,13 +244,21 @@ export const TelecallingPage = () => {
           flowDetail = `${activeLogin.status} • Cust ID: ${activeLogin.customerId || l.customerId || '—'}`;
         } else if (l.assignmentType === 'collect_docs') {
           if (l.docCollectionStatus === 'Documents Collected') {
-            flowLabel = `Documents Collected (${docs.length})`;
+            flowLabel = 'Documents Collected';
             flowTone = 'bg-emerald-50 text-emerald-800 border-emerald-200';
-            flowDetail = `By ${l.docCollectedBy || l.docCollectionAssigneeName || 'Staff'} • ${l.docCollectedAt ? formatDate(l.docCollectedAt) : ''}`;
+            flowDetail = l.docCollectionCompletionNote
+              ? `"${l.docCollectionCompletionNote}" — By ${l.docCollectedBy || l.docCollectionAssigneeName || 'Staff'}`
+              : `By ${l.docCollectedBy || l.docCollectionAssigneeName || 'Staff'}${l.docCollectedAt ? ` • ${formatDate(l.docCollectedAt)}` : ''}`;
+          } else if (l.docCollectionStatus === 'Not Collected') {
+            flowLabel = 'Docs Not Collected';
+            flowTone = 'bg-rose-50 text-rose-800 border-rose-200';
+            flowDetail = l.docCollectionCompletionNote || `Response by ${l.docCollectedBy || l.docCollectionAssigneeName || 'Staff'}`;
           } else {
             flowLabel = 'Pending Document Collection';
             flowTone = 'bg-amber-50 text-amber-900 border-amber-200';
-            flowDetail = `Waiting on ${l.docCollectionAssigneeName || l.assignedToName || 'Assignee'}`;
+            flowDetail = l.docCollectionCompletionNote
+              ? `"${l.docCollectionCompletionNote}" — ${l.docCollectionAssigneeName || l.assignedToName || 'Assignee'}`
+              : `Waiting on ${l.docCollectionAssigneeName || l.assignedToName || 'Assignee'}`;
           }
         } else {
           flowLabel = 'Case Assigned — Pending Bank Login';

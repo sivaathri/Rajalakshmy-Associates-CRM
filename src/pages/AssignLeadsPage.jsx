@@ -10,18 +10,15 @@ import {
   Copy,
   Check,
   Search,
-  Upload,
+  MessageSquare,
   CheckCircle2,
   Building2,
-  PhoneCall,
-  MapPin,
-  Briefcase,
   History,
   ArrowRight,
   Clock,
   X,
   FileCheck,
-  AlertCircle
+  XCircle
 } from 'lucide-react';
 import { formatDate, formatMobileNumber, matchesMobileSearch } from '../utils/formatters';
 
@@ -32,7 +29,6 @@ export const AssignLeadsPage = () => {
     leads = [],
     customers = [],
     bankLogins = [],
-    collectAssignedLeadDocument,
     markAssignedDocsCompleted
   } = useCRM();
   const { currentUser, showToast } = useAuth();
@@ -44,11 +40,9 @@ export const AssignLeadsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  // Document Collection Modal State (Option 1: Collect Only Document)
+  // Document Collection Response Modal State (Option 1: Collect Only Document)
   const [collectingLead, setCollectingLead] = useState(null);
-  const [docCategory, setDocCategory] = useState('KYC 1');
-  const [docFileName, setDocFileName] = useState('');
-  const [docFileObj, setDocFileObj] = useState(null);
+  const [responseStatus, setResponseStatus] = useState('Documents Collected');
   const [completionNote, setCompletionNote] = useState('');
 
   // Track Full Lifecycle Modal
@@ -132,40 +126,22 @@ export const AssignLeadsPage = () => {
 
   const handleOpenDocModal = (lead) => {
     setCollectingLead(lead);
-    setDocCategory('KYC 1');
-    setDocFileName('');
-    setDocFileObj(null);
+    setResponseStatus(lead.docCollectionStatus === 'Not Collected' ? 'Not Collected' : 'Documents Collected');
     setCompletionNote(lead.docCollectionCompletionNote || '');
   };
 
-  const handleUploadDoc = (e) => {
+  const handleSaveDocResponse = (e) => {
     e.preventDefault();
     if (!collectingLead) return;
-    if (docCategory === 'Other' && !docFileName.trim()) {
-      alert('Please enter document name for "Other" category');
+    if (!completionNote.trim() && responseStatus !== 'Documents Collected') {
+      alert('Please enter response details / remarks');
       return;
     }
-    if (!docFileName.trim() && !docFileObj) {
-      alert('Please select a file or enter a document name');
-      return;
-    }
-    const label = docCategory === 'Other' && docFileName.trim() ? `Other: ${docFileName.trim()}` : docCategory;
-    const name = docFileObj ? docFileObj.name : `${docFileName.trim()}.pdf`;
-    const size = docFileObj ? `${(docFileObj.size / (1024 * 1024)).toFixed(2)} MB` : '1.2 MB';
-
-    collectAssignedLeadDocument(collectingLead.id, {
-      category: label,
-      name,
-      size
-    });
-
-    setDocFileName('');
-    setDocFileObj(null);
-  };
-
-  const handleCompleteDocCollection = () => {
-    if (!collectingLead) return;
-    markAssignedDocsCompleted(collectingLead.id, completionNote.trim());
+    markAssignedDocsCompleted(
+      collectingLead.id,
+      completionNote.trim() || 'Documents collected',
+      responseStatus
+    );
     setCollectingLead(null);
   };
 
@@ -356,27 +332,14 @@ export const AssignLeadsPage = () => {
                         <div className="text-[10px] text-slate-400">{assignedDateDisplay}</div>
                       </td>
 
-                      {/* Remarks & Docs */}
+                      {/* Remarks & Response */}
                       <td className="px-4 py-3 max-w-[220px]">
                         <div className="text-[11px] text-slate-700 line-clamp-2" title={item.remarks || ''}>
                           {item.remarks || '—'}
                         </div>
-                        {item.mergedDocs.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {item.mergedDocs.slice(0, 2).map((d, i) => (
-                              <span
-                                key={d.id || i}
-                                className="inline-flex items-center gap-1 rounded bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-900 truncate max-w-[160px]"
-                              >
-                                <FileText className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
-                                <span className="truncate">{d.category}: {d.name}</span>
-                              </span>
-                            ))}
-                            {item.mergedDocs.length > 2 && (
-                              <span className="text-[10px] font-bold text-emerald-800">
-                                +{item.mergedDocs.length - 2} more
-                              </span>
-                            )}
+                        {item.docCollectionCompletionNote && (
+                          <div className="text-[10px] text-emerald-800 font-semibold mt-0.5 line-clamp-2" title={item.docCollectionCompletionNote}>
+                            Response: {item.docCollectionCompletionNote}
                           </div>
                         )}
                       </td>
@@ -385,12 +348,20 @@ export const AssignLeadsPage = () => {
                       <td className="px-4 py-3">
                         {isDocOnly ? (
                           <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${
-                            docsCollected
+                            item.docCollectionStatus === 'Documents Collected'
                               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : item.docCollectionStatus === 'Not Collected'
+                              ? 'bg-rose-50 text-rose-800 border-rose-200'
                               : 'bg-amber-50 text-amber-900 border-amber-200'
                           }`}>
-                            {docsCollected ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                            <span>{docsCollected ? `Docs Collected (${item.mergedDocs.length})` : 'Pending Collection'}</span>
+                            {item.docCollectionStatus === 'Documents Collected' ? (
+                              <CheckCircle2 className="w-3 h-3" />
+                            ) : item.docCollectionStatus === 'Not Collected' ? (
+                              <XCircle className="w-3 h-3" />
+                            ) : (
+                              <Clock className="w-3 h-3" />
+                            )}
+                            <span>{item.docCollectionStatus || 'Pending Collection'}</span>
                           </span>
                         ) : latestLogin ? (
                           <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${
@@ -418,10 +389,10 @@ export const AssignLeadsPage = () => {
                             <button
                               type="button"
                               onClick={() => handleOpenDocModal(item)}
-                              className="inline-flex items-center gap-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1.5 text-[11px] font-bold shadow-2xs transition whitespace-nowrap"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 text-white px-3 py-1.5 text-[11px] font-bold shadow-2xs transition whitespace-nowrap"
                             >
-                              <Upload className="w-3.5 h-3.5" />
-                              <span>{docsCollected ? 'Docs' : 'Upload Docs'}</span>
+                              <MessageSquare className="w-3.5 h-3.5 text-gold-300" />
+                              <span>{docsCollected ? 'Update Response' : 'Response'}</span>
                             </button>
                           ) : (
                             <>
@@ -467,14 +438,14 @@ export const AssignLeadsPage = () => {
         />
       </div>
 
-      {/* Option 1 Modal: Collect Documents Only */}
+      {/* Option 1 Modal: Document Collection Response (No File Upload) */}
       {liveCollectingLead && (
         <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+          <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-gold-300 block">
-                  Option 1 • Collect Only Document
+                  Option 1 • Document Collection Response
                 </span>
                 <h3 className="text-base font-bold text-white">
                   {liveCollectingLead.customerName} ({formatMobileNumber(liveCollectingLead.mobile)})
@@ -489,108 +460,50 @@ export const AssignLeadsPage = () => {
               </button>
             </div>
 
-            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
-              {liveCollectingLead.docCollectionNote && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-950">
-                  <strong className="block text-[10px] uppercase text-amber-800">RM Requested Documents:</strong>
-                  {liveCollectingLead.docCollectionNote}
+            <form onSubmit={handleSaveDocResponse} className="p-6 space-y-4 text-xs">
+              {liveCollectingLead.remarks && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-700">
+                  <strong className="block text-[10px] uppercase text-slate-500 mb-0.5">RM Call Remarks:</strong>
+                  {liveCollectingLead.remarks}
                 </div>
               )}
 
-              {/* Upload Document Form */}
-              <form onSubmit={handleUploadDoc} className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <Upload className="w-4 h-4 text-burgundy-800" />
-                  <span>Upload Collected Document</span>
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Document Category</label>
-                    <select
-                      value={docCategory}
-                      onChange={(e) => setDocCategory(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white text-xs"
+              <div>
+                <label className="block font-bold text-slate-700 mb-1.5">
+                  Collection Status <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[
+                    { id: 'Documents Collected', label: 'Docs Collected', active: 'border-emerald-600 bg-emerald-50 text-emerald-900' },
+                    { id: 'Pending Collection', label: 'Follow-up / Pending', active: 'border-amber-600 bg-amber-50 text-amber-900' },
+                    { id: 'Not Collected', label: 'Not Collected', active: 'border-rose-600 bg-rose-50 text-rose-900' }
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setResponseStatus(opt.id)}
+                      className={`px-3 py-2 rounded-xl border text-[11px] font-bold transition text-center ${
+                        responseStatus === opt.id
+                          ? `${opt.active} shadow-xs`
+                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                      }`}
                     >
-                      <option value="KYC 1">KYC 1 (Aadhaar / ID)</option>
-                      <option value="KYC 2">KYC 2 (PAN Card)</option>
-                      <option value="KYC 3">KYC 3 (GST / Business Proof)</option>
-                      <option value="Bank Statement">Bank Statement</option>
-                      <option value="ITR / Financials">ITR / Financials</option>
-                      <option value="Other">Other Document</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Document Name {docCategory === 'Other' && <span className="text-rose-500">*</span>}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Aadhaar_Front"
-                      value={docFileName}
-                      onChange={(e) => setDocFileName(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white text-xs"
-                    />
-                  </div>
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Attach File (Optional)</label>
-                  <input
-                    type="file"
-                    onChange={(e) => setDocFileObj(e.target.files?.[0] || null)}
-                    className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-burgundy-50 file:text-burgundy-900 hover:file:bg-burgundy-100"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 px-4 py-2 text-xs font-bold text-white shadow-xs transition"
-                >
-                  <Upload className="w-3.5 h-3.5 text-gold-300" />
-                  <span>Save Uploaded Document</span>
-                </button>
-              </form>
-
-              {/* Existing Docs List */}
-              <div className="space-y-2">
-                <h4 className="font-bold text-slate-700">
-                  Uploaded Documents ({liveCollectingLead.mergedDocs.length})
-                </h4>
-                {liveCollectingLead.mergedDocs.length === 0 ? (
-                  <div className="p-3 rounded-xl border border-dashed border-slate-200 text-slate-400 italic flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>No documents uploaded yet.</span>
-                  </div>
-                ) : (
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                    {liveCollectingLead.mergedDocs.map((d, i) => (
-                      <div key={d.id || i} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <div className="min-w-0">
-                            <div className="font-bold text-slate-800 truncate">{d.name}</div>
-                            <div className="text-[10px] text-slate-500">{d.category} • {formatDate(d.uploadDate)}</div>
-                          </div>
-                        </div>
-                        <span className="text-[10px] text-slate-400 shrink-0">{d.size}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
-              {/* Completion Note */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Collection Status Note (Optional)
+                <label className="block font-bold text-slate-700 mb-1">
+                  Response Remarks / Update Notes
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Collected all hard copies & PDF from client office"
+                <textarea
+                  rows={3}
+                  placeholder="Enter document collection response (e.g. Collected Aadhaar, PAN & 6-month Bank Statement from client)..."
                   value={completionNote}
                   onChange={(e) => setCompletionNote(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white text-xs"
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white text-xs focus:outline-none focus:border-burgundy-800"
                 />
               </div>
 
@@ -600,18 +513,17 @@ export const AssignLeadsPage = () => {
                   onClick={() => setCollectingLead(null)}
                   className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
                 >
-                  Close
+                  Cancel
                 </button>
                 <button
-                  type="button"
-                  onClick={handleCompleteDocCollection}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-2 text-xs font-bold text-white shadow-xs transition"
+                  type="submit"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 px-4 py-2 text-xs font-bold text-white shadow-xs transition"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Mark Document Collection Complete</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-gold-300" />
+                  <span>Save Response</span>
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}

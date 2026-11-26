@@ -2127,16 +2127,17 @@ export const CRMProvider = ({ children }) => {
     showToast(`Document "${newDocItem.name}" uploaded & synced to Lead`, 'success');
   };
 
-  const markAssignedDocsCompleted = (leadId, note = '') => {
+  const markAssignedDocsCompleted = (leadId, note = '', nextStatus = 'Documents Collected') => {
     const existingLead = leads.find(l => l.id === leadId);
     if (!existingLead) return;
 
     const todayStr = new Date().toISOString().split('T')[0];
     const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const resolvedStatus = nextStatus || 'Documents Collected';
 
     setLeads(prev => prev.map(l => l.id === leadId ? {
       ...l,
-      docCollectionStatus: 'Documents Collected',
+      docCollectionStatus: resolvedStatus,
       docCollectedBy: currentUser?.name || 'Staff',
       docCollectedById: currentUser?.id || '',
       docCollectedAt: todayStr,
@@ -2151,9 +2152,10 @@ export const CRMProvider = ({ children }) => {
         (cleanMob && getClean10Digits(c.mobile) === cleanMob);
       return matches ? {
         ...c,
-        docCollectionStatus: 'Documents Collected',
+        docCollectionStatus: resolvedStatus,
         docCollectedBy: currentUser?.name || 'Staff',
-        docCollectedAt: todayStr
+        docCollectedAt: todayStr,
+        docCollectionCompletionNote: note || c.docCollectionCompletionNote || ''
       } : c;
     }));
 
@@ -2163,18 +2165,18 @@ export const CRMProvider = ({ children }) => {
       leadId: existingLead.id,
       customerName: existingLead.customerName,
       stage: 'Document Collection',
-      action: 'Document Collection Marked Completed',
+      action: `Doc Collection Response (${resolvedStatus})`,
       fromStatus: existingLead.docCollectionStatus || 'Pending Collection',
-      toStatus: 'Documents Collected',
+      toStatus: resolvedStatus,
       date: todayStr,
       time: timeStr,
       actorId: currentUser?.id || '',
       actorName: currentUser?.name || 'Staff',
       actorRole: currentUser?.role || '',
-      details: note || 'Documents collected and returned to RM'
+      details: note || `Marked as ${resolvedStatus}`
     });
 
-    showToast('Document collection marked as completed!', 'success');
+    showToast(`Document collection response saved (${resolvedStatus})!`, 'success');
   };
 
   // Add 2-Day Update / Note (Req 4: remind every 2 days for do next or wt today update)
