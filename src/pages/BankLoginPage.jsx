@@ -625,18 +625,7 @@ export const BankLoginPage = () => {
   return (
     <div className="space-y-6">
       {/* Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="font-bold text-slate-700">Bank Files Console:</span>
-          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-burgundy-50 text-burgundy-900 border border-burgundy-200">
-            {currentUser?.name || 'User'} ({currentUser?.role || 'RM'})
-          </span>
-          {!isAdminOrManager && (
-            <span className="text-[11px] text-slate-500 hidden sm:inline">
-              • Showing only your personal assigned & logged files
-            </span>
-          )}
-        </div>
+      <div className="flex items-center justify-end">
         <button
           onClick={() => {
             setCustomerMobile('');
