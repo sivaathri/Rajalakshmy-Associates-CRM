@@ -69,16 +69,33 @@ const writeCallLocksToStorage = (locksObj) => {
   }
 };
 
-// Helper to guarantee strictly unique RA-CUST- IDs across all records
+// Helper to guarantee strictly unique RA-CUST- IDs across all records (starting from 1)
 export const ensureUniqueCustomerIds = (customerList) => {
   const seenIds = new Set();
-  let maxNum = 1000;
+  let maxNum = 0;
 
-  // Normalize all IDs to RA-CUST- format (seamlessly upgrades legacy CUST- IDs)
+  // Normalize all IDs to RA-CUST- format (starting from 1)
   const normalizedList = (customerList || []).map(c => {
     let item = c;
-    if (c.id && typeof c.id === 'string' && c.id.startsWith('CUST-')) {
-      item = { ...c, id: c.id.replace('CUST-', 'RA-CUST-') };
+    if (c.id && typeof c.id === 'string') {
+      let nid = c.id.replace('CUST-', 'RA-CUST-');
+      const legacyMatch = nid.match(/^RA-CUST-(\d+)$/i);
+      if (legacyMatch) {
+        const n = parseInt(legacyMatch[1], 10);
+        if (n >= 1000) {
+          nid = `RA-CUST-${n - 1000 === 0 ? 1 : n - 1000}`;
+        }
+      }
+      item = { ...c, id: nid };
+      if (item.customerId) {
+        const cMatch = item.customerId.match(/^RA-CUST-(\d+)$/i);
+        if (cMatch) {
+          const cn = parseInt(cMatch[1], 10);
+          if (cn >= 1000) {
+            item.customerId = `RA-CUST-${cn - 1000 === 0 ? 1 : cn - 1000}`;
+          }
+        }
+      }
     }
     // Remove auto-injected 'Chennai, Tamil Nadu' for field activities if no actual address was entered
     if (item.city === 'Chennai' && !item.address && (item.submittedBy || item.referenceFrom)) {
@@ -92,7 +109,8 @@ export const ensureUniqueCustomerIds = (customerList) => {
     if (c.id && typeof c.id === 'string') {
       const match = c.id.match(/\d+/);
       if (match) {
-        const num = parseInt(match[0], 10);
+        let num = parseInt(match[0], 10);
+        if (num >= 1000) num = num - 1000 || 1;
         if (!isNaN(num) && num > maxNum) {
           maxNum = num;
         }
@@ -106,7 +124,7 @@ export const ensureUniqueCustomerIds = (customerList) => {
       maxNum += 1;
       const assignedId = `RA-CUST-${maxNum}`;
       seenIds.add(assignedId);
-      return { ...c, id: assignedId };
+      return { ...c, id: assignedId, customerId: c.customerId || assignedId };
     }
     seenIds.add(c.id);
     return c;
@@ -250,7 +268,18 @@ export const CRMProvider = ({ children }) => {
   const [bankLogins, setBankLogins] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.BANK_LOGINS);
-      return saved ? JSON.parse(saved) : [];
+      const list = saved ? JSON.parse(saved) : [];
+      return (list || []).map(b => {
+        let cid = b.customerId;
+        if (typeof cid === 'string') {
+          const match = cid.match(/^RA-CUST-(\d+)$/i);
+          if (match && parseInt(match[1], 10) >= 1000) {
+            const num = parseInt(match[1], 10);
+            cid = `RA-CUST-${num - 1000 === 0 ? 1 : num - 1000}`;
+          }
+        }
+        return { ...b, customerId: cid };
+      });
     } catch {
       return [];
     }
@@ -494,16 +523,17 @@ export const CRMProvider = ({ children }) => {
     showToast('All tables cleared! Ready for your own data in LocalStorage', 'info');
   };
 
-  // Helper to generate next sequential official Customer ID (RA-CUST-XXXX) strictly for verified/converted customers
+  // Helper to generate next sequential official Customer ID (RA-CUST-X) strictly for verified/converted customers starting from 1
   const generateOfficialCustomerId = (customerList) => {
-    let maxNum = 1000;
+    let maxNum = 0;
     (customerList || []).forEach(c => {
       if (c.isCustomer || (c.services && c.services.length > 0)) {
         const refId = c.customerId || c.id;
         if (refId && typeof refId === 'string') {
           const match = refId.match(/\d+/);
           if (match) {
-            const num = parseInt(match[0], 10);
+            let num = parseInt(match[0], 10);
+            if (num >= 1000) num = num - 1000 || 1;
             if (!isNaN(num) && num > maxNum) maxNum = num;
           }
         }

@@ -293,6 +293,21 @@ export const BankLoginPage = () => {
     setShowNumberSuggestions(false);
   };
 
+  // Helper: Format customer ID so it starts with 1 (e.g. RA-CUST-1 instead of RA-CUST-1001)
+  const formatDisplayCustomerId = (id) => {
+    if (!id) return 'RA-CUST-1';
+    const str = String(id).trim();
+    const match = str.match(/^RA-CUST-(\d+)$/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num >= 1000) {
+        return `RA-CUST-${num - 1000 === 0 ? 1 : num - 1000}`;
+      }
+      return `RA-CUST-${num}`;
+    }
+    return str;
+  };
+
   // Helper: display loan amount gracefully whether string or number
   const renderLoanAmount = (val) => {
     if (val === undefined || val === null || val === '') return '-';
@@ -839,13 +854,14 @@ export const BankLoginPage = () => {
                 <th className="px-4 py-3">Bank & Loan Value</th>
                 <th className="px-4 py-3">2-Day Reminder & Updates</th>
                 <th className="px-4 py-3">File Status</th>
+                <th className="px-4 py-3 text-center">Disburse / Reject</th>
                 <th className="px-4 py-3 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredLogins.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400 italic">
+                  <td colSpan={7} className="py-12 text-center text-slate-400 italic">
                     No bank login records found matching criteria.
                   </td>
                 </tr>
@@ -862,7 +878,7 @@ export const BankLoginPage = () => {
                     }`}>
                       {/* Customer ID & Date */}
                       <td className="px-4 py-3">
-                        <span className="font-mono font-bold text-burgundy-900 block">{login.customerId || login.id}</span>
+                        <span className="font-mono font-bold text-burgundy-900 block">{formatDisplayCustomerId(login.customerId || login.id)}</span>
                         <span className="text-[10px] text-slate-400 block mt-0.5">Logged: {formatDate(login.loginDate)}</span>
                       </td>
 
@@ -959,63 +975,93 @@ export const BankLoginPage = () => {
                         </div>
                       </td>
 
-                      {/* Actions */}
+                      {/* Disburse / Reject Column */}
                       <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                          {/* 2-Day Update Button (Req 4) */}
-                          {login.status === 'In Progress' && (
+                        <div className="inline-flex items-center justify-center gap-1.5 flex-nowrap">
+                          {login.status === 'In Progress' ? (
+                            <>
+                              {/* Disburse Button */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDisburseModal(login)}
+                                className="h-7 px-2.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold transition flex items-center gap-1.5 shadow-2xs"
+                                title="Convert file to Disbursement"
+                              >
+                                <Check className="w-3.5 h-3.5 text-emerald-700" />
+                                <span>Disburse</span>
+                              </button>
+
+                              {/* Reject Button */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenRejectModal(login)}
+                                className="h-7 px-2.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-semibold transition flex items-center gap-1.5 shadow-2xs"
+                                title="Mark Rejected by Bank with remarks"
+                              >
+                                <X className="w-3.5 h-3.5 text-rose-600" />
+                                <span>Reject</span>
+                              </button>
+                            </>
+                          ) : login.status === 'Disbursed' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Disbursed</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                              <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                              <span>Rejected</span>
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Actions (Routine Update & View) */}
+                      <td className="px-4 py-3 text-center">
+                        <div className="inline-flex items-center justify-center gap-1.5 flex-nowrap">
+                          {login.status === 'In Progress' ? (
+                            <>
+                              {/* 1. Daily 2-Day Routine Update */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setUpdatingLogin(login);
+                                  setTodayUpdateNote('');
+                                }}
+                                className={`h-7 px-2.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 ${
+                                  isDue
+                                    ? 'bg-amber-500 hover:bg-amber-600 text-amber-950 ring-1 ring-amber-600/30 shadow-xs animate-pulse'
+                                    : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs'
+                                }`}
+                                title="Add Today's Update / Next Action (2-day cycle)"
+                              >
+                                <Clock className={`w-3.5 h-3.5 ${isDue ? 'text-amber-950' : 'text-slate-500'}`} />
+                                <span>{isDue ? 'Update Due!' : 'Update'}</span>
+                              </button>
+
+                              {/* 2. View Customer & Bank Details */}
+                              <button
+                                type="button"
+                                onClick={() => setViewHistoryLogin(login)}
+                                className="h-7 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold transition flex items-center gap-1.5 shadow-2xs"
+                                title="View Complete Customer Dossier & File Details"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                <span>View</span>
+                              </button>
+                            </>
+                          ) : (
+                            /* Completed / Archived Files */
                             <button
                               type="button"
-                              onClick={() => {
-                                setUpdatingLogin(login);
-                                setTodayUpdateNote('');
-                              }}
-                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 ${
-                                isDue
-                                  ? 'bg-amber-500 hover:bg-amber-600 text-amber-950 shadow-xs ring-1 ring-amber-600/30'
-                                  : 'border border-slate-300 bg-white hover:bg-slate-50 text-slate-700'
-                              }`}
-                              title="Add Today's Update / Next Action (Reminds every 2 days)"
+                              onClick={() => setViewHistoryLogin(login)}
+                              className="h-7 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold transition flex items-center gap-1.5 shadow-2xs"
+                              title="View File Details & Follow-up Timeline"
                             >
-                              <Clock className="w-3 h-3" />
-                              <span>Update</span>
+                              <Eye className="w-3.5 h-3.5 text-slate-500" />
+                              <span>View Details</span>
                             </button>
                           )}
-
-                          {/* Disburse Button (Req 5: convert to Disposement) */}
-                          {login.status === 'In Progress' && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenDisburseModal(login)}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-[11px] font-bold text-white shadow-xs transition flex items-center gap-1"
-                              title="Convert to Disbursement"
-                            >
-                              <Check className="w-3 h-3" />
-                              <span>Disburse</span>
-                            </button>
-                          )}
-
-                          {/* Reject Button (Req 5: if reject enter remarks) */}
-                          {login.status === 'In Progress' && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenRejectModal(login)}
-                              className="px-2 py-1 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-semibold transition"
-                              title="Mark Rejected by Bank with remarks"
-                            >
-                              Reject
-                            </button>
-                          )}
-
-                          {/* View Details & History Button */}
-                          <button
-                            type="button"
-                            onClick={() => setViewHistoryLogin(login)}
-                            className="p-1.5 text-slate-500 hover:text-burgundy-900 rounded-lg hover:bg-slate-100 transition"
-                            title="View File Details & Follow-up Timeline"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1666,7 +1712,7 @@ export const BankLoginPage = () => {
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <span>{viewHistoryLogin.customerName}</span>
                   <span className="font-mono text-xs px-2 py-0.5 rounded bg-white/10 text-gold-200 border border-white/10">
-                    {viewHistoryLogin.customerId || viewHistoryLogin.id}
+                    {formatDisplayCustomerId(viewHistoryLogin.customerId || viewHistoryLogin.id)}
                   </span>
                 </h3>
               </div>
@@ -1718,7 +1764,7 @@ export const BankLoginPage = () => {
                   <div>
                     <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Customer ID</span>
                     <span className="text-xs font-mono font-bold text-burgundy-900 mt-0.5 block">
-                      {viewHistoryLogin.customerId || viewHistoryLogin.id}
+                      {formatDisplayCustomerId(viewHistoryLogin.customerId || viewHistoryLogin.id)}
                     </span>
                   </div>
                   <div>

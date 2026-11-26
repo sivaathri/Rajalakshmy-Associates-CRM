@@ -60,16 +60,17 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
   const [state, setState] = useState('Tamil Nadu');
   const [city, setCity] = useState('Chennai');
 
-  // Compute next guaranteed unique customer ID (format: RA-CUST-XXXX)
+  // Compute next guaranteed unique customer ID (format: RA-CUST-X, starting with 1)
   const nextCustomerId = React.useMemo(() => {
-    let maxNum = 1000;
+    let maxNum = 0;
     (customers || []).forEach(c => {
       if (c.isCustomer || (c.services && c.services.length > 0)) {
         const refId = c.customerId || c.id;
         if (refId && typeof refId === 'string') {
           const match = refId.match(/\d+/);
           if (match) {
-            const num = parseInt(match[0], 10);
+            let num = parseInt(match[0], 10);
+            if (num >= 1000) num = num - 1000 || 1;
             if (!isNaN(num) && num > maxNum) {
               maxNum = num;
             }
