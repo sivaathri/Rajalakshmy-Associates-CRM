@@ -503,42 +503,6 @@ export const TelecallingPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-         
-          <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
-            Relationship Manager Calling Module
-          </h2>
-         
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-        
-         
-          <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
-            <span className="text-[10px] text-white/60 block uppercase font-bold">My Added Numbers</span>
-            <span className="text-sm font-extrabold text-gold-300">{myAddedCount}</span>
-          </div>
-          <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
-            <span className="text-[10px] text-white/60 block uppercase font-bold">
-              {selectedDb && selectedType ? 'Fresh Queue Numbers' : 'Total Fresh Numbers'}
-            </span>
-            <span className="text-sm font-extrabold text-gold-300">
-              {selectedDb && selectedType ? displayQueue.length : (oldTotalCount + newTotalCount)}
-            </span>
-          </div>
-          <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
-            <span className="text-[10px] text-white/60 block uppercase font-bold">Today's Calls</span>
-            <span className="text-sm font-extrabold text-emerald-300">{todayCallsCount}</span>
-          </div>
-          <div className="rounded-xl bg-black/30 border border-white/10 px-3 py-1.5 text-center">
-            <span className="text-[10px] text-white/60 block uppercase font-bold">Pending Reminders</span>
-            <span className="text-sm font-extrabold text-amber-300">{outcomeCounts.Reminder}</span>
-          </div>
-        </div>
-      </div>
-
       {/* 2-Step Database & Classification Selector Card */}
       <div className="rounded-2xl border-2 border-burgundy-100 bg-white p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
@@ -551,11 +515,7 @@ export const TelecallingPage = () => {
                 Optional: Showing all data by default
               </span>
             )}
-            {activeTab === 'focused' && (
-              <span className="text-[11px] font-semibold text-burgundy-800 bg-burgundy-50 px-2.5 py-0.5 rounded-full border border-burgundy-200">
-                Select Step 1 & Step 2 for Focused Dialing
-              </span>
-            )}
+           
           </div>
 
           {(selectedDb || selectedType) && (
