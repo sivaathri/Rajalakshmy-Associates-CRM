@@ -1519,36 +1519,44 @@ export const CRMProvider = ({ children }) => {
     showToast(`Advance request ${status}`, 'info');
   };
 
-  // Punch In Action (Punch Only for In Time)
+  // Punch In Action (Punch Only for In Time, tracked with 24-hour timestamp)
   // Date format strictly: DD-MM-YYYY
   const punchIn = () => {
     if (!currentUser) return { success: false, message: 'Please log in to punch attendance' };
 
-    const todayDate = formatDateDDMMYYYY(new Date()); // e.g. "17-11-2026"
-    const nowTime = new Date().toLocaleTimeString('en-IN', {
+    const nowMs = Date.now();
+    const todayDate = formatDateDDMMYYYY(new Date(nowMs)); // e.g. "17-11-2026"
+    const nowTime = new Date(nowMs).toLocaleTimeString('en-IN', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: true
     });
 
-    // Check if user already punched in today
-    const existing = attendance.find(
-      a => a.employeeId === currentUser.id && a.date === todayDate
-    );
+    // Check if user already punched in within the last 24 hours (or today if no punchedAt stored)
+    const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+    const recentPunch = attendance.find(a => {
+      if (a.employeeId !== currentUser.id) return false;
+      if (typeof a.punchedAt === 'number') {
+        return (nowMs - a.punchedAt) < TWENTY_FOUR_HOURS_MS;
+      }
+      return a.date === todayDate;
+    });
 
-    if (existing) {
-      showToast(`Already Punched In today at ${existing.inTime}`, 'info');
-      return { success: false, alreadyPunched: true, record: existing };
+    if (recentPunch) {
+      showToast(`Already Punched In (${recentPunch.date} at ${recentPunch.inTime})`, 'info');
+      return { success: false, alreadyPunched: true, record: recentPunch };
     }
 
     const newRecord = {
-      id: `ATT-${Date.now().toString().slice(-6)}`,
+      id: `ATT-${nowMs.toString().slice(-6)}`,
       employeeId: currentUser.id,
       employeeName: currentUser.name,
       role: currentUser.role,
       date: todayDate, // Format strictly DD-MM-YYYY
       inTime: nowTime,
+      punchedAt: nowMs,
+      punchedAtIso: new Date(nowMs).toISOString(),
       status: 'Present',
       punchMode: 'Direct Web In-Punch'
     };

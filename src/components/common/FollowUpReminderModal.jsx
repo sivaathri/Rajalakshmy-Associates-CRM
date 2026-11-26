@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCRM } from '../../context/CRMContext';
 import {
   CalendarCheck,
-  Calendar,
   Clock,
   CheckCircle2,
   PhoneMissed,
@@ -13,37 +12,142 @@ import {
   MapPin,
   X,
   AlertTriangle,
-  ArrowRight
+  ArrowRight,
+  LogIn,
+  ShieldCheck
 } from 'lucide-react';
-import { formatDate, formatMobileNumber } from '../../utils/formatters';
+import { formatDate, formatDateDDMMYYYY, formatMobileNumber } from '../../utils/formatters';
+
+const MANDATORY_ROLES = ['RM', 'Sales Manager', 'Ops'];
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
+const parseAttendanceTimestamp = (rec) => {
+  if (!rec) return null;
+  if (typeof rec.punchedAt === 'number' && !isNaN(rec.punchedAt)) return rec.punchedAt;
+  if (rec.punchedAtIso) {
+    const t = new Date(rec.punchedAtIso).getTime();
+    if (!isNaN(t)) return t;
+  }
+  if (rec.date && /^\d{2}-\d{2}-\d{4}$/.test(rec.date)) {
+    const [dd, mm, yyyy] = rec.date.split('-').map(Number);
+    let hours = 9;
+    let minutes = 0;
+    let seconds = 0;
+    if (rec.inTime) {
+      const m = rec.inTime.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?/i);
+      if (m) {
+        hours = parseInt(m[1], 10);
+        minutes = parseInt(m[2], 10);
+        seconds = m[3] ? parseInt(m[3], 10) : 0;
+        const mer = (m[4] || '').toLowerCase();
+        if (mer === 'pm' && hours < 12) hours += 12;
+        if (mer === 'am' && hours === 12) hours = 0;
+      }
+    }
+    const parsed = new Date(yyyy, mm - 1, dd, hours, minutes, seconds).getTime();
+    if (!isNaN(parsed)) return parsed;
+  }
+  return null;
+};
 
 export const FollowUpReminderModal = () => {
-  const { showFollowUpModal, setShowFollowUpModal, currentUser, showToast } = useAuth();
-  const { customers, logCall, updateCustomer } = useCRM();
+  const { showFollowUpModal, setShowFollowUpModal, currentUser, showToast, loginSessionNonce } = useAuth();
+  const { customers, logCall, updateCustomer, attendance = [], punchIn } = useCRM();
 
   // Per-contact selected outcome state
   const [selectedOutcomes, setSelectedOutcomes] = useState({});
   const [remarksMap, setRemarksMap] = useState({});
   const [rescheduleDates, setRescheduleDates] = useState({});
+  // Track follow-ups responded in the current login session (handles rescheduling via "4. Reminder")
+  const [respondedIds, setRespondedIds] = useState([]);
+  // Live clock to trigger 24-hour Punch In check automatically
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
-  // Filter pending reminders
-  const myReminders = customers.filter(c => {
-    if (currentUser?.role === 'RM') {
-      return c.callingStatus === 'Reminder' && (c.assignedTo === currentUser.id || c.actionedBy === currentUser.id);
-    }
-    if (currentUser?.role === 'Sales Manager') {
-      return (
-        c.callingStatus === 'Reminder' &&
-        (c.submittedBy === currentUser.id ||
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Reset per-login session state whenever user changes or re-logs in
+  useEffect(() => {
+    setRespondedIds([]);
+    setSelectedOutcomes({});
+    setRemarksMap({});
+    setRescheduleDates({});
+    setNowMs(Date.now());
+  }, [currentUser?.id, loginSessionNonce]);
+
+  const isMandatoryRole = Boolean(currentUser && MANDATORY_ROLES.includes(currentUser.role));
+
+  // Filter pending follow-up reminders scoped to current user
+  const myReminders = useMemo(() => {
+    if (!currentUser) return [];
+    return (customers || []).filter(c => {
+      if (c.callingStatus !== 'Reminder') return false;
+      if (respondedIds.includes(c.id)) return false;
+
+      if (currentUser.role === 'RM') {
+        return c.assignedTo === currentUser.id || c.actionedBy === currentUser.id;
+      }
+      if (currentUser.role === 'Sales Manager') {
+        return (
+          c.submittedBy === currentUser.id ||
           c.referenceFrom?.includes(currentUser.name) ||
-          c.assignedTo === currentUser.id)
-      );
-    }
-    return c.callingStatus === 'Reminder';
-  });
+          c.assignedTo === currentUser.id
+        );
+      }
+      if (currentUser.role === 'Ops') {
+        return (
+          c.assignedTo === currentUser.id ||
+          c.actionedBy === currentUser.id ||
+          c.submittedBy === currentUser.id
+        );
+      }
+      return true;
+    });
+  }, [customers, currentUser, respondedIds]);
 
-  // If no follow-up modal requested OR there are no follow-ups pending, do NOT show this modal!
-  if (!showFollowUpModal || myReminders.length === 0) return null;
+  // Determine 24-hour Punch-In status for current user
+  const punchStatus = useMemo(() => {
+    if (!currentUser) return { isPunchDue: false, lastPunch: null };
+    const userPunches = (attendance || [])
+      .filter(a => a.employeeId === currentUser.id)
+      .map(rec => ({ rec, ts: parseAttendanceTimestamp(rec) }))
+      .filter(entry => entry.ts !== null)
+      .sort((a, b) => b.ts - a.ts);
+
+    const latest = userPunches[0] || null;
+    if (!latest) {
+      return { isPunchDue: true, lastPunch: null };
+    }
+    const elapsed = nowMs - latest.ts;
+    return {
+      isPunchDue: elapsed >= TWENTY_FOUR_HOURS_MS,
+      lastPunch: latest.rec
+    };
+  }, [attendance, currentUser, nowMs]);
+
+  const isPunchDueForMandatoryRole = isMandatoryRole && punchStatus.isPunchDue;
+  const hasPendingFollowUps = myReminders.length > 0;
+
+  // For RM / Sales Manager / Ops:
+  // 1) If follow-ups exist upon login -> must show and finish all follow-ups (no Close button)
+  // 2) Once all follow-ups are completed (or if none exist), if Punch-In is due (every 24 hrs) -> show Punch-In (no Close button until punched)
+  const shouldForceOpen = isMandatoryRole && (
+    isPunchDueForMandatoryRole ||
+    (showFollowUpModal && hasPendingFollowUps)
+  );
+  const shouldOpen = shouldForceOpen || (showFollowUpModal && hasPendingFollowUps);
+
+  if (!currentUser || !shouldOpen) return null;
+
+  // Step mode: 'followups' first whenever any follow-ups remain; otherwise 'punchin'
+  const currentStep = hasPendingFollowUps ? 'followups' : 'punchin';
+  const canClosePopup = isMandatoryRole
+    ? (!hasPendingFollowUps && !isPunchDueForMandatoryRole)
+    : true;
 
   const handleSelectOutcome = (customerId, outcome) => {
     setSelectedOutcomes(prev => ({ ...prev, [customerId]: outcome }));
@@ -68,6 +172,8 @@ export const FollowUpReminderModal = () => {
     const customer = customers.find(c => c.id === customerId);
     if (!customer) return;
 
+    const cName = customer?.name || 'Customer';
+
     if (outcome === 'Reminder') {
       const remDate = rescheduleDates[customerId] || '';
       if (!remDate) {
@@ -91,7 +197,7 @@ export const FollowUpReminderModal = () => {
         lastCalledDate: new Date().toISOString().split('T')[0]
       });
 
-      showToast(`Follow-up rescheduled for ${cName(customer)} to ${remDate}`, 'info');
+      showToast(`Follow-up rescheduled for ${cName} to ${remDate}`, 'info');
     } else {
       const defaultNotes = {
         'OK': 'Interested / Converted - Customer confirmed interest in advisory services',
@@ -114,58 +220,85 @@ export const FollowUpReminderModal = () => {
         lastCalledDate: new Date().toISOString().split('T')[0]
       });
 
-      showToast(`Follow-up saved: ${cName(customer)} marked as ${outcome}`, 'success');
+      showToast(`Follow-up saved: ${cName} marked as ${outcome}`, 'success');
     }
 
-    // Reset this contact's state
+    // Mark responded in current login flow so next step (Punch In) unlocks once all are answered
+    const updatedResponded = [...respondedIds, customerId];
+    setRespondedIds(updatedResponded);
     handleCancelOutcome(customerId);
+
+    // If that was the last follow-up and Punch In is already satisfied (< 24h), auto-close smoothly
+    const remainingCount = myReminders.filter(r => r.id !== customerId).length;
+    if (remainingCount === 0 && !isPunchDueForMandatoryRole) {
+      setShowFollowUpModal(false);
+    }
   };
 
-  const cName = (c) => c?.name || 'Customer';
+  const handleMandatoryPunchIn = () => {
+    const res = punchIn();
+    if (res?.success || res?.alreadyPunched) {
+      setNowMs(Date.now());
+      setShowFollowUpModal(false);
+    }
+  };
+
+  const todayDisplay = formatDateDDMMYYYY(new Date(nowMs));
+  const liveClockStr = new Date(nowMs).toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 animate-fade-in">
+    <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
       <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-2xl border border-gold-200 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between bg-gradient-to-r from-burgundy-900 via-burgundy-800 to-burgundy-950 px-6 py-4 text-white">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold-400 text-burgundy-950 shadow-md">
-              <CalendarCheck className="w-6 h-6" />
+              {currentStep === 'followups' ? (
+                <CalendarCheck className="w-6 h-6" />
+              ) : (
+                <Clock className="w-6 h-6" />
+              )}
             </div>
             <div>
-              <h2 className="text-lg font-bold">Action Required: Pending Follow-ups</h2>
+              <h2 className="text-lg font-bold">
+                {currentStep === 'followups'
+                  ? 'Action Required: Pending Follow-ups'
+                  : 'Daily Attendance: Punch In Required'}
+              </h2>
               <p className="text-xs text-gold-200">
                 Logged in as <span className="font-semibold text-white">{currentUser?.name}</span> ({currentUser?.role})
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => setShowFollowUpModal(false)}
-            className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {canClosePopup && (
+            <button
+              onClick={() => setShowFollowUpModal(false)}
+              className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 max-h-[70vh] overflow-y-auto space-y-4">
-          {myReminders.length === 0 ? (
-            <div className="text-center py-8">
-              <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
-              <h3 className="text-base font-bold text-slate-800">All Follow-ups Cleared!</h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-                You have no pending reminders scheduled at this moment. You can proceed directly to your CRM dashboard.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        {/* STEP 1: MANDATORY FOLLOW-UPS */}
+        {currentStep === 'followups' ? (
+          <>
+            <div className="p-6 max-h-[70vh] overflow-y-auto space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 flex-wrap gap-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-amber-900 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
-                  <AlertTriangle className="w-4 h-4 text-amber-600" />
-                  <span>You have {myReminders.length} pending follow-up call(s) waiting for action.</span>
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>
+                    Respond to all <strong>{myReminders.length}</strong> pending follow-up(s) to continue
+                    {isPunchDueForMandatoryRole ? ' to Daily Punch In.' : '.'}
+                  </span>
                 </div>
-                <span className="text-xs text-slate-400">Select Outcome Below</span>
+                <span className="text-xs font-semibold text-slate-500">Select Any 1 Response Below</span>
               </div>
 
               <div className="space-y-4">
@@ -186,7 +319,7 @@ export const FollowUpReminderModal = () => {
                             </span>
                           </div>
                           <div className="text-xs text-slate-600 mt-0.5">
-                            <span className="font-semibold text-slate-800 font-mono">{formatMobileNumber(c.mobile)}</span> • {c.business || c.city} ({c.state})
+                            <span className="font-semibold text-slate-800 font-mono">{formatMobileNumber(c.mobile)}</span> • {c.business || c.city} {c.state ? `(${c.state})` : ''}
                           </div>
                         </div>
 
@@ -204,10 +337,10 @@ export const FollowUpReminderModal = () => {
                         </div>
                       )}
 
-                      {/* 4 Outcome Selection Buttons */}
+                      {/* 5 Outcome Selection Buttons */}
                       <div className="pt-2 border-t border-slate-200/70 space-y-2">
                         <div className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
-                          <span>Select Follow-up Call Outcome:</span>
+                          <span>Select Follow-up Call Outcome (Any One):</span>
                           {activeOutcome && (
                             <span className="text-[10px] text-burgundy-900 font-bold bg-burgundy-50 px-2 py-0.5 rounded border border-burgundy-200">
                               Selected: {activeOutcome}
@@ -216,7 +349,6 @@ export const FollowUpReminderModal = () => {
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                          {/* 1. OK */}
                           <button
                             type="button"
                             onClick={() => handleSelectOutcome(c.id, 'OK')}
@@ -228,10 +360,9 @@ export const FollowUpReminderModal = () => {
                           >
                             <CheckCircle2 className={`w-4 h-4 mb-1 ${activeOutcome === 'OK' ? 'text-emerald-600' : 'text-slate-400'}`} />
                             <span className="text-xs font-bold">1. OK</span>
-                            <span className="text-[10px] text-slate-500">Interested / Converted</span>
+                            <span className="text-[10px] text-slate-500">Interested</span>
                           </button>
 
-                          {/* 2. Not Attend */}
                           <button
                             type="button"
                             onClick={() => handleSelectOutcome(c.id, 'Not Attend')}
@@ -243,10 +374,9 @@ export const FollowUpReminderModal = () => {
                           >
                             <PhoneMissed className={`w-4 h-4 mb-1 ${activeOutcome === 'Not Attend' ? 'text-blue-600' : 'text-slate-400'}`} />
                             <span className="text-xs font-bold">2. Not Attend</span>
-                            <span className="text-[10px] text-slate-500">Ringing / Busy / Off</span>
+                            <span className="text-[10px] text-slate-500">Ringing / Busy</span>
                           </button>
 
-                          {/* 3. No Need */}
                           <button
                             type="button"
                             onClick={() => handleSelectOutcome(c.id, 'No Need')}
@@ -258,10 +388,9 @@ export const FollowUpReminderModal = () => {
                           >
                             <XCircle className={`w-4 h-4 mb-1 ${activeOutcome === 'No Need' ? 'text-rose-600' : 'text-slate-400'}`} />
                             <span className="text-xs font-bold">3. No Need</span>
-                            <span className="text-[10px] text-slate-500">Not Interested / DND</span>
+                            <span className="text-[10px] text-slate-500">Not Interested</span>
                           </button>
 
-                          {/* 4. Reminder */}
                           <button
                             type="button"
                             onClick={() => handleSelectOutcome(c.id, 'Reminder')}
@@ -273,10 +402,9 @@ export const FollowUpReminderModal = () => {
                           >
                             <CalendarClock className={`w-4 h-4 mb-1 ${activeOutcome === 'Reminder' ? 'text-amber-600' : 'text-slate-400'}`} />
                             <span className="text-xs font-bold">4. Reminder</span>
-                            <span className="text-[10px] text-slate-500">Schedule Follow-up</span>
+                            <span className="text-[10px] text-slate-500">Follow-up</span>
                           </button>
 
-                          {/* 5. Field Visit */}
                           <button
                             type="button"
                             onClick={() => handleSelectOutcome(c.id, 'Field Visit')}
@@ -288,7 +416,7 @@ export const FollowUpReminderModal = () => {
                           >
                             <MapPin className={`w-4 h-4 mb-1 ${activeOutcome === 'Field Visit' ? 'text-purple-600' : 'text-slate-400'}`} />
                             <span className="text-xs font-bold">5. Field Visit</span>
-                            <span className="text-[10px] text-slate-500">In-Person / Meeting</span>
+                            <span className="text-[10px] text-slate-500">Meeting</span>
                           </button>
                         </div>
 
@@ -401,23 +529,94 @@ export const FollowUpReminderModal = () => {
                   );
                 })}
               </div>
-            </>
-          )}
-        </div>
+            </div>
 
-        {/* Modal Footer */}
-        <div className="flex items-center justify-between bg-slate-50 px-6 py-3 border-t border-slate-200">
-          <span className="text-xs text-slate-500">
-            Open pending follow-ups anytime from the top navigation bar.
-          </span>
-          <button
-            onClick={() => setShowFollowUpModal(false)}
-            className="flex items-center gap-2 rounded-xl bg-burgundy-900 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-burgundy-800 transition"
-          >
-            <span>Proceed to Dashboard</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
+            {/* Footer: Only show Proceed/Close if NOT mandatory role */}
+            <div className="flex items-center justify-between bg-slate-50 px-6 py-3 border-t border-slate-200">
+              <span className="text-xs font-medium text-amber-800">
+                {isMandatoryRole
+                  ? `${myReminders.length} follow-up(s) remaining before closing${isPunchDueForMandatoryRole ? ' / Punch In' : ''}.`
+                  : 'Open pending follow-ups anytime from the top navigation bar.'}
+              </span>
+              {canClosePopup && (
+                <button
+                  onClick={() => setShowFollowUpModal(false)}
+                  className="flex items-center gap-2 rounded-xl bg-burgundy-900 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-burgundy-800 transition"
+                >
+                  <span>Proceed to Dashboard</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </>
+        ) : (
+          /* STEP 2: MANDATORY 24-HOUR PUNCH IN (NO CLOSE BUTTON UNTIL PUNCHED) */
+          <>
+            <div className="p-8 space-y-6 bg-[#FAF8F5]">
+              {respondedIds.length > 0 && (
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-bold text-emerald-900">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>All pending follow-ups completed! Complete Punch In to enter the CRM.</span>
+                </div>
+              )}
+
+              <div className="rounded-2xl border-2 border-burgundy-100 bg-white p-6 shadow-sm text-center space-y-4">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-burgundy-900 to-burgundy-950 text-gold-300 shadow-lg">
+                  <ShieldCheck className="w-8 h-8" />
+                </div>
+
+                <div>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-950 border border-amber-300">
+                    <Clock className="w-3 h-3" />
+                    <span>24-Hour Attendance Check</span>
+                  </span>
+                  <h3 className="text-xl font-extrabold text-slate-900 mt-2 font-corporate">
+                    Mandatory Daily Punch In
+                  </h3>
+                  <p className="text-xs text-slate-600 max-w-md mx-auto mt-1">
+                    Hello <strong>{currentUser?.name}</strong>, please register your attendance Punch In to access the workspace. This prompt appears every 24 hours.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-lg mx-auto text-xs pt-2">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Date</span>
+                    <span className="font-mono font-bold text-slate-900">{todayDisplay}</span>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Current Time</span>
+                    <span className="font-mono font-bold text-burgundy-900">{liveClockStr}</span>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Last Punch In</span>
+                    <span className="font-semibold text-slate-700">
+                      {punchStatus.lastPunch
+                        ? `${punchStatus.lastPunch.date} • ${punchStatus.lastPunch.inTime}`
+                        : 'Over 24h / None'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleMandatoryPunchIn}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 hover:from-burgundy-800 hover:to-burgundy-900 px-8 py-3.5 text-sm font-extrabold text-white shadow-xl transition active:scale-95"
+                  >
+                    <LogIn className="w-5 h-5 text-gold-300" />
+                    <span>Punch In Now</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between bg-slate-50 px-6 py-3 border-t border-slate-200">
+              <span className="text-xs font-medium text-rose-700">
+                Punch In is mandatory to continue — popup cannot be closed without punching in.
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>,
     document.body

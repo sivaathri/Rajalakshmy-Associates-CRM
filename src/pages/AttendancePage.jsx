@@ -212,17 +212,13 @@ export const AttendancePage = () => {
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider">
-            <Clock className="w-4 h-4" />
-            <span>Attendance & Leave Portal</span>
-            <span>•</span>
-            <span>Rajalakshmy Associates</span>
+            
+            
           </div>
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             {currentUser?.name} — Attendance & Leave Desk
           </h2>
-          <p className="text-xs text-white/80 max-w-xl mt-1 leading-relaxed">
-            Record your daily in-time arrival punch and manage your leave requisitions. All timestamps and history logs are maintained in <strong className="text-gold-300 font-mono">DD-MM-YYYY</strong> corporate standards.
-          </p>
+
           <div className="mt-3 inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-lg text-xs font-mono border border-white/10">
             <span>User ID: <strong>{currentUser?.id}</strong></span>
             <span>•</span>

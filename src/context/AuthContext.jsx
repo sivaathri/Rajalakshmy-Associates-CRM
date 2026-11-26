@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [loginSessionNonce, setLoginSessionNonce] = useState(0);
   const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -79,6 +80,10 @@ export const AuthProvider = ({ children }) => {
         };
       }
       setCurrentUser(employee);
+      setLoginSessionNonce(n => n + 1);
+      if (['RM', 'Sales Manager', 'Ops'].includes(employee.role)) {
+        setShowFollowUpModal(true);
+      }
       showToast(`Welcome back, ${employee.name} (${employee.role})`, 'success');
       return { success: true, user: employee };
     }
@@ -96,6 +101,10 @@ export const AuthProvider = ({ children }) => {
     );
     if (employee) {
       setCurrentUser(employee);
+      setLoginSessionNonce(n => n + 1);
+      if (['RM', 'Sales Manager', 'Ops'].includes(employee.role)) {
+        setShowFollowUpModal(true);
+      }
       showToast(`Switched view to ${employee.name} (${employee.role})`, 'info');
       return employee;
     }
@@ -106,12 +115,17 @@ export const AuthProvider = ({ children }) => {
     if (userObj) {
       const normalized = normalizeUserContact(userObj);
       setCurrentUser(normalized);
+      setLoginSessionNonce(n => n + 1);
+      if (['RM', 'Sales Manager', 'Ops'].includes(normalized.role)) {
+        setShowFollowUpModal(true);
+      }
       showToast(`Switched session to ${normalized.name} (${normalized.id} • ${normalized.role})`, 'info');
     }
   };
 
   const logout = () => {
     setCurrentUser(null);
+    setShowFollowUpModal(false);
     showToast('Logged out successfully', 'info');
   };
 
@@ -171,6 +185,7 @@ export const AuthProvider = ({ children }) => {
         canAccessRoute,
         showFollowUpModal,
         setShowFollowUpModal,
+        loginSessionNonce,
         toastMessage,
         showToast
       }}
