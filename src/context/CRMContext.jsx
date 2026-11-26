@@ -1477,6 +1477,7 @@ export const CRMProvider = ({ children }) => {
         isCustomer: true,
         customerId: custId,
         name: loginData.customerName || c.name,
+        dob: loginData.dob || c.dob,
         business: loginData.business || c.business,
         city: loginData.city || c.city
       } : c));
@@ -1488,6 +1489,7 @@ export const CRMProvider = ({ children }) => {
         customerId: custId,
         isCustomer: true,
         name: loginData.customerName || 'New Loan Client',
+        dob: loginData.dob || '',
         mobile: loginData.mobile,
         business: loginData.business || 'General Client',
         city: loginData.city || '',
@@ -1502,6 +1504,7 @@ export const CRMProvider = ({ children }) => {
       id: custId, // ID is the Customer ID! (NOT a login ID)
       customerId: custId,
       customerName: loginData.customerName,
+      dob: loginData.dob || '',
       mobile: loginData.mobile,
       business: loginData.business || 'General Business',
       city: loginData.city || '',

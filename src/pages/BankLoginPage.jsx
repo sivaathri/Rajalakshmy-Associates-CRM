@@ -59,6 +59,7 @@ export const BankLoginPage = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [sourceCustomerId, setSourceCustomerId] = useState('');
   const [customerName, setCustomerName] = useState('');
+  const [customerDob, setCustomerDob] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [customerBusiness, setCustomerBusiness] = useState('');
   const [customerCity, setCustomerCity] = useState('');
@@ -177,6 +178,7 @@ export const BankLoginPage = () => {
       setSelectedCustomerId('');
       setSourceCustomerId('');
       setCustomerName('');
+      setCustomerDob('');
       setCustomerBusiness('');
       setCustomerCity('');
       return;
@@ -197,6 +199,7 @@ export const BankLoginPage = () => {
         }
         const fetchedName = src.name || src.customerName || '';
         setCustomerName(fetchedName === 'Unknown / Lead' ? '' : fetchedName);
+        setCustomerDob(src.dob || src.dateOfBirth || '');
         setCustomerBusiness(src.business || '');
         setCustomerCity(src.city || src.location || '');
       }
@@ -340,6 +343,7 @@ export const BankLoginPage = () => {
       customerId: selectedCustomerId,
       sourceCustomerId,
       customerName: customerName.trim() || 'New Loan Client',
+      dob: customerDob,
       mobile: formattedMobile,
       business: customerBusiness.trim() || 'General Business',
       city: customerCity.trim(),
@@ -358,6 +362,7 @@ export const BankLoginPage = () => {
     setSelectedCustomerId('');
     setSourceCustomerId('');
     setCustomerName('');
+    setCustomerDob('');
     setCustomerMobile('');
     setCustomerBusiness('');
     setCustomerCity('');
@@ -446,6 +451,7 @@ export const BankLoginPage = () => {
             setSelectedCustomerId('');
             setSourceCustomerId('');
             setCustomerName('');
+            setCustomerDob('');
             setCustomerBusiness('');
             setCustomerCity('');
             setBankName('');
@@ -790,8 +796,13 @@ export const BankLoginPage = () => {
                           <Building2 className="w-3 h-3 text-slate-400" />
                           <span>{login.business} • {login.city}</span>
                         </div>
-                        <div className="text-[11px] font-mono text-slate-600 mt-0.5">
-                          {login.mobile}
+                        <div className="text-[11px] text-slate-600 flex items-center gap-2 mt-0.5">
+                          <span className="font-mono">{login.mobile}</span>
+                          {login.dob && (
+                            <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-sans">
+                              DOB: {formatDate(login.dob)}
+                            </span>
+                          )}
                         </div>
                       </td>
 
@@ -1086,6 +1097,32 @@ export const BankLoginPage = () => {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Date of Birth
+                      </label>
+                      <input
+                        type="date"
+                        value={customerDob}
+                        onChange={(e) => setCustomerDob(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Business / Enterprise
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Ramanathan Silks & Exports"
+                        value={customerBusiness}
+                        onChange={(e) => setCustomerBusiness(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
                         Location / City
                       </label>
                       <input
@@ -1096,19 +1133,6 @@ export const BankLoginPage = () => {
                         className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
                       />
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Business / Enterprise
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Ramanathan Silks & Exports"
-                      value={customerBusiness}
-                      onChange={(e) => setCustomerBusiness(e.target.value)}
-                      className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                    />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1550,7 +1574,10 @@ export const BankLoginPage = () => {
                     </div>
                   </div>
                 )}
-                <div className="text-slate-400 text-[10px] pt-0.5">Logged on: {formatDate(viewHistoryLogin.loginDate)}</div>
+                <div className="text-slate-400 text-[10px] pt-0.5 flex items-center justify-between">
+                  <span>Logged on: {formatDate(viewHistoryLogin.loginDate)}</span>
+                  {viewHistoryLogin.dob && <span>DOB: {formatDate(viewHistoryLogin.dob)}</span>}
+                </div>
               </div>
 
               <div>
