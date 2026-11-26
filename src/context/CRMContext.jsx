@@ -269,7 +269,8 @@ export const CRMProvider = ({ children }) => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.BANK_LOGINS);
       const list = saved ? JSON.parse(saved) : [];
-      return (list || []).map(b => {
+      const seenIds = new Set();
+      return (list || []).map((b, idx) => {
         let cid = b.customerId;
         if (typeof cid === 'string') {
           const match = cid.match(/^RA-CUST-(\d+)$/i);
@@ -278,7 +279,17 @@ export const CRMProvider = ({ children }) => {
             cid = `RA-CUST-${num - 1000 === 0 ? 1 : num - 1000}`;
           }
         }
-        return { ...b, customerId: cid };
+        let uniqueId = b.id || b.loginId;
+        if (!uniqueId || seenIds.has(uniqueId)) {
+          uniqueId = `${cid || 'BL'}-${(b.bankName || 'bank').replace(/\s+/g, '')}-${idx}`;
+        }
+        seenIds.add(uniqueId);
+        return {
+          ...b,
+          id: uniqueId,
+          loginId: uniqueId,
+          customerId: cid || b.customerId || b.id
+        };
       });
     } catch {
       return [];
@@ -1530,8 +1541,10 @@ export const CRMProvider = ({ children }) => {
       });
     }
 
+    const loginUniqueId = loginData.id || `${custId}-BL-${Date.now().toString().slice(-4)}`;
     const newLogin = {
-      id: custId, // ID is the Customer ID! (NOT a login ID)
+      id: loginUniqueId,
+      loginId: loginUniqueId,
       customerId: custId,
       customerName: loginData.customerName,
       dob: loginData.dob || '',
@@ -1671,7 +1684,7 @@ export const CRMProvider = ({ children }) => {
     const nextDate = addTwoDays(todayStr);
 
     setBankLogins(prev => prev.map(l => {
-      if (l.id === loginId) {
+      if (l.id === loginId || l.loginId === loginId) {
         const newUpdate = {
           id: `UPD-${Date.now().toString().slice(-4)}`,
           date: todayStr,
@@ -1694,7 +1707,7 @@ export const CRMProvider = ({ children }) => {
   // Disburse Login (Req 5: convert to Disposement with bank name, loan amount, type of loan)
   const disburseLogin = (loginId, { bankName, loanAmount, loanType, disbursementDate, remarks = '' }) => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const login = bankLogins.find(l => l.id === loginId);
+    const login = bankLogins.find(l => l.id === loginId || l.loginId === loginId);
     if (!login) return;
 
     const disburseData = {
@@ -1716,7 +1729,7 @@ export const CRMProvider = ({ children }) => {
       : `₹ ${disburseData.loanAmount}`;
 
     setBankLogins(prev => prev.map(l => {
-      if (l.id === loginId) {
+      if (l.id === loginId || l.loginId === loginId) {
         const disburseUpdate = {
           id: `UPD-${Date.now().toString().slice(-4)}`,
           date: todayStr,
@@ -1750,7 +1763,7 @@ export const CRMProvider = ({ children }) => {
   const rejectLogin = (loginId, { remarks }) => {
     const todayStr = new Date().toISOString().split('T')[0];
     setBankLogins(prev => prev.map(l => {
-      if (l.id === loginId) {
+      if (l.id === loginId || l.loginId === loginId) {
         const rejectUpdate = {
           id: `UPD-${Date.now().toString().slice(-4)}`,
           date: todayStr,

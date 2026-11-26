@@ -442,10 +442,36 @@ export const BankLoginPage = () => {
   }, 0);
   const rejectedCount = scopedBankLogins.filter(b => b.status === 'Rejected').length;
 
-  const paginatedLogins = useMemo(() => {
+  // Group bank logins by customer so that an existing customer is ONE single record in the table
+  const groupedCustomerLogins = useMemo(() => {
+    const map = new Map();
+
+    filteredLogins.forEach(login => {
+      const custKey = clean10Digits(login.mobile) || login.customerId || login.id;
+      if (!map.has(custKey)) {
+        map.set(custKey, {
+          key: custKey,
+          customerId: login.customerId || login.id,
+          customerName: login.customerName,
+          mobile: login.mobile,
+          business: login.business,
+          city: login.city,
+          dob: login.dob,
+          assignedRMId: login.assignedRMId,
+          assignedRMName: login.assignedRMName,
+          logins: []
+        });
+      }
+      map.get(custKey).logins.push(login);
+    });
+
+    return Array.from(map.values());
+  }, [filteredLogins]);
+
+  const paginatedCustomerRecords = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return filteredLogins.slice(start, start + itemsPerPage);
-  }, [filteredLogins, currentPage, itemsPerPage]);
+    return groupedCustomerLogins.slice(start, start + itemsPerPage);
+  }, [groupedCustomerLogins, currentPage, itemsPerPage]);
 
   // Add Login Handler
   const handleCreateLogin = (e) => {
@@ -937,227 +963,249 @@ export const BankLoginPage = () => {
                 <th className="px-4 py-3 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredLogins.length === 0 ? (
+            {groupedCustomerLogins.length === 0 ? (
+              <tbody className="divide-y divide-slate-100">
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-400 italic">
                     No bank login records found matching criteria.
                   </td>
                 </tr>
-              ) : (
-                paginatedLogins.map(login => {
-                  const isDue = is2DayUpdateDue(login);
-                  const lastUpdate = login.updates?.[0];
-                  const cDigits = clean10Digits(login.mobile);
-                  const loginCount = customerLoginsCountMap[cDigits] || 1;
+              </tbody>
+            ) : (
+              paginatedCustomerRecords.map(customerGroup => {
+                const totalLogins = customerLoginsCountMap[clean10Digits(customerGroup.mobile)] || customerGroup.logins.length;
+                const loginsList = customerGroup.logins;
+                const rowCount = loginsList.length;
 
-                  return (
-                    <tr key={login.id} className={`hover:bg-slate-50/80 transition ${
-                      isDue ? 'bg-amber-50/30' : ''
-                    }`}>
-                      {/* Customer ID & Date */}
-                      <td className="px-4 py-3">
-                        <span className="font-mono font-bold text-burgundy-900 block">{formatDisplayCustomerId(login.customerId || login.id)}</span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">Logged: {formatDate(login.loginDate)}</span>
-                      </td>
+                return (
+                  <tbody key={customerGroup.key} className="border-b border-slate-200 divide-y divide-slate-100 hover:bg-slate-50/40 transition">
+                    {loginsList.map((login, idx) => {
+                      const isDue = is2DayUpdateDue(login);
+                      const lastUpdate = login.updates?.[0];
+                      const isFirstRow = idx === 0;
 
-                      {/* Customer Info (Req 6: All are customers) */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => setViewHistoryLogin(login)}
-                            className="font-bold text-slate-900 hover:text-burgundy-900 hover:underline text-left cursor-pointer transition"
-                            title="Click to view customer & file profile"
-                          >
-                            {login.customerName}
-                          </button>
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-burgundy-50 text-burgundy-900 border border-burgundy-200" title={`This customer has ${loginCount} bank file${loginCount > 1 ? 's' : ''} logged`}>
-                            {loginCount} {loginCount === 1 ? 'Login' : 'Logins'}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                          <Building2 className="w-3 h-3 text-slate-400" />
-                          <span>{login.business} • {login.city}</span>
-                        </div>
-                        <div className="text-[11px] text-slate-600 flex items-center gap-2 mt-0.5">
-                          <span className="font-mono">{login.mobile}</span>
-                          {login.dob && (
-                            <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-sans">
-                              DOB: {formatDate(login.dob)}
-                            </span>
+                      return (
+                        <tr
+                          key={login.id || `${customerGroup.key}_${login.bankName}_${idx}`}
+                          className={`transition ${isDue ? 'bg-amber-50/30' : ''}`}
+                        >
+                          {/* Customer ID & Customer Info (Render ONCE per customer spanning all bank logins) */}
+                          {isFirstRow && (
+                            <>
+                              {/* Customer ID & Date */}
+                              <td rowSpan={rowCount} className="px-4 py-3 align-top border-r border-slate-100/80">
+                                <span className="font-mono font-bold text-burgundy-900 block text-xs">
+                                  {formatDisplayCustomerId(customerGroup.customerId)}
+                                </span>
+                                <span className="text-[10px] text-slate-400 block mt-0.5">
+                                  Logged: {formatDate(login.loginDate)}
+                                </span>
+                              </td>
+
+                              {/* Customer Info (CRM) */}
+                              <td rowSpan={rowCount} className="px-4 py-3 align-top border-r border-slate-100/80">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => setViewHistoryLogin(login)}
+                                    className="font-bold text-slate-900 hover:text-burgundy-900 hover:underline text-left cursor-pointer transition"
+                                    title="Click to view customer & file profile"
+                                  >
+                                    {customerGroup.customerName}
+                                  </button>
+                                  <span
+                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-burgundy-50 text-burgundy-900 border border-burgundy-200"
+                                    title={`This customer has ${totalLogins} bank file${totalLogins > 1 ? 's' : ''} logged`}
+                                  >
+                                    {totalLogins} {totalLogins === 1 ? 'Login' : 'Logins'}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                                  <Building2 className="w-3 h-3 text-slate-400" />
+                                  <span>{customerGroup.business} • {customerGroup.city}</span>
+                                </div>
+                                <div className="text-[11px] text-slate-600 flex items-center gap-2 mt-0.5">
+                                  <span className="font-mono">{customerGroup.mobile}</span>
+                                  {customerGroup.dob && (
+                                    <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-sans">
+                                      DOB: {formatDate(customerGroup.dob)}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                            </>
                           )}
-                        </div>
-                      </td>
 
-                      {/* Bank & Loan Value */}
-                      <td className="px-4 py-3">
-                        <div className="font-bold text-slate-800">{login.bankName}</div>
-                        {login.bankId && (
-                          <div className="text-[10px] font-mono text-slate-500">Bank ID: {login.bankId}</div>
-                        )}
-                        <div className="text-xs font-bold text-burgundy-900 mt-0.5">
-                          {renderLoanAmount(login.loanAmount)}
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">
-                          {login.loanType}
-                          {login.interestRate && <span className="text-amber-800 font-semibold ml-1.5">• ROI: {login.interestRate}</span>}
-                        </div>
-                      </td>
-
-                      {/* 2-Day Reminder & Status Update (Req 4) */}
-                      <td className="px-4 py-3">
-                        {login.status === 'In Progress' ? (
-                          <div>
-                            {isDue ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
-                                <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                <span>2-Day Update Due! ({login.nextFollowUpDate})</span>
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-slate-600 flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-slate-400" />
-                                <span>Next Due: {formatDate(login.nextFollowUpDate)}</span>
-                              </span>
+                          {/* Bank & Loan Value */}
+                          <td className="px-4 py-3 align-top">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {rowCount > 1 && (
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-burgundy-900 bg-burgundy-50 px-1.5 py-0.2 rounded border border-burgundy-200">
+                                  File #{idx + 1}
+                                </span>
+                              )}
+                              <span className="font-bold text-slate-800">{login.bankName}</span>
+                            </div>
+                            {login.bankId && (
+                              <div className="text-[10px] font-mono text-slate-500 mt-0.5">Bank ID: {login.bankId}</div>
                             )}
+                            <div className="text-xs font-bold text-burgundy-900 mt-0.5">
+                              {renderLoanAmount(login.loanAmount)}
+                            </div>
+                            <div className="text-[10px] text-slate-500 mt-0.5">
+                              {login.loanType}
+                              {login.interestRate && <span className="text-amber-800 font-semibold ml-1.5">• ROI: {login.interestRate}</span>}
+                            </div>
+                          </td>
 
-                            {lastUpdate && (
-                              <div className="text-[10px] text-slate-500 italic mt-1 line-clamp-1 max-w-xs" title={lastUpdate.note}>
-                                Last ({formatDate(lastUpdate.date)}): "{lastUpdate.note}"
+                          {/* 2-Day Reminder & Updates */}
+                          <td className="px-4 py-3 align-top">
+                            {login.status === 'In Progress' ? (
+                              <div>
+                                {isDue ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                                    <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                    <span>2-Day Update Due! ({login.nextFollowUpDate})</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] text-slate-600 flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-slate-400" />
+                                    <span>Next Due: {formatDate(login.nextFollowUpDate)}</span>
+                                  </span>
+                                )}
+
+                                {lastUpdate && (
+                                  <div className="text-[10px] text-slate-500 italic mt-1 line-clamp-1 max-w-xs" title={lastUpdate.note}>
+                                    Last ({formatDate(lastUpdate.date)}): "{lastUpdate.note}"
+                                  </div>
+                                )}
+                              </div>
+                            ) : login.status === 'Disbursed' ? (
+                              <div className="text-[11px] text-emerald-800 font-semibold">
+                                Disbursed: {renderLoanAmount(login.disbursementDetails?.loanAmount)} ({login.disbursementDetails?.bankName})
+                              </div>
+                            ) : (
+                              <div className="text-[11px] text-rose-800 italic line-clamp-1 max-w-xs" title={login.rejectionRemarks}>
+                                Reason: {login.rejectionRemarks || 'Declined by bank'}
                               </div>
                             )}
-                          </div>
-                        ) : login.status === 'Disbursed' ? (
-                          <div className="text-[11px] text-emerald-800 font-semibold">
-                            Disbursed: {renderLoanAmount(login.disbursementDetails?.loanAmount)} ({login.disbursementDetails?.bankName})
-                          </div>
-                        ) : (
-                          <div className="text-[11px] text-rose-800 italic line-clamp-1 max-w-xs" title={login.rejectionRemarks}>
-                            Reason: {login.rejectionRemarks || 'Declined by bank'}
-                          </div>
-                        )}
-                      </td>
+                          </td>
 
-                      {/* File Status */}
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                          login.status === 'Disbursed'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-500/20'
-                            : login.status === 'Rejected'
-                            ? 'bg-rose-50 text-rose-800 border-rose-300 ring-1 ring-rose-500/20'
-                            : 'bg-blue-50 text-blue-800 border-blue-300 ring-1 ring-blue-500/20'
-                        }`}>
-                          {login.status === 'Disbursed' ? '✓ Disbursed' : login.status}
-                        </span>
-                        <div className="text-[10px] text-slate-400 mt-1">
-                          {login.assignedToRole === 'Sales Manager' ? 'Sales Manager' : 'RM'}: {login.assignedRMName}
-                        </div>
-                      </td>
-
-                      {/* Disburse / Reject Column */}
-                      <td className="px-4 py-3 text-center">
-                        <div className="inline-flex items-center justify-center gap-1.5 flex-nowrap">
-                          {login.status === 'In Progress' ? (
-                            <>
-                              {/* Disburse Button */}
-                              <button
-                                type="button"
-                                onClick={() => handleOpenDisburseModal(login)}
-                                className="h-7 px-2.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold transition flex items-center gap-1.5 shadow-2xs"
-                                title="Convert file to Disbursement"
-                              >
-                                <Check className="w-3.5 h-3.5 text-emerald-700" />
-                                <span>Disburse</span>
-                              </button>
-
-                              {/* Reject Button */}
-                              <button
-                                type="button"
-                                onClick={() => handleOpenRejectModal(login)}
-                                className="h-7 px-2.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-semibold transition flex items-center gap-1.5 shadow-2xs"
-                                title="Mark Rejected by Bank with remarks"
-                              >
-                                <X className="w-3.5 h-3.5 text-rose-600" />
-                                <span>Reject</span>
-                              </button>
-                            </>
-                          ) : login.status === 'Disbursed' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Disbursed</span>
+                          {/* File Status */}
+                          <td className="px-4 py-3 align-top">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              login.status === 'Disbursed'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-500/20'
+                                : login.status === 'Rejected'
+                                ? 'bg-rose-50 text-rose-800 border-rose-300 ring-1 ring-rose-500/20'
+                                : 'bg-blue-50 text-blue-800 border-blue-300 ring-1 ring-blue-500/20'
+                            }`}>
+                              {login.status === 'Disbursed' ? '✓ Disbursed' : login.status}
                             </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
-                              <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                              <span>Rejected</span>
-                            </span>
-                          )}
-                        </div>
-                      </td>
+                            <div className="text-[10px] text-slate-400 mt-1">
+                              {login.assignedToRole === 'Sales Manager' ? 'Sales Manager' : 'RM'}: {login.assignedRMName}
+                            </div>
+                          </td>
 
-                      {/* Actions (Routine Update & View) */}
-                      <td className="px-4 py-3 text-center">
-                        <div className="inline-flex items-center justify-center gap-1.5 flex-nowrap">
-                          {login.status === 'In Progress' ? (
-                            <>
-                              {/* 1. Daily 2-Day Routine Update */}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setUpdatingLogin(login);
-                                  setTodayUpdateNote('');
-                                }}
-                                className={`h-7 px-2.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 ${
-                                  isDue
-                                    ? 'bg-amber-500 hover:bg-amber-600 text-amber-950 ring-1 ring-amber-600/30 shadow-xs animate-pulse'
-                                    : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs'
-                                }`}
-                                title="Add Today's Update / Next Action (2-day cycle)"
-                              >
-                                <Clock className={`w-3.5 h-3.5 ${isDue ? 'text-amber-950' : 'text-slate-500'}`} />
-                                <span>{isDue ? 'Update Due!' : 'Update'}</span>
-                              </button>
+                          {/* Disburse / Reject Column */}
+                          <td className="px-4 py-3 text-center align-top">
+                            <div className="inline-flex items-center justify-center gap-1.5 flex-nowrap">
+                              {login.status === 'In Progress' ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenDisburseModal(login)}
+                                    className="h-7 px-2.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold transition flex items-center gap-1.5 shadow-2xs"
+                                    title="Convert file to Disbursement"
+                                  >
+                                    <Check className="w-3.5 h-3.5 text-emerald-700" />
+                                    <span>Disburse</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenRejectModal(login)}
+                                    className="h-7 px-2.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-semibold transition flex items-center gap-1.5 shadow-2xs"
+                                    title="Mark Rejected by Bank with remarks"
+                                  >
+                                    <X className="w-3.5 h-3.5 text-rose-600" />
+                                    <span>Reject</span>
+                                  </button>
+                                </>
+                              ) : login.status === 'Disbursed' ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Disbursed</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                                  <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                                  <span>Rejected</span>
+                                </span>
+                              )}
+                            </div>
+                          </td>
 
-                              {/* 2. View Customer & Bank Details */}
-                              <button
-                                type="button"
-                                onClick={() => setViewHistoryLogin(login)}
-                                className="h-7 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold transition flex items-center gap-1.5 shadow-2xs"
-                                title="View Complete Customer Dossier & File Details"
-                              >
-                                <Eye className="w-3.5 h-3.5 text-slate-500" />
-                                <span>View</span>
-                              </button>
-                            </>
-                          ) : (
-                            /* Completed / Archived Files */
-                            <button
-                              type="button"
-                              onClick={() => setViewHistoryLogin(login)}
-                              className="h-7 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold transition flex items-center gap-1.5 shadow-2xs"
-                              title="View File Details & Follow-up Timeline"
-                            >
-                              <Eye className="w-3.5 h-3.5 text-slate-500" />
-                              <span>View Details</span>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
+                          {/* Actions Column */}
+                          <td className="px-4 py-3 text-center align-top">
+                            <div className="inline-flex items-center justify-center gap-1.5 flex-nowrap">
+                              {login.status === 'In Progress' ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setUpdatingLogin(login);
+                                      setTodayUpdateNote('');
+                                    }}
+                                    className={`h-7 px-2.5 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 ${
+                                      isDue
+                                        ? 'bg-amber-500 hover:bg-amber-600 text-amber-950 ring-1 ring-amber-600/30 shadow-xs animate-pulse'
+                                        : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs'
+                                    }`}
+                                    title="Add Today's Update / Next Action (2-day cycle)"
+                                  >
+                                    <Clock className={`w-3.5 h-3.5 ${isDue ? 'text-amber-950' : 'text-slate-500'}`} />
+                                    <span>{isDue ? 'Update Due!' : 'Update'}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setViewHistoryLogin(login)}
+                                    className="h-7 px-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold transition flex items-center gap-1.5 shadow-2xs"
+                                    title="View Customer & Bank File Profile"
+                                  >
+                                    <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>View</span>
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setViewHistoryLogin(login)}
+                                  className="h-7 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold transition flex items-center gap-1.5 shadow-2xs"
+                                  title="View File Details & Follow-up Timeline"
+                                >
+                                  <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                  <span>View Details</span>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                );
+              })
+            )}
           </table>
         </div>
 
         {/* Reusable Pagination */}
         <Pagination
           currentPage={currentPage}
-          totalItems={filteredLogins.length}
+          totalItems={groupedCustomerLogins.length}
           itemsPerPage={itemsPerPage}
           onPageChange={setCurrentPage}
-          summaryLabel="bank files"
+          summaryLabel="customer records"
         />
       </div>
 
