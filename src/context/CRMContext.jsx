@@ -1549,6 +1549,12 @@ export const CRMProvider = ({ children }) => {
       status: 'In Progress',
       assignedRMId: loginData.assignedRMId || currentUser?.id || 'EMP004',
       assignedRMName: loginData.assignedRMName || currentUser?.name || 'Ananya Subramanian',
+      assignedToRole: loginData.assignedToRole || currentUser?.role || 'RM',
+      createdBy: loginData.createdBy || currentUser?.id || 'EMP004',
+      createdByName: loginData.createdByName || currentUser?.name || 'Ananya Subramanian',
+      createdByRole: loginData.createdByRole || currentUser?.role || 'RM',
+      submittedBy: loginData.submittedBy || currentUser?.id || 'EMP004',
+      submittedByName: loginData.submittedByName || currentUser?.name || 'Ananya Subramanian',
       updates: [
         {
           id: `UPD-${Date.now().toString().slice(-4)}`,
@@ -1636,6 +1642,12 @@ export const CRMProvider = ({ children }) => {
       loginDate: loginData.loginDate || new Date().toISOString().split('T')[0],
       assignedRMId: targetAssigneeId,
       assignedRMName: targetAssigneeName,
+      assignedToRole: targetAssigneeRole,
+      createdBy: currentUser?.id || lead.assignedBy || 'EMP004',
+      createdByName: currentUser?.name || lead.assignedByName || 'Ananya Subramanian',
+      createdByRole: currentUser?.role || 'RM',
+      submittedBy: currentUser?.id || 'EMP004',
+      submittedByName: currentUser?.name || 'Ananya Subramanian',
       notes: loginData.notes || `Converted from Lead #${lead.id}`
     });
 

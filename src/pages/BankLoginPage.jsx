@@ -28,13 +28,14 @@ import {
 import { formatCurrency, formatDate } from '../utils/formatters';
 
 export const BankLoginPage = () => {
-  const { bankLogins, addBankLogin, addLoginUpdate, disburseLogin, rejectLogin, customers, activities = [], leads = [] } = useCRM();
+  const { bankLogins, addBankLogin, addLoginUpdate, disburseLogin, rejectLogin, customers, activities = [], leads = [], employees = [] } = useCRM();
   const { currentUser, showToast } = useAuth();
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [bankFilter, setBankFilter] = useState('All');
+  const [executiveFilter, setExecutiveFilter] = useState('All');
   const [onlyDueReminders, setOnlyDueReminders] = useState(false);
   const [dateRangeType, setDateRangeType] = useState('all'); // 'all' | 'today' | 'week' | 'month' | 'custom'
   const [customStartDate, setCustomStartDate] = useState('');
@@ -46,7 +47,7 @@ export const BankLoginPage = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, bankFilter, onlyDueReminders, dateRangeType, customStartDate, customEndDate]);
+  }, [searchTerm, statusFilter, bankFilter, executiveFilter, onlyDueReminders, dateRangeType, customStartDate, customEndDate, currentUser?.id]);
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -89,24 +90,61 @@ export const BankLoginPage = () => {
   const enteredDigits = String(customerMobile || '').replace(/\D/g, '');
   const entered10 = enteredDigits.length >= 10 ? enteredDigits.slice(-10) : '';
 
+  const isAdminOrManager = currentUser?.role === 'Admin' || currentUser?.role === 'Manager' || currentUser?.role === 'Managing Director';
+
+  // Base accessible bank logins strictly scoped by user & role
+  // Non-admin roles (RM, Sales Manager, Ops, etc.) ONLY see files assigned to or created/submitted by them.
+  const scopedBankLogins = useMemo(() => {
+    if (!currentUser) return [];
+
+    if (isAdminOrManager) {
+      if (executiveFilter && executiveFilter !== 'All') {
+        return bankLogins.filter(b =>
+          b.assignedRMId === executiveFilter ||
+          b.assignedRMName === executiveFilter ||
+          b.createdBy === executiveFilter ||
+          b.submittedBy === executiveFilter
+        );
+      }
+      return bankLogins;
+    }
+
+    // For RM, Sales Manager, and all other non-admin roles:
+    return bankLogins.filter(b => {
+      const matchId = (
+        (b.assignedRMId && b.assignedRMId === currentUser.id) ||
+        (b.createdBy && b.createdBy === currentUser.id) ||
+        (b.submittedBy && b.submittedBy === currentUser.id)
+      );
+      const matchName = (
+        currentUser.name && (
+          (b.assignedRMName && b.assignedRMName.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) ||
+          (b.createdByName && b.createdByName.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) ||
+          (b.submittedByName && b.submittedByName.trim().toLowerCase() === currentUser.name.trim().toLowerCase())
+        )
+      );
+      return matchId || matchName;
+    });
+  }, [bankLogins, currentUser, isAdminOrManager, executiveFilter]);
+
   // Count of bank logins per customer mobile
   const customerLoginsCountMap = useMemo(() => {
     const map = {};
-    bankLogins.forEach(b => {
+    scopedBankLogins.forEach(b => {
       const d = clean10Digits(b.mobile);
       if (d) {
         map[d] = (map[d] || 0) + 1;
       }
     });
     return map;
-  }, [bankLogins]);
+  }, [scopedBankLogins]);
 
   // All bank logins for customer currently viewed in Modal 5 (Eye icon)
   const viewCustomerAllLogins = useMemo(() => {
     if (!viewHistoryLogin?.mobile) return [];
     const d = clean10Digits(viewHistoryLogin.mobile);
-    return bankLogins.filter(b => clean10Digits(b.mobile) === d);
-  }, [viewHistoryLogin, bankLogins]);
+    return scopedBankLogins.filter(b => clean10Digits(b.mobile) === d);
+  }, [viewHistoryLogin, scopedBankLogins]);
 
   // Handler: Open Add Bank Login modal pre-filled for an existing customer
   const handleOpenAddModalForCustomer = (cust) => {
@@ -332,7 +370,7 @@ export const BankLoginPage = () => {
 
   // Filtered dataset
   const filteredLogins = useMemo(() => {
-    return bankLogins.filter(item => {
+    return scopedBankLogins.filter(item => {
       // 2-Day Due toggle
       if (onlyDueReminders && !is2DayUpdateDue(item)) {
         return false;
@@ -379,28 +417,28 @@ export const BankLoginPage = () => {
 
       return true;
     });
-  }, [bankLogins, onlyDueReminders, statusFilter, bankFilter, dateRangeType, customStartDate, customEndDate, searchTerm, todayStr]);
+  }, [scopedBankLogins, onlyDueReminders, statusFilter, bankFilter, dateRangeType, customStartDate, customEndDate, searchTerm, todayStr]);
 
   // Distinct banks list for filter
   const distinctBanks = useMemo(() => {
     const set = new Set();
-    bankLogins.forEach(b => {
+    scopedBankLogins.forEach(b => {
       if (b.bankName) set.add(b.bankName);
     });
     return Array.from(set);
-  }, [bankLogins]);
+  }, [scopedBankLogins]);
 
-  // Aggregate Metrics
-  const totalLoginsCount = bankLogins.length;
-  const inProgressCount = bankLogins.filter(b => b.status === 'In Progress').length;
-  const updatesDueCount = bankLogins.filter(is2DayUpdateDue).length;
-  const disbursedLogins = bankLogins.filter(b => b.status === 'Disbursed');
+  // Aggregate Metrics (strictly scoped to logged-in user / role)
+  const totalLoginsCount = scopedBankLogins.length;
+  const inProgressCount = scopedBankLogins.filter(b => b.status === 'In Progress').length;
+  const updatesDueCount = scopedBankLogins.filter(is2DayUpdateDue).length;
+  const disbursedLogins = scopedBankLogins.filter(b => b.status === 'Disbursed');
   const disbursedVolume = disbursedLogins.reduce((sum, b) => {
     const raw = b.disbursementDetails?.loanAmount ?? b.loanAmount ?? 0;
     const num = typeof raw === 'number' ? raw : Number(String(raw).replace(/[^\d.-]/g, '')) || 0;
     return sum + num;
   }, 0);
-  const rejectedCount = bankLogins.filter(b => b.status === 'Rejected').length;
+  const rejectedCount = scopedBankLogins.filter(b => b.status === 'Rejected').length;
 
   const paginatedLogins = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -446,7 +484,15 @@ export const BankLoginPage = () => {
       loanType,
       loanAmount: loanAmount.trim(),
       loginDate,
-      notes: initialNotes.trim() || `Submitted file to ${bankName}`
+      notes: initialNotes.trim() || `Submitted file to ${bankName}`,
+      assignedRMId: currentUser?.id || 'EMP004',
+      assignedRMName: currentUser?.name || 'Ananya Subramanian',
+      assignedToRole: currentUser?.role || 'RM',
+      createdBy: currentUser?.id || 'EMP004',
+      createdByName: currentUser?.name || 'Ananya Subramanian',
+      createdByRole: currentUser?.role || 'RM',
+      submittedBy: currentUser?.id || 'EMP004',
+      submittedByName: currentUser?.name || 'Ananya Subramanian'
     });
 
     // Reset
@@ -535,7 +581,18 @@ export const BankLoginPage = () => {
   return (
     <div className="space-y-6">
       {/* Action Bar */}
-      <div className="flex flex-wrap items-center justify-end gap-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-bold text-slate-700">Bank Files Console:</span>
+          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-burgundy-50 text-burgundy-900 border border-burgundy-200">
+            {currentUser?.name || 'User'} ({currentUser?.role || 'RM'})
+          </span>
+          {!isAdminOrManager && (
+            <span className="text-[11px] text-slate-500 hidden sm:inline">
+              • Showing only your personal assigned & logged files
+            </span>
+          )}
+        </div>
         <button
           onClick={() => {
             setCustomerMobile('');
@@ -608,7 +665,7 @@ export const BankLoginPage = () => {
 
       {/* Filter and Search Bar */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${isAdminOrManager ? 'lg:grid-cols-6' : 'lg:grid-cols-5'} gap-3`}>
           {/* Universal Search */}
           <div className="relative">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
@@ -620,6 +677,26 @@ export const BankLoginPage = () => {
               className="w-full text-xs rounded-xl border border-slate-300 py-2 pl-9 pr-3 focus:outline-none focus:border-burgundy-800"
             />
           </div>
+
+          {/* Executive / RM Filter (Visible to Admin & Manager) */}
+          {isAdminOrManager && (
+            <div>
+              <select
+                value={executiveFilter}
+                onChange={(e) => setExecutiveFilter(e.target.value)}
+                className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800 bg-white"
+              >
+                <option value="All">All Executives / RMs</option>
+                {employees
+                  .filter(emp => emp.status !== 'Inactive')
+                  .map(emp => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} ({emp.role})
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
 
           {/* Status Filter */}
           <div>
@@ -971,7 +1048,7 @@ export const BankLoginPage = () => {
                           {login.status === 'Disbursed' ? '✓ Disbursed' : login.status}
                         </span>
                         <div className="text-[10px] text-slate-400 mt-1">
-                          RM: {login.assignedRMName}
+                          {login.assignedToRole === 'Sales Manager' ? 'Sales Manager' : 'RM'}: {login.assignedRMName}
                         </div>
                       </td>
 
