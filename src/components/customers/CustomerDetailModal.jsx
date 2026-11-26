@@ -16,9 +16,11 @@ import {
   Clock,
   CheckCircle,
   Briefcase,
-  Upload
+  Upload,
+  History
 } from 'lucide-react';
 import { formatDate, getStatusBadgeClass, formatMobileNumber } from '../../utils/formatters';
+import { NumberLifecycleModal } from '../common/NumberLifecycleModal';
 
 export const CustomerDetailModal = ({ customer, onClose }) => {
   const {
@@ -42,6 +44,7 @@ export const CustomerDetailModal = ({ customer, onClose }) => {
   const [serviceName, setServiceName] = useState('');
   const [serviceDetails, setServiceDetails] = useState('');
   const [serviceRemarks, setServiceRemarks] = useState('');
+  const [showLifecycleModal, setShowLifecycleModal] = useState(false);
 
   if (!customer) return null;
 
@@ -494,7 +497,16 @@ export const CustomerDetailModal = ({ customer, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end bg-slate-50 px-6 py-3 border-t border-slate-200">
+        <div className="flex items-center justify-between bg-slate-50 px-6 py-3 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={() => setShowLifecycleModal(true)}
+            className="rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-300 px-4 py-2 text-xs font-bold text-amber-950 transition flex items-center gap-1.5"
+          >
+            <History className="w-3.5 h-3.5 text-amber-900" />
+            <span>Full Lifecycle & Audit Trail</span>
+          </button>
+
           <button
             onClick={onClose}
             className="rounded-xl bg-slate-200 hover:bg-slate-300 px-5 py-2 text-xs font-semibold text-slate-800 transition"
@@ -503,6 +515,11 @@ export const CustomerDetailModal = ({ customer, onClose }) => {
           </button>
         </div>
       </div>
+
+      <NumberLifecycleModal
+        target={showLifecycleModal ? customer : null}
+        onClose={() => setShowLifecycleModal(false)}
+      />
     </div>,
     document.body
   );

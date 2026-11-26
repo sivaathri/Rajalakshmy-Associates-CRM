@@ -13,10 +13,12 @@ import {
   Building,
   Layers,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  History
 } from 'lucide-react';
 import { DailyActivityForm } from '../components/dailyActivities/DailyActivityForm';
 import { Pagination } from '../components/common/Pagination';
+import { NumberLifecycleModal } from '../components/common/NumberLifecycleModal';
 import { formatDate, exportToCSV, formatMobileNumber } from '../utils/formatters';
 
 export const DailyActivitiesPage = () => {
@@ -26,6 +28,7 @@ export const DailyActivitiesPage = () => {
   const isSalesManager = currentUser?.role === 'Sales Manager';
 
   const [activeTab, setActiveTab] = useState('form'); // 'form' | 'excel' | 'reports'
+  const [trackingActivity, setTrackingActivity] = useState(null);
 
   // Reports Filter state: default to 'all' so users immediately see all contacts they have added!
   const [selectedEmp, setSelectedEmp] = useState(isSalesManager ? (currentUser?.id || 'EMP005') : 'All');
@@ -316,12 +319,13 @@ export const DailyActivitiesPage = () => {
                     <th className="px-4 py-3">Submitted By</th>
                     <th className="px-4 py-3">Date & Time</th>
                     <th className="px-4 py-3">Database Target</th>
+                    <th className="px-4 py-3 text-center">Track</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {paginatedActivities.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="px-4 py-8 text-center text-xs text-slate-400 italic">
+                      <td colSpan="9" className="px-4 py-8 text-center text-xs text-slate-400 italic">
                         No field submission records found matching your filters.
                       </td>
                     </tr>
@@ -366,6 +370,17 @@ export const DailyActivitiesPage = () => {
                               {act.classifiedTo}
                             </span>
                           </td>
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => setTrackingActivity(act)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-slate-600 hover:text-amber-900 text-[11px] font-semibold transition shadow-2xs"
+                              title="Track Full Number Lifecycle & Audit Trail"
+                            >
+                              <History className="w-3.5 h-3.5" />
+                              <span>Track</span>
+                            </button>
+                          </td>
                         </tr>
                       );
                     })
@@ -385,6 +400,12 @@ export const DailyActivitiesPage = () => {
           </div>
         </div>
       )}
+
+      {/* Full Number Lifecycle & Audit Trail Modal */}
+      <NumberLifecycleModal
+        target={trackingActivity}
+        onClose={() => setTrackingActivity(null)}
+      />
     </div>
   );
 };

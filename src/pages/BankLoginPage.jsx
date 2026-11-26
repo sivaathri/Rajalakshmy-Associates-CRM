@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from '../components/common/Pagination';
+import { NumberLifecycleModal } from '../components/common/NumberLifecycleModal';
 import {
   FileCheck,
   Building2,
@@ -56,6 +57,7 @@ export const BankLoginPage = () => {
   const [disbursingLogin, setDisbursingLogin] = useState(null);
   const [rejectingLogin, setRejectingLogin] = useState(null);
   const [viewHistoryLogin, setViewHistoryLogin] = useState(null);
+  const [trackingLogin, setTrackingLogin] = useState(null);
 
   // Add Form State
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
@@ -1192,6 +1194,14 @@ export const BankLoginPage = () => {
                                   <span>View Details</span>
                                 </button>
                               )}
+                              <button
+                                type="button"
+                                onClick={() => setTrackingLogin(login)}
+                                className="h-7 px-2 rounded-lg border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-slate-600 hover:text-amber-900 text-[11px] font-semibold transition flex items-center gap-1 shadow-2xs"
+                                title="Track Complete Number Lifecycle & Audit Trail"
+                              >
+                                <History className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -2089,6 +2099,18 @@ export const BankLoginPage = () => {
                       <span className="text-emerald-700 text-[10px] font-semibold uppercase block">Disbursement Date</span>
                       <span className="font-semibold text-emerald-900">{formatDate(viewHistoryLogin.disbursementDetails.disbursementDate)}</span>
                     </div>
+                    {viewHistoryLogin.disbursementDetails.disbursedByName && (
+                      <div>
+                        <span className="text-emerald-700 text-[10px] font-semibold uppercase block">Disbursed By</span>
+                        <span className="font-semibold text-emerald-950">
+                          {viewHistoryLogin.disbursementDetails.disbursedByName}
+                          {viewHistoryLogin.disbursementDetails.disbursedByRole ? ` (${viewHistoryLogin.disbursementDetails.disbursedByRole})` : ''}
+                        </span>
+                        {viewHistoryLogin.disbursementDetails.disbursedTime && (
+                          <span className="text-[10px] text-emerald-700 block">at {viewHistoryLogin.disbursementDetails.disbursedTime}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   {viewHistoryLogin.disbursementDetails.remarks && (
                     <div className="text-[11px] text-emerald-800 bg-white/70 p-2 rounded-xl border border-emerald-200/60 mt-1">
@@ -2101,12 +2123,21 @@ export const BankLoginPage = () => {
               {/* Rejection Remarks (if Rejected) */}
               {viewHistoryLogin.rejectionRemarks && (
                 <div className="p-4 bg-rose-50/90 rounded-2xl border border-rose-200 text-xs space-y-1.5">
-                  <div className="font-bold text-rose-950 flex items-center gap-1.5 text-xs">
-                    <XCircle className="w-4 h-4 text-rose-600" />
-                    <span>File Rejection Details</span>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="font-bold text-rose-950 flex items-center gap-1.5 text-xs">
+                      <XCircle className="w-4 h-4 text-rose-600" />
+                      <span>File Rejection Details</span>
+                    </div>
+                    {(viewHistoryLogin.rejectedByName || viewHistoryLogin.rejectedDate) && (
+                      <span className="text-[10px] font-semibold text-rose-800 bg-white/80 px-2 py-0.5 rounded-full border border-rose-200">
+                        {viewHistoryLogin.rejectedByName ? `By ${viewHistoryLogin.rejectedByName}${viewHistoryLogin.rejectedByRole ? ` (${viewHistoryLogin.rejectedByRole})` : ''}` : 'Rejected'}
+                        {viewHistoryLogin.rejectedDate ? ` • ${formatDate(viewHistoryLogin.rejectedDate)}` : ''}
+                        {viewHistoryLogin.rejectedTime ? ` at ${viewHistoryLogin.rejectedTime}` : ''}
+                      </span>
+                    )}
                   </div>
                   <div className="text-rose-900 bg-white/70 p-2.5 rounded-xl border border-rose-200/60 text-xs font-medium">
-                    {viewHistoryLogin.rejectionRemarks}
+                    <span className="font-bold">Reason:</span> {viewHistoryLogin.rejectionRemarks}
                   </div>
                 </div>
               )}
@@ -2148,7 +2179,16 @@ export const BankLoginPage = () => {
                     {viewCustomerAllLogins.length} {viewCustomerAllLogins.length === 1 ? 'Bank File' : 'Bank Files'}
                   </strong>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setTrackingLogin(viewHistoryLogin)}
+                    className="px-3.5 py-2 text-xs font-bold text-amber-950 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-xl shadow-xs transition flex items-center gap-1.5"
+                    title="Track complete number lifecycle from creation to disbursement/rejection"
+                  >
+                    <History className="w-3.5 h-3.5 text-amber-900" />
+                    <span>Track Full Lifecycle</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => handleOpenAddModalForCustomer(viewHistoryLogin)}
@@ -2171,6 +2211,12 @@ export const BankLoginPage = () => {
           </div>
         </div>
       )}
+
+      {/* Full Number Lifecycle & Audit Trail Modal */}
+      <NumberLifecycleModal
+        target={trackingLogin}
+        onClose={() => setTrackingLogin(null)}
+      />
     </div>
   );
 };

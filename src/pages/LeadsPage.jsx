@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from '../components/common/Pagination';
+import { NumberLifecycleModal } from '../components/common/NumberLifecycleModal';
 import {
   Compass,
   Search,
@@ -24,6 +25,7 @@ import {
   PhoneCall,
   Eye,
   Edit,
+  History,
   RotateCcw,
   FileText,
   Upload,
@@ -62,6 +64,7 @@ export const LeadsPage = () => {
   const [convertingLeadData, setConvertingLeadData] = useState(null); // { lead, assignee }
   const [viewingLeadId, setViewingLeadId] = useState(null);
   const [isLeadEditMode, setIsLeadEditMode] = useState(false);
+  const [trackingLead, setTrackingLead] = useState(null);
 
   const viewingLead = useMemo(() => {
     if (!viewingLeadId) return null;
@@ -799,6 +802,16 @@ export const LeadsPage = () => {
                               )}
                             </div>
                           )}
+
+                          {/* Track Full Number Lifecycle */}
+                          <button
+                            type="button"
+                            onClick={() => setTrackingLead(lead)}
+                            className="p-1.5 text-slate-500 hover:text-amber-800 rounded-lg hover:bg-amber-50 transition"
+                            title="Track Full Number History & Audit Trail"
+                          >
+                            <History className="w-4 h-4" />
+                          </button>
 
                           {/* View Lead Details Eye Button */}
                           <button
@@ -1852,6 +1865,12 @@ export const LeadsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Full Number Lifecycle & Audit Trail Modal */}
+      <NumberLifecycleModal
+        target={trackingLead}
+        onClose={() => setTrackingLead(null)}
+      />
     </div>
   );
 };

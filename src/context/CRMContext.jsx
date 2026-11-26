@@ -39,8 +39,11 @@ const STORAGE_KEYS = {
   BANK_LOGINS: 'rajalakshmy_bank_logins_v2',
   LEAVES: 'rajalakshmy_leaves_v2',
   EMPLOYEES: 'rajalakshmy_employees_v2',
-  CALL_LOCKS: 'rajalakshmy_call_locks_v1'
+  CALL_LOCKS: 'rajalakshmy_call_locks_v1',
+  AUDIT_TRAIL: 'rajalakshmy_audit_trail_v1'
 };
+
+const getClean10Digits = (num) => String(num || '').replace(/\D/g, '').slice(-10);
 
 // TODO (Node.js Backend Migration): Replace localStorage call locks + storage event sync with:
 // 1. Atomic DB/Redis lock (e.g. locked_by + lock_expires_at, 45s TTL) on contact selection
@@ -343,6 +346,50 @@ export const CRMProvider = ({ children }) => {
     }
   });
 
+  // End-to-End Number & Case Lifecycle Audit Trail
+  const [auditTrail, setAuditTrail] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.AUDIT_TRAIL);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const recordLifecycleEvent = (eventData = {}) => {
+    const now = new Date();
+    const dateStr = eventData.date || now.toISOString().split('T')[0];
+    const timeStr = eventData.time || now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const entry = {
+      id: `AUD-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: eventData.timestamp || now.toISOString(),
+      date: dateStr,
+      time: timeStr,
+      mobile: eventData.mobile || '',
+      cleanMobile: getClean10Digits(eventData.mobile),
+      customerId: eventData.customerId || '',
+      leadId: eventData.leadId || '',
+      loginId: eventData.loginId || '',
+      customerName: eventData.customerName || '',
+      stage: eventData.stage || 'System',
+      action: eventData.action || 'Updated',
+      fromStatus: eventData.fromStatus || '',
+      toStatus: eventData.toStatus || '',
+      actorId: eventData.actorId || currentUser?.id || 'SYSTEM',
+      actorName: eventData.actorName || currentUser?.name || 'System',
+      actorRole: eventData.actorRole || currentUser?.role || '',
+      assigneeId: eventData.assigneeId || '',
+      assigneeName: eventData.assigneeName || '',
+      assigneeRole: eventData.assigneeRole || '',
+      bankName: eventData.bankName || '',
+      loanAmount: eventData.loanAmount || '',
+      reason: eventData.reason || '',
+      details: eventData.details || ''
+    };
+    setAuditTrail(prev => [entry, ...prev]);
+    return entry;
+  };
+
   // Corporate Staff & Personnel State (Persisted in LocalStorage)
   const [employees, setEmployees] = useState(() => {
     try {
@@ -547,6 +594,14 @@ export const CRMProvider = ({ children }) => {
     localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(leaves));
   }, [leaves]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.AUDIT_TRAIL, JSON.stringify(auditTrail));
+    } catch (e) {
+      console.warn('Could not persist audit trail:', e);
+    }
+  }, [auditTrail]);
+
   // Reset to clean LocalStorage state
   const resetToFactoryDefaults = () => {
     setCustomers([]);
@@ -560,6 +615,7 @@ export const CRMProvider = ({ children }) => {
     setLeads([]);
     setBankLogins([]);
     setLeaves([]);
+    setAuditTrail([]);
     setCallLocks({});
     Object.values(STORAGE_KEYS).forEach(k => {
       try {
@@ -647,6 +703,23 @@ export const CRMProvider = ({ children }) => {
     });
 
     setCustomers(prev => [newCustomer, ...prev]);
+
+    if (!customerData._skipAudit) {
+      recordLifecycleEvent({
+        mobile: newCustomer.mobile,
+        customerId: isOfficialCustomer ? newCustomer.customerId : '',
+        customerName: newCustomer.name,
+        stage: isOfficialCustomer ? 'Customer Profile' : 'Database Entry',
+        action: customerData._fromActivity ? 'Number Added (Daily Field Activity)' : isOfficialCustomer ? 'Customer Registered' : 'Number Created',
+        toStatus: 'Pending',
+        actorId: newCustomer.submittedBy,
+        actorName: newCustomer.submittedByName,
+        actorRole: customerData.submittedByRole || currentUser?.role || '',
+        assigneeId: newCustomer.assignedTo,
+        assigneeName: newCustomer.assignedName,
+        details: `Source: ${newCustomer.source}${newCustomer.referenceFrom ? ` (Ref: ${newCustomer.referenceFrom})` : ''} • Business: ${newCustomer.business || '—'}${newCustomer.city ? ` • Loc: ${newCustomer.city}` : ''}`
+      });
+    }
 
     // Also record into activities log if not already initiated from an activity
     if (!customerData._fromActivity) {
@@ -871,6 +944,24 @@ export const CRMProvider = ({ children }) => {
 
     setCalls(prev => [newCall, ...prev]);
 
+    const prevCallingStatus = customer.callingStatus || 'Pending';
+    recordLifecycleEvent({
+      mobile: customer.mobile,
+      customerId: customer.isCustomer ? (customer.customerId || customer.id) : '',
+      customerName: customer.name,
+      stage: 'Telecalling',
+      action: `Call Attended (${outcome})`,
+      fromStatus: prevCallingStatus,
+      toStatus: outcome,
+      actorId: currentUser?.id || 'EMP004',
+      actorName: currentUser?.name || 'Ananya Subramanian',
+      actorRole: currentUser?.role || 'RM',
+      assigneeId: currentUser?.id || 'EMP004',
+      assigneeName: currentUser?.name || 'Ananya Subramanian',
+      assigneeRole: currentUser?.role || 'RM',
+      details: `${remarks ? `Response: "${remarks}"` : 'No remarks'}${reminderDate ? ` • Follow-up date: ${reminderDate}` : ''} • Duration: ${duration}`
+    });
+
     // Update customer's status AND claim/assign number to the user who took action so it follows them
     const customerUpdates = {
       callingStatus: outcome,
@@ -958,6 +1049,24 @@ export const CRMProvider = ({ children }) => {
           return [newLead, ...prevLeads];
         }
       });
+
+      recordLifecycleEvent({
+        mobile: customer.mobile,
+        customerId: customer.isCustomer ? (customer.customerId || customer.id) : '',
+        customerName: customer.name,
+        stage: 'Lead Pipeline',
+        action: `Status Changed to ${leadStatus}`,
+        fromStatus: customer.callingStatus || 'Pending',
+        toStatus: leadStatus,
+        actorId: actionUser.id,
+        actorName: actionUser.name,
+        actorRole: actionUser.role || 'RM',
+        assigneeId: actionUser.id,
+        assigneeName: actionUser.name,
+        assigneeRole: actionUser.role || 'RM',
+        details: currentLeadRemarks || `Auto-moved to Lead Pipeline from Telecalling (${outcome})`
+      });
+
       showToast(`Contact converted into Lead! Assigned strictly to you (${actionUser.name})`, 'success');
     } else {
       showToast(`Response saved! Number now follows you (${currentUser?.name || 'RM'})`, 'success');
@@ -1477,12 +1586,29 @@ export const CRMProvider = ({ children }) => {
     });
 
     setLeads(prev => [newLead, ...prev]);
+    recordLifecycleEvent({
+      mobile: newLead.mobile,
+      customerId: newLead.customerId || '',
+      leadId: newLead.id,
+      customerName: newLead.customerName,
+      stage: 'Lead Pipeline',
+      action: 'Lead Created',
+      toStatus: newLead.status,
+      actorId: currentUser?.id || 'EMP004',
+      actorName: currentUser?.name || 'Ananya Subramanian',
+      actorRole: currentUser?.role || '',
+      assigneeId: newLead.assignedToId,
+      assigneeName: newLead.assignedToName,
+      assigneeRole: newLead.assignedToRole,
+      details: `${newLead.requiredService} • Est: ${newLead.estimatedAmount} • ${newLead.remarks}`
+    });
     showToast(`Lead created for ${newLead.customerName}!`, 'success');
     return newLead;
   };
 
   // Assign Lead (Req 7: RM can assign to himself or assign person of the Sales Manager role)
   const assignLead = (leadId, assigneeId, assigneeName, assigneeRole) => {
+    const existingLead = leads.find(l => l.id === leadId);
     setLeads(prev => prev.map(l => {
       if (l.id === leadId) {
         return {
@@ -1498,6 +1624,25 @@ export const CRMProvider = ({ children }) => {
       }
       return l;
     }));
+    if (existingLead) {
+      recordLifecycleEvent({
+        mobile: existingLead.mobile,
+        customerId: existingLead.customerId || '',
+        leadId: existingLead.id,
+        customerName: existingLead.customerName,
+        stage: 'Lead Assignment',
+        action: existingLead.assignedToId ? 'Lead Reassigned' : 'Lead Assigned',
+        fromStatus: existingLead.assignedToName || 'Unassigned',
+        toStatus: `${assigneeName} (${assigneeRole})`,
+        actorId: currentUser?.id || 'EMP004',
+        actorName: currentUser?.name || 'Ananya Subramanian',
+        actorRole: currentUser?.role || 'RM',
+        assigneeId,
+        assigneeName,
+        assigneeRole,
+        details: `Assigned to ${assigneeName} (${assigneeRole}) by ${currentUser?.name || 'RM'}`
+      });
+    }
     showToast(`Lead assigned to ${assigneeName} (${assigneeRole})`, 'success');
   };
 
@@ -1505,6 +1650,24 @@ export const CRMProvider = ({ children }) => {
     const normalizedUpdates = normalizeRecordContacts(updates);
     const existingLead = leads.find(l => l.id === leadId);
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, ...normalizedUpdates } : l));
+
+    if (existingLead) {
+      const statusChanged = normalizedUpdates.status && normalizedUpdates.status !== existingLead.status;
+      recordLifecycleEvent({
+        mobile: normalizedUpdates.mobile || existingLead.mobile,
+        customerId: existingLead.customerId || '',
+        leadId: existingLead.id,
+        customerName: normalizedUpdates.customerName || existingLead.customerName,
+        stage: 'Lead Pipeline',
+        action: statusChanged ? `Lead Status Changed to ${normalizedUpdates.status}` : 'Lead Profile Updated',
+        fromStatus: statusChanged ? (existingLead.status || '') : '',
+        toStatus: statusChanged ? normalizedUpdates.status : '',
+        actorId: currentUser?.id || 'EMP004',
+        actorName: currentUser?.name || 'Ananya Subramanian',
+        actorRole: currentUser?.role || '',
+        details: normalizedUpdates.remarks || (statusChanged ? `Status updated from ${existingLead.status} to ${normalizedUpdates.status}` : 'Customer/service details updated in Lead profile')
+      });
+    }
 
     const linkedCustId = existingLead?.sourceCustomerId || existingLead?.customerId;
     if (linkedCustId) {
@@ -1637,6 +1800,26 @@ export const CRMProvider = ({ children }) => {
     };
 
     setBankLogins(prev => [newLogin, ...prev]);
+    if (!loginData._skipAudit) {
+      recordLifecycleEvent({
+        mobile: newLogin.mobile,
+        customerId: custId,
+        loginId: loginUniqueId,
+        customerName: newLogin.customerName,
+        stage: 'Bank Login',
+        action: `Logged In with ${newLogin.bankName}`,
+        toStatus: 'In Progress',
+        actorId: newLogin.createdBy,
+        actorName: newLogin.createdByName,
+        actorRole: newLogin.createdByRole,
+        assigneeId: newLogin.assignedRMId,
+        assigneeName: newLogin.assignedRMName,
+        assigneeRole: newLogin.assignedToRole,
+        bankName: newLogin.bankName,
+        loanAmount: newLogin.loanAmount,
+        details: `${newLogin.loanType} • ${newLogin.bankName}${newLogin.loanAmount ? ` • ₹${newLogin.loanAmount}` : ''}`
+      });
+    }
     showToast(`Registered Customer ${custId} into Bank Login with ${newLogin.bankName}!`, 'success');
     return newLogin;
   };
@@ -1717,7 +1900,8 @@ export const CRMProvider = ({ children }) => {
       createdByRole: currentUser?.role || 'RM',
       submittedBy: currentUser?.id || 'EMP004',
       submittedByName: currentUser?.name || 'Ananya Subramanian',
-      notes: loginData.notes || `Converted from Lead #${lead.id}`
+      notes: loginData.notes || `Converted from Lead #${lead.id}`,
+      _skipAudit: true
     });
 
     setLeads(prev => prev.map(l => l.id === leadId ? {
@@ -1730,6 +1914,27 @@ export const CRMProvider = ({ children }) => {
       remarks: `${l.remarks ? l.remarks + ' | ' : ''}Customer ID: ${custId} (Bank Login with ${loginData.bankName})`
     } : l));
 
+    recordLifecycleEvent({
+      mobile: lead.mobile,
+      customerId: custId,
+      leadId: lead.id,
+      loginId: createdLogin?.id || custId,
+      customerName: lead.customerName,
+      stage: 'Bank Login',
+      action: `Status Changed to Login (${loginData.bankName})`,
+      fromStatus: lead.status || 'Lead',
+      toStatus: 'Converted to Login',
+      actorId: currentUser?.id || 'EMP004',
+      actorName: currentUser?.name || 'Ananya Subramanian',
+      actorRole: currentUser?.role || 'RM',
+      assigneeId: targetAssigneeId,
+      assigneeName: targetAssigneeName,
+      assigneeRole: targetAssigneeRole,
+      bankName: loginData.bankName,
+      loanAmount: loginData.loanAmount || lead.estimatedAmount,
+      details: `Generated Customer ID ${custId} • ${loginData.loanType || lead.requiredService} • Bank: ${loginData.bankName}`
+    });
+
     showToast(`Customer ID ${custId} auto-generated! Registered in Bank Login with ${loginData.bankName}.`, 'success');
     return createdLogin;
   };
@@ -1738,6 +1943,7 @@ export const CRMProvider = ({ children }) => {
   const addLoginUpdate = (loginId, updateNote) => {
     const todayStr = new Date().toISOString().split('T')[0];
     const nextDate = addTwoDays(todayStr);
+    const login = bankLogins.find(l => l.id === loginId || l.loginId === loginId);
 
     setBankLogins(prev => prev.map(l => {
       if (l.id === loginId || l.loginId === loginId) {
@@ -1757,12 +1963,32 @@ export const CRMProvider = ({ children }) => {
       return l;
     }));
 
+    if (login) {
+      recordLifecycleEvent({
+        mobile: login.mobile,
+        customerId: login.customerId,
+        loginId: login.id,
+        customerName: login.customerName,
+        stage: 'Bank Follow-up',
+        action: '2-Day Bank File Update',
+        fromStatus: login.status,
+        toStatus: login.status,
+        actorId: currentUser?.id || 'EMP004',
+        actorName: currentUser?.name || 'RM',
+        actorRole: currentUser?.role || 'RM',
+        bankName: login.bankName,
+        details: updateNote
+      });
+    }
+
     showToast(`Update saved! Next follow-up reminder scheduled for ${nextDate}`, 'success');
   };
 
   // Disburse Login (Req 5: convert to Disposement with bank name, loan amount, type of loan)
   const disburseLogin = (loginId, { bankName, loanAmount, loanType, disbursementDate, remarks = '' }) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     const login = bankLogins.find(l => l.id === loginId || l.loginId === loginId);
     if (!login) return;
 
@@ -1771,6 +1997,10 @@ export const CRMProvider = ({ children }) => {
       loanAmount: loanAmount || login.loanAmount,
       loanType: loanType || login.loanType,
       disbursementDate: disbursementDate || todayStr,
+      disbursedTime: timeStr,
+      disbursedById: currentUser?.id || 'EMP004',
+      disbursedByName: currentUser?.name || 'RM',
+      disbursedByRole: currentUser?.role || 'RM',
       remarks: remarks || ''
     };
 
@@ -1803,6 +2033,25 @@ export const CRMProvider = ({ children }) => {
       return l;
     }));
 
+    recordLifecycleEvent({
+      mobile: login.mobile,
+      customerId: login.customerId,
+      loginId: login.id,
+      customerName: login.customerName,
+      stage: 'Disbursement',
+      action: `Disbursed ${displayAmt} (${disburseData.bankName})`,
+      fromStatus: login.status || 'In Progress',
+      toStatus: 'Disbursed',
+      date: disburseData.disbursementDate,
+      time: timeStr,
+      actorId: currentUser?.id || 'EMP004',
+      actorName: currentUser?.name || 'RM',
+      actorRole: currentUser?.role || 'RM',
+      bankName: disburseData.bankName,
+      loanAmount: disburseData.loanAmount,
+      details: `${disburseData.loanType} • ${displayAmt}${remarks ? ` • Remarks: ${remarks}` : ''}`
+    });
+
     // Record into Performance Case Dispositions
     submitPerformanceCase({
       customerName: login.customerName,
@@ -1817,7 +2066,11 @@ export const CRMProvider = ({ children }) => {
 
   // Reject Login (Req 5: if reject enter remarks)
   const rejectLogin = (loginId, { remarks }) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const login = bankLogins.find(l => l.id === loginId || l.loginId === loginId);
+
     setBankLogins(prev => prev.map(l => {
       if (l.id === loginId || l.loginId === loginId) {
         const rejectUpdate = {
@@ -1831,11 +2084,38 @@ export const CRMProvider = ({ children }) => {
           status: 'Rejected',
           lastUpdateDate: todayStr,
           rejectionRemarks: remarks,
+          rejectedById: currentUser?.id || 'EMP004',
+          rejectedByName: currentUser?.name || 'RM',
+          rejectedByRole: currentUser?.role || 'RM',
+          rejectedDate: todayStr,
+          rejectedTime: timeStr,
           updates: [rejectUpdate, ...(l.updates || [])]
         };
       }
       return l;
     }));
+
+    if (login) {
+      recordLifecycleEvent({
+        mobile: login.mobile,
+        customerId: login.customerId,
+        loginId: login.id,
+        customerName: login.customerName,
+        stage: 'Rejected',
+        action: `Bank File Rejected (${login.bankName})`,
+        fromStatus: login.status || 'In Progress',
+        toStatus: 'Rejected',
+        date: todayStr,
+        time: timeStr,
+        actorId: currentUser?.id || 'EMP004',
+        actorName: currentUser?.name || 'RM',
+        actorRole: currentUser?.role || 'RM',
+        bankName: login.bankName,
+        loanAmount: login.loanAmount,
+        reason: remarks,
+        details: `Rejection Reason: ${remarks}`
+      });
+    }
 
     showToast(`Login #${loginId} marked as Rejected. Remarks logged.`, 'info');
   };
@@ -1861,6 +2141,8 @@ export const CRMProvider = ({ children }) => {
         bankLogins,
         leaves,
         employees,
+        auditTrail,
+        recordLifecycleEvent,
         setEmployees,
         addEmployee,
         updateEmployee,

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from '../components/common/Pagination';
+import { NumberLifecycleModal } from '../components/common/NumberLifecycleModal';
 import {
   BarChart3,
   Calendar,
@@ -14,7 +15,9 @@ import {
   TrendingUp,
   PieChart as PieIcon,
   Layers,
-  ArrowUpRight
+  ArrowUpRight,
+  Search,
+  History
 } from 'lucide-react';
 import {
   BarChart,
@@ -29,13 +32,17 @@ import {
   Cell,
   Legend
 } from 'recharts';
-import { formatCurrency, formatDate, exportToCSV } from '../utils/formatters';
+import { formatCurrency, formatDate, exportToCSV, formatMobileNumber, matchesMobileSearch } from '../utils/formatters';
 
 export const ReportsPage = () => {
-  const { customers, calls, activities, performanceCases, employees } = useCRM();
+  const { customers, calls, activities, performanceCases, leads = [], bankLogins = [], employees } = useCRM();
   const { currentUser } = useAuth();
 
   const isSalesManager = currentUser?.role === 'Sales Manager';
+
+  // Number Lifecycle Lookup State
+  const [numberTrackQuery, setNumberTrackQuery] = useState('');
+  const [trackingTarget, setTrackingTarget] = useState(null);
 
   // Filters
   const [datePreset, setDatePreset] = useState('this-month'); // 'today' | 'this-week' | 'this-month' | 'custom'
@@ -169,6 +176,42 @@ export const ReportsPage = () => {
     exportToCSV(data, 'rajalakshmy_comprehensive_crm_report.csv');
   };
 
+  const trackableMatches = useMemo(() => {
+    const q = numberTrackQuery.trim().toLowerCase();
+    if (!q) return [];
+    const byMobile = new Map();
+    const upsert = (item, stageLabel) => {
+      const mob = String(item.mobile || '').replace(/\D/g, '').slice(-10);
+      const key = mob || item.customerId || item.id;
+      if (!key) return;
+      const matches =
+        (item.customerName || item.name || '').toLowerCase().includes(q) ||
+        (item.customerId || item.id || '').toLowerCase().includes(q) ||
+        (item.mobile && matchesMobileSearch(item.mobile, numberTrackQuery));
+      if (!matches) return;
+      const existing = byMobile.get(key);
+      byMobile.set(key, {
+        key,
+        name: item.customerName || item.name || existing?.name || 'Unknown',
+        mobile: item.mobile || existing?.mobile || '',
+        customerId: item.isCustomer || stageLabel === 'Bank Login'
+          ? (item.customerId || (item.id?.startsWith('RA-CUST') ? item.id : existing?.customerId))
+          : existing?.customerId,
+        latestStage: stageLabel,
+        record: existing?.record || item
+      });
+    };
+
+    (scopedCustomers || []).forEach(c => upsert(c, c.isCustomer ? 'Customer' : 'Database'));
+    (scopedActivities || []).forEach(a => upsert(a, 'Field Activity'));
+    if (!isSalesManager) {
+      (leads || []).forEach(l => upsert(l, `Lead (${l.status || 'New'})`));
+      (bankLogins || []).forEach(b => upsert(b, `Bank Login (${b.status || 'In Progress'})`));
+    }
+
+    return Array.from(byMobile.values()).slice(0, 8);
+  }, [numberTrackQuery, scopedCustomers, scopedActivities, leads, bankLogins, isSalesManager]);
+
   return (
     <div className="space-y-6">
       {/* Top Banner */}
@@ -200,6 +243,62 @@ export const ReportsPage = () => {
           <Download className="w-4 h-4" />
           <span>Export Master CSV Report</span>
         </button>
+      </div>
+
+      {/* End-to-End Number Lifecycle Lookup */}
+      <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/70 via-white to-[#FAF6EF] p-4 shadow-sm space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-900 border border-amber-200">
+              <History className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Track Any Number Lifecycle & Audit Trail</h3>
+              <p className="text-[11px] text-slate-500">
+                Search by 10-digit mobile number, Customer Name, or Customer ID to view who created, called, changed statuses, assigned, logged into bank, disbursed, or rejected (with dates & reasons).
+              </p>
+            </div>
+          </div>
+
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search mobile number, name, or ID..."
+              value={numberTrackQuery}
+              onChange={(e) => setNumberTrackQuery(e.target.value)}
+              className="w-full h-9 rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-xs text-slate-800 focus:outline-none focus:border-burgundy-800 focus:ring-1 focus:ring-burgundy-800"
+            />
+          </div>
+        </div>
+
+        {numberTrackQuery.trim() && (
+          <div className="border-t border-amber-200/60 pt-3">
+            {trackableMatches.length === 0 ? (
+              <p className="text-xs text-slate-500 italic">No matching contact or number found.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                {trackableMatches.map(m => (
+                  <button
+                    key={m.key}
+                    type="button"
+                    onClick={() => setTrackingTarget(m.record)}
+                    className="text-left rounded-xl border border-slate-200 bg-white hover:border-burgundy-400 hover:bg-burgundy-50/40 px-3 py-2 transition shadow-2xs flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-900 truncate">{m.name}</div>
+                      <div className="text-[11px] font-mono text-slate-600">{formatMobileNumber(m.mobile)}</div>
+                      <div className="text-[10px] font-semibold text-burgundy-800 truncate">
+                        {m.customerId ? `${m.customerId} • ` : ''}{m.latestStage}
+                      </div>
+                    </div>
+                    <History className="w-4 h-4 text-amber-700 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Date Filter Bar */}
@@ -395,6 +494,12 @@ export const ReportsPage = () => {
           summaryLabel="staff performance rankings"
         />
       </div>
+
+      {/* Full Number Lifecycle & Audit Trail Modal */}
+      <NumberLifecycleModal
+        target={trackingTarget}
+        onClose={() => setTrackingTarget(null)}
+      />
     </div>
   );
 };
