@@ -13,6 +13,20 @@ export const formatDate = (dateStr) => {
   return formatDateDDMMYYYY(dateStr);
 };
 
+// Format mobile number continuously without 5-and-5 space (e.g. +91 9994354019)
+export const formatMobileNumber = (val) => {
+  if (!val) return "";
+  const str = String(val).trim();
+  const digits = str.replace(/\D/g, '');
+  if (digits.length === 10) {
+    return `+91 ${digits}`;
+  }
+  if (digits.length === 12 && digits.startsWith('91')) {
+    return `+91 ${digits.slice(2)}`;
+  }
+  return str.replace(/(\d{5})\s+(\d{5})/g, '$1$2').trim();
+};
+
 // Format strictly to DD-MM-YYYY (e.g. 17-11-2026)
 export const formatDateDDMMYYYY = (dateInput) => {
   if (!dateInput) return "-";

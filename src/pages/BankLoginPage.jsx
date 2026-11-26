@@ -26,7 +26,7 @@ import {
   Check,
   Lock
 } from 'lucide-react';
-import { formatCurrency, formatDate } from '../utils/formatters';
+import { formatCurrency, formatDate, formatMobileNumber } from '../utils/formatters';
 
 export const BankLoginPage = () => {
   const { bankLogins, addBankLogin, addLoginUpdate, disburseLogin, rejectLogin, customers, activities = [], leads = [], employees = [] } = useCRM();
@@ -159,7 +159,7 @@ export const BankLoginPage = () => {
     setShowNumberSuggestions(false);
 
     const digits = clean10Digits(cust.mobile);
-    const formatted = digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : (cust.mobile || '');
+    const formatted = digits.length === 10 ? `+91 ${digits}` : formatMobileNumber(cust.mobile || '');
     setCustomerMobile(formatted);
     setSelectedCustomerId(cust.customerId || cust.id || '');
     setSourceCustomerId(cust.sourceCustomerId || cust.id || '');
@@ -329,7 +329,7 @@ export const BankLoginPage = () => {
 
   // Handle selecting a number from suggestions
   const handleSelectSuggestedRecord = (rec) => {
-    setCustomerMobile(rec.mobile || '');
+    setCustomerMobile(formatMobileNumber(rec.mobile));
     setShowNumberSuggestions(false);
   };
 
@@ -512,7 +512,7 @@ export const BankLoginPage = () => {
     }
 
     const digits = customerMobile.replace(/\D/g, '').slice(-10);
-    const formattedMobile = `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+    const formattedMobile = `+91 ${digits}`;
 
     addBankLogin({
       customerId: selectedCustomerId,
@@ -1041,7 +1041,7 @@ export const BankLoginPage = () => {
                                   <span>{customerGroup.business} • {customerGroup.city}</span>
                                 </div>
                                 <div className="text-[11px] text-slate-600 flex items-center gap-2 mt-0.5">
-                                  <span className="font-mono">{customerGroup.mobile}</span>
+                                  <span className="font-mono">{formatMobileNumber(customerGroup.mobile)}</span>
                                   {customerGroup.dob && (
                                     <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-sans">
                                       DOB: {formatDate(customerGroup.dob)}
@@ -1281,7 +1281,7 @@ export const BankLoginPage = () => {
                         className="w-full text-left px-3 py-2 hover:bg-burgundy-50/70 transition flex items-center justify-between gap-2 text-xs"
                       >
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono font-bold text-burgundy-900">{rec.mobile}</span>
+                          <span className="font-mono font-bold text-burgundy-900">{formatMobileNumber(rec.mobile)}</span>
                           <span className="font-semibold text-slate-800">{rec.name}</span>
                           {rec.loginCount > 0 && (
                             <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-burgundy-50 text-burgundy-800 border border-burgundy-200">
@@ -1730,7 +1730,7 @@ export const BankLoginPage = () => {
             <form onSubmit={handleConfirmDisbursement} className="p-6 space-y-3.5">
               <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-200 text-xs">
                 <div className="font-bold text-emerald-950">{disbursingLogin.customerName}</div>
-                <div className="text-emerald-800 font-mono mt-0.5">{disbursingLogin.mobile} • {disbursingLogin.business}</div>
+                <div className="text-emerald-800 font-mono mt-0.5">{formatMobileNumber(disbursingLogin.mobile)} • {disbursingLogin.business}</div>
               </div>
 
               <div>
@@ -1944,7 +1944,7 @@ export const BankLoginPage = () => {
                   </div>
                   <div>
                     <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Mobile Number</span>
-                    <span className="text-xs font-mono font-bold text-slate-800 mt-0.5 block">{viewHistoryLogin.mobile}</span>
+                    <span className="text-xs font-mono font-bold text-slate-800 mt-0.5 block">{formatMobileNumber(viewHistoryLogin.mobile)}</span>
                   </div>
                   <div>
                     <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Date of Birth (DOB)</span>

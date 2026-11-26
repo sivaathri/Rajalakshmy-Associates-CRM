@@ -191,7 +191,7 @@ export const LeadsPage = () => {
 
     const assignedEmp = employees.find(e => e.id === newLeadAssigneeId) || currentUser;
     const digits = newLeadMobile.replace(/\D/g, '').slice(-10);
-    const formattedMobile = `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+    const formattedMobile = `+91 ${digits}`;
 
     addLead({
       customerName: newLeadName.trim() || 'Prospect Lead',

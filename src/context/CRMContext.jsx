@@ -284,11 +284,19 @@ export const CRMProvider = ({ children }) => {
           uniqueId = `${cid || 'BL'}-${(b.bankName || 'bank').replace(/\s+/g, '')}-${idx}`;
         }
         seenIds.add(uniqueId);
+        let mob = b.mobile;
+        if (mob) {
+          const digits = String(mob).replace(/\D/g, '');
+          if (digits.length === 10) mob = `+91 ${digits}`;
+          else if (digits.length === 12 && digits.startsWith('91')) mob = `+91 ${digits.slice(2)}`;
+          else mob = String(mob).replace(/(\d{5})\s+(\d{5})/g, '$1$2').trim();
+        }
         return {
           ...b,
           id: uniqueId,
           loginId: uniqueId,
-          customerId: cid || b.customerId || b.id
+          customerId: cid || b.customerId || b.id,
+          mobile: mob || b.mobile
         };
       });
 
@@ -1064,7 +1072,7 @@ export const CRMProvider = ({ children }) => {
 
         newCustomersToAdd.push({
           name: type === 'unknown' ? 'Unknown / Lead' : name,
-          mobile: `+91 ${tenDigit.slice(0, 5)} ${tenDigit.slice(5)}`,
+          mobile: `+91 ${tenDigit}`,
           business,
           state,
           databaseType: 'new',
@@ -1079,7 +1087,7 @@ export const CRMProvider = ({ children }) => {
         id: idx + 1,
         name,
         rawMobile: mobileRaw,
-        mobileFormatted: isValidMobile ? `+91 ${tenDigit.slice(0, 5)} ${tenDigit.slice(5)}` : mobileRaw,
+        mobileFormatted: isValidMobile ? `+91 ${tenDigit}` : mobileRaw,
         business,
         state,
         type,
@@ -1580,7 +1588,11 @@ export const CRMProvider = ({ children }) => {
       createdAt: new Date().toISOString(),
       customerName: loginData.customerName,
       dob: loginData.dob || '',
-      mobile: loginData.mobile,
+      mobile: loginData.mobile
+        ? (loginData.mobile.replace(/\D/g, '').slice(-10).length === 10
+            ? `+91 ${loginData.mobile.replace(/\D/g, '').slice(-10)}`
+            : loginData.mobile.replace(/(\d{5})\s+(\d{5})/g, '$1$2').trim())
+        : '',
       business: loginData.business || 'General Business',
       city: loginData.city || '',
       bankName: loginData.bankName || 'State Bank of India',
