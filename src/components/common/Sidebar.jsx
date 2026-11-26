@@ -17,7 +17,6 @@ import {
   ChevronLeft,
   Clock,
   Menu,
-  Compass,
   FileCheck,
   UserCog,
   LogOut,
@@ -27,7 +26,7 @@ import { formatDateDDMMYYYY } from '../../utils/formatters';
 
 export const Sidebar = ({ isOpen, setIsOpen }) => {
   const { currentUser, canAccessRoute, logout, confirmAndLogout } = useAuth();
-  const { customers, performanceCases, advanceAmounts, resignations, attendance = [], leads = [], bankLogins = [], leaves = [], employees = [] } = useCRM();
+  const { customers, performanceCases, advanceAmounts, resignations, attendance = [], bankLogins = [], leaves = [], employees = [] } = useCRM();
 
   const isSalesManager = currentUser?.role === 'Sales Manager';
 
@@ -63,16 +62,6 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
     : (currentUser?.role === 'RM'
         ? customerOnlyList.filter(c => c.assignedTo === currentUser?.id).length
         : customerOnlyList.length);
-
-  // Active leads count (strictly scoped to logged-in user)
-  const scopedLeads = currentUser
-    ? leads.filter(l =>
-        l.assignedToId === currentUser.id ||
-        l.actionedBy === currentUser.id ||
-        (currentUser.name && (l.assignedToName === currentUser.name || l.actionedByName === currentUser.name))
-      )
-    : [];
-  const activeLeadsCount = scopedLeads.filter(l => l.status !== 'Converted to Login').length;
 
   // Bank Logins 2-Day Updates Due count
   const todayIso = new Date().toISOString().split('T')[0];
@@ -222,31 +211,6 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
             {isExpanded && (
               <span className="text-[10px] bg-white/15 text-gold-200 font-semibold px-1.5 py-0.5 rounded-full">
                 {scopedCustomerMenuCount}
-              </span>
-            )}
-          </NavLink>
-        )}
-
-        {/* Lead Management Menu (Req 2) */}
-        {canAccessRoute('leads') && (
-          <NavLink
-            to="/leads"
-            onClick={() => isMobile && setIsOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition ${
-                isActive
-                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
-                  : 'text-white/80 hover:bg-white/10 hover:text-white'
-              }`
-            }
-          >
-            <div className="flex items-center gap-3">
-              <Compass className="w-4 h-4 shrink-0 text-emerald-400" />
-              {isExpanded && <span>Lead</span>}
-            </div>
-            {isExpanded && activeLeadsCount > 0 && (
-              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-1.5 text-[10px] font-bold">
-                {activeLeadsCount}
               </span>
             )}
           </NavLink>

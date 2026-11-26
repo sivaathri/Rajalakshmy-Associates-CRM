@@ -20,7 +20,6 @@ import { PerformancePage } from './pages/PerformancePage';
 import { ResignationPage } from './pages/ResignationPage';
 import { AdvanceAmountPage } from './pages/AdvanceAmountPage';
 import { AttendancePage } from './pages/AttendancePage';
-import { LeadsPage } from './pages/LeadsPage';
 import { BankLoginPage } from './pages/BankLoginPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -50,7 +49,6 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
     if (path.startsWith('/customers/old/unknown') || path.startsWith('/database/old/unknown')) return 'Database • Old Unknown Numbers';
     if (path.startsWith('/customers/new/known') || path.startsWith('/database/new/known')) return 'Database • New Known Numbers';
     if (path.startsWith('/customers/new/unknown') || path.startsWith('/database/new/unknown')) return 'Database • New Unknown Numbers';
-    if (path.startsWith('/leads') || path.startsWith('/lead')) return 'Lead Management';
     if (path.startsWith('/bank-logins') || path.startsWith('/logins')) return 'Bank File Login & 2-Day Routine Console';
     if (path.startsWith('/daily-activities')) return 'Daily Activities';
     if (path.startsWith('/performance')) return 'Performance & Case Disposition';
@@ -142,17 +140,6 @@ export function App() {
                 </ProtectedLayout>
               }
             />
-
-            {/* Lead Management  (Req 2) */}
-            <Route
-              path="/leads"
-              element={
-                <ProtectedLayout requiredRoute="leads">
-                  <LeadsPage />
-                </ProtectedLayout>
-              }
-            />
-            <Route path="/lead" element={<Navigate to="/leads" replace />} />
 
             {/* Bank Loan File Login Console (Req 2, 4, 5, 6) */}
             <Route
