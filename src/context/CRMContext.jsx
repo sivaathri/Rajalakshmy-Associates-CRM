@@ -270,7 +270,7 @@ export const CRMProvider = ({ children }) => {
       const saved = localStorage.getItem(STORAGE_KEYS.BANK_LOGINS);
       const list = saved ? JSON.parse(saved) : [];
       const seenIds = new Set();
-      return (list || []).map((b, idx) => {
+      const normalized = (list || []).map((b, idx) => {
         let cid = b.customerId;
         if (typeof cid === 'string') {
           const match = cid.match(/^RA-CUST-(\d+)$/i);
@@ -291,6 +291,27 @@ export const CRMProvider = ({ children }) => {
           customerId: cid || b.customerId || b.id
         };
       });
+
+      // Assign sequential file numbers per customer in chronological creation order:
+      // Since new logins were prepended (index 0 is newest, higher index is older),
+      // scanning in reverse order (from normalized.length - 1 down to 0) gives:
+      // 1st created file -> fileNumber 1
+      // 2nd created file -> fileNumber 2
+      // 3rd created file -> fileNumber 3
+      const customerCounts = {};
+      for (let i = normalized.length - 1; i >= 0; i--) {
+        const item = normalized[i];
+        const custKey = (item.mobile ? item.mobile.replace(/\D/g, '').slice(-10) : '') || item.customerId || item.id;
+        customerCounts[custKey] = (customerCounts[custKey] || 0) + 1;
+        item.fileNumber = item.fileNumber || customerCounts[custKey];
+        if (!item.createdAt) {
+          item.createdAt = item.loginDate
+            ? `${item.loginDate}T00:00:00.${String(customerCounts[custKey]).padStart(3, '0')}Z`
+            : new Date(Date.now() - (normalized.length - i) * 60000).toISOString();
+        }
+      }
+
+      return normalized;
     } catch {
       return [];
     }
@@ -1541,11 +1562,22 @@ export const CRMProvider = ({ children }) => {
       });
     }
 
+    // Determine sequential file number for this customer (1st created: 1, 2nd: 2, 3rd: 3...)
+    const cleanMobile = loginData.mobile ? loginData.mobile.replace(/\D/g, '').slice(-10) : '';
+    const custExistingLogins = bankLogins.filter(b => {
+      const bMobile = b.mobile ? b.mobile.replace(/\D/g, '').slice(-10) : '';
+      return (cleanMobile && bMobile === cleanMobile) || (b.customerId && b.customerId === custId);
+    });
+    const maxExistingFileNum = custExistingLogins.reduce((max, l) => Math.max(max, l.fileNumber || 0), 0);
+    const nextFileNumber = Math.max(maxExistingFileNum + 1, custExistingLogins.length + 1);
+
     const loginUniqueId = loginData.id || `${custId}-BL-${Date.now().toString().slice(-4)}`;
     const newLogin = {
       id: loginUniqueId,
       loginId: loginUniqueId,
       customerId: custId,
+      fileNumber: nextFileNumber,
+      createdAt: new Date().toISOString(),
       customerName: loginData.customerName,
       dob: loginData.dob || '',
       mobile: loginData.mobile,

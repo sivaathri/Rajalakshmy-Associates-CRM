@@ -465,6 +465,22 @@ export const BankLoginPage = () => {
       map.get(custKey).logins.push(login);
     });
 
+    // Ensure files for each customer are ordered chronologically by creation (1st created: File 1, 2nd: File 2, 3rd: File 3...)
+    map.forEach(group => {
+      group.logins.sort((a, b) => {
+        const numA = typeof a.fileNumber === 'number' ? a.fileNumber : 9999;
+        const numB = typeof b.fileNumber === 'number' ? b.fileNumber : 9999;
+        if (numA !== numB) return numA - numB;
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (timeA && timeB && timeA !== timeB) return timeA - timeB;
+        if (a.loginDate && b.loginDate && a.loginDate !== b.loginDate) {
+          return a.loginDate.localeCompare(b.loginDate);
+        }
+        return 0;
+      });
+    });
+
     return Array.from(map.values());
   }, [filteredLogins]);
 
@@ -1039,9 +1055,9 @@ export const BankLoginPage = () => {
                           {/* Bank & Loan Value */}
                           <td className="px-4 py-3 align-top">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              {rowCount > 1 && (
+                              {(rowCount > 1 || totalLogins > 1) && (
                                 <span className="text-[9px] font-bold uppercase tracking-wider text-burgundy-900 bg-burgundy-50 px-1.5 py-0.2 rounded border border-burgundy-200">
-                                  File #{idx + 1}
+                                  File #{login.fileNumber || (idx + 1)}
                                 </span>
                               )}
                               <span className="font-bold text-slate-800">{login.bankName}</span>
@@ -1332,7 +1348,7 @@ export const BankLoginPage = () => {
                               <span>Existing Customer Found — Details Fetched</span>
                               {lookupResult.matchedLogins?.length > 0 && (
                                 <span className="font-normal text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-300">
-                                  {lookupResult.matchedLogins.length} {lookupResult.matchedLogins.length === 1 ? 'Login on File' : 'Logins on File'}
+                                  {lookupResult.matchedLogins.length} {lookupResult.matchedLogins.length === 1 ? 'Login on File' : 'Logins on File'} • Creating File #{lookupResult.matchedLogins.length + 1}
                                 </span>
                               )}
                             </span>
@@ -1970,7 +1986,10 @@ export const BankLoginPage = () => {
                     <span className="text-[10px] text-slate-500">Click a file below to switch view</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                    {viewCustomerAllLogins.map(bl => (
+                    {viewCustomerAllLogins
+                      .slice()
+                      .sort((a, b) => (a.fileNumber ?? 9999) - (b.fileNumber ?? 9999))
+                      .map((bl, bIdx) => (
                       <div
                         key={bl.id}
                         onClick={() => setViewHistoryLogin(bl)}
@@ -1981,7 +2000,10 @@ export const BankLoginPage = () => {
                         }`}
                       >
                         <div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[9px] font-bold text-burgundy-900 bg-burgundy-100 px-1.5 py-0.2 rounded border border-burgundy-200">
+                              File #{bl.fileNumber || (bIdx + 1)}
+                            </span>
                             <span className="font-bold text-slate-900">{bl.bankName}</span>
                             {bl.id === viewHistoryLogin.id && (
                               <span className="text-[9px] bg-burgundy-100 text-burgundy-900 px-1 rounded font-bold">Viewing</span>
