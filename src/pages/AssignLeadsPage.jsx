@@ -5,8 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { Pagination } from '../components/common/Pagination';
 import { NumberLifecycleModal } from '../components/common/NumberLifecycleModal';
 import {
-  UserCheck,
-  FileText,
   Copy,
   Check,
   Search,
@@ -14,10 +12,8 @@ import {
   CheckCircle2,
   Building2,
   History,
-  ArrowRight,
   Clock,
   X,
-  FileCheck,
   XCircle
 } from 'lucide-react';
 import { formatDate, formatMobileNumber, matchesMobileSearch } from '../utils/formatters';
@@ -180,36 +176,6 @@ export const AssignLeadsPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gold-400/20 border border-gold-300/30 text-gold-300 shadow-sm shrink-0">
-            <UserCheck className="w-6 h-6" />
-          </div>
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gold-300 block">
-              Telecalling Assignments & Handoffs • {currentUser?.name} ({currentUser?.role})
-            </span>
-            <h2 className="text-xl md:text-2xl font-extrabold text-white font-corporate">
-              Assign Lead Inbox
-            </h2>
-            <p className="text-xs text-white/75 mt-0.5 max-w-2xl">
-              View complete customer information for leads assigned to you: either collect documents only (Option 1) or copy the mobile number to create a Bank Login file (Option 2).
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => navigate('/bank-logins')}
-          className="inline-flex items-center gap-2 rounded-xl bg-gold-500 hover:bg-gold-600 px-4 py-2.5 text-xs font-extrabold text-amber-950 shadow-md transition self-start md:self-center shrink-0"
-        >
-          <FileCheck className="w-4 h-4" />
-          <span>Open Bank Login Console</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
       {/* Filter & Search Bar */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
