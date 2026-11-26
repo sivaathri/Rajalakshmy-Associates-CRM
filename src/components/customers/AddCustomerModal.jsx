@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useCRM } from '../../context/CRMContext';
 import { useAuth } from '../../context/AuthContext';
+import { formatMobileNumber } from '../../utils/formatters';
 import {
   X,
   User,
@@ -219,7 +220,8 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
     });
 
     const digits = mobile.replace(/\D/g, '').slice(-10);
-    const formattedMobile = `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+    const formattedMobile = `+91 ${digits}`;
+    const formattedAltMobile = altMobile.trim() ? formatMobileNumber(altMobile.trim()) : '';
 
     const finalId = (customerId && customerId.trim()) ? customerId.trim().toUpperCase() : nextCustomerId;
     if (customers.some(c => c.id?.toLowerCase() === finalId.toLowerCase() || c.customerId?.toLowerCase() === finalId.toLowerCase())) {
@@ -233,7 +235,7 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
       isCustomer: true,
       name: customerType === 'known' ? name : 'Unknown / Lead',
       mobile: formattedMobile,
-      altMobile,
+      altMobile: formattedAltMobile,
       business,
       address,
       state,
@@ -344,7 +346,7 @@ export const AddCustomerModal = ({ isOpen, onClose, defaultDatabase = 'new', def
               <input
                 type="tel"
                 required
-                placeholder="10-digit (e.g. 98401 23456)"
+                placeholder="10-digit (e.g. 9840123456)"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
                 className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"

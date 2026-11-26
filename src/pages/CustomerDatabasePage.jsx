@@ -19,7 +19,7 @@ import {
   CheckCircle2,
   Clock
 } from 'lucide-react';
-import { formatDate, getStatusBadgeClass, exportToCSV } from '../utils/formatters';
+import { formatDate, getStatusBadgeClass, exportToCSV, formatMobileNumber, matchesMobileSearch } from '../utils/formatters';
 import { CustomerDetailModal } from '../components/customers/CustomerDetailModal';
 import { AddDatabaseRecordModal } from '../components/database/AddDatabaseRecordModal';
 import { Pagination } from '../components/common/Pagination';
@@ -85,7 +85,7 @@ export const CustomerDatabasePage = () => {
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
         const matchesName = c.name && c.name.toLowerCase().includes(q);
-        const matchesMobile = c.mobile && c.mobile.includes(q);
+        const matchesMobile = matchesMobileSearch(c.mobile, searchTerm);
         const matchesBusiness = c.business && c.business.toLowerCase().includes(q);
         if (!matchesName && !matchesMobile && !matchesBusiness) return false;
       }
@@ -119,7 +119,7 @@ export const CustomerDatabasePage = () => {
   const handleExport = () => {
     const exportData = filteredCustomers.map((c, idx) => ({
       "Sl No": idx + 1,
-      "Mobile Number": c.mobile,
+      "Mobile Number": formatMobileNumber(c.mobile),
       "Contact Name": c.name || '-',
       "Business": c.business || '-',
       "State": c.state,
@@ -278,7 +278,7 @@ export const CustomerDatabasePage = () => {
                           {cust.name}
                         </td>
                         <td className="px-4 py-3 font-mono font-medium">
-                          {cust.mobile}
+                          {formatMobileNumber(cust.mobile)}
                         </td>
                         <td className="px-4 py-3 font-medium text-slate-800">
                           {cust.business || 'General Client'}
@@ -287,7 +287,7 @@ export const CustomerDatabasePage = () => {
                     ) : (
                       <>
                         <td className="px-4 py-3 font-mono font-bold text-slate-900">
-                          {cust.mobile}
+                          {formatMobileNumber(cust.mobile)}
                         </td>
                         <td className="px-4 py-3 text-slate-600">
                           {cust.business || 'Unverified Lead'}

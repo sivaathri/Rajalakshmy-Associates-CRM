@@ -26,7 +26,7 @@ import {
   Check,
   Lock
 } from 'lucide-react';
-import { formatCurrency, formatDate, formatMobileNumber } from '../utils/formatters';
+import { formatCurrency, formatDate, formatMobileNumber, matchesMobileSearch } from '../utils/formatters';
 
 export const BankLoginPage = () => {
   const { bankLogins, addBankLogin, addLoginUpdate, disburseLogin, rejectLogin, customers, activities = [], leads = [], employees = [] } = useCRM();
@@ -408,7 +408,7 @@ export const BankLoginPage = () => {
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
         const mName = item.customerName?.toLowerCase().includes(q);
-        const mMobile = item.mobile?.includes(q);
+        const mMobile = matchesMobileSearch(item.mobile, searchTerm);
         const mBiz = item.business?.toLowerCase().includes(q);
         const mBank = item.bankName?.toLowerCase().includes(q);
         const mBankId = item.bankId?.toLowerCase().includes(q);

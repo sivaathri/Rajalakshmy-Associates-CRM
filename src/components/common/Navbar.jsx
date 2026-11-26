@@ -12,6 +12,7 @@ import {
   X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { formatMobileNumber } from '../../utils/formatters';
 
 export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
   const { currentUser, logout, confirmAndLogout, loginAsRole } = useAuth();
@@ -153,7 +154,7 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
                 </div>
                 <div className="flex items-center gap-2 text-[11px]">
                   <PhoneCall className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{currentUser?.mobile}</span>
+                  <span>{formatMobileNumber(currentUser?.mobile)}</span>
                 </div>
               </div>
 

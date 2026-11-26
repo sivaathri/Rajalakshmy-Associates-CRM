@@ -24,7 +24,18 @@ export const formatMobileNumber = (val) => {
   if (digits.length === 12 && digits.startsWith('91')) {
     return `+91 ${digits.slice(2)}`;
   }
-  return str.replace(/(\d{5})\s+(\d{5})/g, '$1$2').trim();
+  if (digits.length === 11 && digits.startsWith('0') && /^[6-9]/.test(digits.slice(1))) {
+    return `+91 ${digits.slice(1)}`;
+  }
+  return str.replace(/(\d{4,6})\s+(\d{4,6})/g, '$1$2').trim();
+};
+
+export const matchesMobileSearch = (mobile, query) => {
+  if (!mobile || !query) return false;
+  if (String(mobile).toLowerCase().includes(query.toLowerCase())) return true;
+  const qDigits = String(query).replace(/\D/g, '');
+  if (!qDigits) return false;
+  return String(mobile).replace(/\D/g, '').includes(qDigits);
 };
 
 // Format strictly to DD-MM-YYYY (e.g. 17-11-2026)

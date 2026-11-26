@@ -15,7 +15,7 @@ import {
   AlertTriangle,
   ArrowRight
 } from 'lucide-react';
-import { formatDate } from '../../utils/formatters';
+import { formatDate, formatMobileNumber } from '../../utils/formatters';
 
 export const FollowUpReminderModal = () => {
   const { showFollowUpModal, setShowFollowUpModal, currentUser, showToast } = useAuth();
@@ -186,7 +186,7 @@ export const FollowUpReminderModal = () => {
                             </span>
                           </div>
                           <div className="text-xs text-slate-600 mt-0.5">
-                            <span className="font-semibold text-slate-800 font-mono">{c.mobile}</span> • {c.business || c.city} ({c.state})
+                            <span className="font-semibold text-slate-800 font-mono">{formatMobileNumber(c.mobile)}</span> • {c.business || c.city} ({c.state})
                           </div>
                         </div>
 

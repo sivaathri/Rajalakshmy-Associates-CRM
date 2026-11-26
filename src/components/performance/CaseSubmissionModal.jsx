@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useCRM } from '../../context/CRMContext';
 import { useAuth } from '../../context/AuthContext';
+import { formatMobileNumber } from '../../utils/formatters';
 import { X, Award, IndianRupee, Calendar, User, Phone, FileText } from 'lucide-react';
 
 export const CaseSubmissionModal = ({ isOpen, onClose }) => {
@@ -21,7 +22,7 @@ export const CaseSubmissionModal = ({ isOpen, onClose }) => {
     const found = customers.find(c => c.id === custId);
     if (found) {
       setCustomerName(found.name);
-      setMobile(found.mobile);
+      setMobile(formatMobileNumber(found.mobile));
     }
   };
 
@@ -34,7 +35,7 @@ export const CaseSubmissionModal = ({ isOpen, onClose }) => {
 
     submitPerformanceCase({
       customerName,
-      mobile,
+      mobile: formatMobileNumber(mobile),
       caseAmount,
       caseDate,
       details
@@ -81,7 +82,7 @@ export const CaseSubmissionModal = ({ isOpen, onClose }) => {
               <option value="">-- Choose Existing Contact --</option>
               {customers.map(c => (
                 <option key={c.id} value={c.id}>
-                  {c.name} ({c.mobile}) - {c.business || c.city}
+                  {c.name} ({formatMobileNumber(c.mobile)}) - {c.business || c.city}
                 </option>
               ))}
             </select>
@@ -108,7 +109,7 @@ export const CaseSubmissionModal = ({ isOpen, onClose }) => {
             <input
               type="tel"
               required
-              placeholder="e.g. +91 98401 22341"
+              placeholder="e.g. +91 9840122341"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
               className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"

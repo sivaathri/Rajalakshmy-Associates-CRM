@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useCRM } from '../../context/CRMContext';
 import { useAuth } from '../../context/AuthContext';
+import { formatMobileNumber } from '../../utils/formatters';
 import {
   FileText,
   User,
@@ -109,7 +110,7 @@ export const ActiveCallModal = () => {
             <div>
               <span className="text-white/60 block text-[10px]">Mobile to Dial:</span>
               <span className="font-bold text-gold-300 text-sm font-mono tracking-wider">
-                {activeCallContact.mobile}
+                {formatMobileNumber(activeCallContact.mobile)}
               </span>
             </div>
             <div>

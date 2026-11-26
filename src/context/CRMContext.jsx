@@ -14,7 +14,15 @@ import {
   INITIAL_LEAVES
 } from '../data/mockData';
 import { useAuth } from './AuthContext';
-import { formatDateDDMMYYYY } from '../utils/formatters';
+import { formatDateDDMMYYYY, formatMobileNumber } from '../utils/formatters';
+
+const normalizeRecordContacts = (item) => {
+  if (!item || typeof item !== 'object') return item;
+  const updated = { ...item };
+  if (item.mobile) updated.mobile = formatMobileNumber(item.mobile);
+  if (item.altMobile) updated.altMobile = formatMobileNumber(item.altMobile);
+  return updated;
+};
 
 const CRMContext = createContext();
 
@@ -160,7 +168,7 @@ export const CRMProvider = ({ children }) => {
   const [customers, setCustomers] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-      return saved ? ensureUniqueCustomerIds(JSON.parse(saved)) : [];
+      return saved ? ensureUniqueCustomerIds(JSON.parse(saved)).map(normalizeRecordContacts) : [];
     } catch {
       return [];
     }
@@ -169,7 +177,7 @@ export const CRMProvider = ({ children }) => {
   const [calls, setCalls] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.CALLS);
-      return saved ? JSON.parse(saved) : [];
+      return saved ? JSON.parse(saved).map(normalizeRecordContacts) : [];
     } catch {
       return [];
     }
@@ -178,7 +186,7 @@ export const CRMProvider = ({ children }) => {
   const [activities, setActivities] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ACTIVITIES);
-      return saved ? JSON.parse(saved) : [];
+      return saved ? JSON.parse(saved).map(normalizeRecordContacts) : [];
     } catch {
       return [];
     }
@@ -187,7 +195,7 @@ export const CRMProvider = ({ children }) => {
   const [performanceCases, setPerformanceCases] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PERFORMANCE);
-      return saved ? JSON.parse(saved) : [];
+      return saved ? JSON.parse(saved).map(normalizeRecordContacts) : [];
     } catch {
       return [];
     }
@@ -225,7 +233,7 @@ export const CRMProvider = ({ children }) => {
   const [enquiries, setEnquiries] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ENQUIRIES);
-      return saved ? JSON.parse(saved) : [];
+      return saved ? JSON.parse(saved).map(normalizeRecordContacts) : [];
     } catch {
       return [];
     }
@@ -250,14 +258,14 @@ export const CRMProvider = ({ children }) => {
           ? 0
           : (Number(l.estimatedAmount) || 0);
 
-        return {
+        return normalizeRecordContacts({
           ...l,
           remarks: cleanedRemarks,
           city: cleanedCity,
           state: cleanedState,
           requiredService: cleanedService,
           estimatedAmount: cleanedAmount
-        };
+        });
       });
     } catch {
       return [];
@@ -341,12 +349,12 @@ export const CRMProvider = ({ children }) => {
       const saved = localStorage.getItem(STORAGE_KEYS.EMPLOYEES);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed.map(normalizeRecordContacts);
       }
     } catch (e) {
       console.warn('Could not load employees from storage:', e);
     }
-    return INITIAL_EMPLOYEES;
+    return INITIAL_EMPLOYEES.map(normalizeRecordContacts);
   });
 
   // Active call state for RM telecalling
@@ -610,7 +618,7 @@ export const CRMProvider = ({ children }) => {
     const isSalesMgr = currentUser?.role === 'Sales Manager' || customerData.submittedBy === 'EMP005';
     const resolvedDatabaseType = isSalesMgr ? 'new' : (customerData.databaseType || 'new');
 
-    const newCustomer = {
+    const newCustomer = normalizeRecordContacts({
       id: newId,
       isCustomer: isOfficialCustomer,
       customerId: isOfficialCustomer ? (customerData.customerId || newId) : '',
@@ -636,7 +644,7 @@ export const CRMProvider = ({ children }) => {
       createdAt: new Date().toISOString().split('T')[0],
       documents: customerData.documents || [],
       services: customerData.services || []
-    };
+    });
 
     setCustomers(prev => [newCustomer, ...prev]);
 
@@ -677,7 +685,8 @@ export const CRMProvider = ({ children }) => {
   };
 
   const updateCustomer = (id, updatedFields) => {
-    setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...updatedFields } : c));
+    const normalizedFields = normalizeRecordContacts(updatedFields);
+    setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...normalizedFields } : c));
     showToast('Customer record updated successfully', 'success');
   };
 
@@ -785,7 +794,7 @@ export const CRMProvider = ({ children }) => {
       title: (employeeData.title || '').trim() || `${employeeData.role || 'Relationship'} Specialist`,
       department: (employeeData.department || '').trim() || 'Operations & Client Services',
       email: (employeeData.email || '').trim() || `${empId.toLowerCase()}@rajalakshmy.com`,
-      mobile: (employeeData.mobile || '').trim() || '+91 98400 00000',
+      mobile: employeeData.mobile?.trim() ? formatMobileNumber(employeeData.mobile.trim()) : '+91 9840000000',
       location: (employeeData.location || '').trim() || 'Chennai Head Office',
       password: employeeData.password || 'password123',
       status: employeeData.status || 'Active',
@@ -798,9 +807,10 @@ export const CRMProvider = ({ children }) => {
   };
 
   const updateEmployee = (id, updatedFields) => {
+    const normalizedFields = normalizeRecordContacts(updatedFields);
     setEmployees(prev => prev.map(e => {
       if (e.id === id) {
-        return { ...e, ...updatedFields };
+        return { ...e, ...normalizedFields };
       }
       return e;
     }));
@@ -984,7 +994,7 @@ export const CRMProvider = ({ children }) => {
     const resolvedReference = (activity.source === 'Reference' || activity.source === 'Bills') ? (activity.referenceFrom || '') : '';
     const resolvedCity = activity.city || activity.location || '';
 
-    const newActivity = {
+    const newActivity = normalizeRecordContacts({
       id: `ACT-${Date.now().toString().slice(-4)}`,
       customerName: isKnown ? (activity.customerName || 'Customer') : 'Unknown / Lead',
       mobile: activity.mobile,
@@ -1001,7 +1011,7 @@ export const CRMProvider = ({ children }) => {
       submissionTime: timeStr,
       classifiedTo: classification,
       status: 'Saved'
-    };
+    });
 
     setActivities(prev => [newActivity, ...prev]);
 
@@ -1170,7 +1180,7 @@ export const CRMProvider = ({ children }) => {
   // PERFORMANCE - CASE DISPOSITION
   // ----------------------------------------------------
   const submitPerformanceCase = (data) => {
-    const newCase = {
+    const newCase = normalizeRecordContacts({
       id: `CASE-${Date.now().toString().slice(-4)}`,
       customerName: data.customerName,
       mobile: data.mobile,
@@ -1183,7 +1193,7 @@ export const CRMProvider = ({ children }) => {
       approvedBy: '',
       approvalDate: '',
       rejectionRemarks: ''
-    };
+    });
 
     setPerformanceCases(prev => [newCase, ...prev]);
     showToast('Case submitted for Admin/Manager approval', 'success');
@@ -1382,7 +1392,7 @@ export const CRMProvider = ({ children }) => {
     const formattedDate = formatDateDDMMYYYY(now);
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    const newEnquiry = {
+    const newEnquiry = normalizeRecordContacts({
       id: `ENQ-${Date.now().toString().slice(-4)}`,
       name: data.name || 'Website Visitor',
       mobile: data.mobile || '',
@@ -1396,7 +1406,7 @@ export const CRMProvider = ({ children }) => {
       assignedTo: data.assignedTo || 'EMP004',
       assignedName: data.assignedName || 'Ananya Subramanian',
       notes: data.notes || ''
-    };
+    });
 
     setEnquiries(prev => [newEnquiry, ...prev]);
     showToast(`New Website Enquiry captured from ${newEnquiry.name}`, 'success');
@@ -1444,11 +1454,12 @@ export const CRMProvider = ({ children }) => {
   // ----------------------------------------------------
   const addLead = (leadData) => {
     const newId = `LEAD-${Date.now().toString().slice(-4)}`;
-    const newLead = {
+    const newLead = normalizeRecordContacts({
       id: newId,
       customerId: leadData.customerId || '',
       customerName: leadData.customerName || 'Prospect Lead',
       mobile: leadData.mobile,
+      altMobile: leadData.altMobile || '',
       business: leadData.business || 'General Business',
       city: leadData.city || 'Tamil Nadu',
       state: leadData.state || 'Tamil Nadu',
@@ -1463,7 +1474,7 @@ export const CRMProvider = ({ children }) => {
       assignedByName: currentUser?.name || 'Ananya Subramanian',
       assignedAt: new Date().toISOString().split('T')[0],
       remarks: leadData.remarks || 'New lead registered'
-    };
+    });
 
     setLeads(prev => [newLead, ...prev]);
     showToast(`Lead created for ${newLead.customerName}!`, 'success');
@@ -1491,22 +1502,23 @@ export const CRMProvider = ({ children }) => {
   };
 
   const updateLead = (leadId, updates) => {
+    const normalizedUpdates = normalizeRecordContacts(updates);
     const existingLead = leads.find(l => l.id === leadId);
-    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, ...updates } : l));
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, ...normalizedUpdates } : l));
 
     const linkedCustId = existingLead?.sourceCustomerId || existingLead?.customerId;
     if (linkedCustId) {
       const custUpdates = {};
-      if (updates.customerName !== undefined) custUpdates.name = updates.customerName;
-      if (updates.mobile !== undefined) custUpdates.mobile = updates.mobile;
-      if (updates.altMobile !== undefined) custUpdates.altMobile = updates.altMobile;
-      if (updates.business !== undefined) custUpdates.business = updates.business;
-      if (updates.city !== undefined) custUpdates.city = updates.city;
-      if (updates.state !== undefined) custUpdates.state = updates.state;
-      if (updates.address !== undefined) custUpdates.address = updates.address;
-      if (updates.requiredService !== undefined) custUpdates.requiredService = updates.requiredService;
-      if (updates.estimatedAmount !== undefined) custUpdates.loanRequirement = updates.estimatedAmount;
-      if (updates.documents !== undefined) custUpdates.documents = updates.documents;
+      if (normalizedUpdates.customerName !== undefined) custUpdates.name = normalizedUpdates.customerName;
+      if (normalizedUpdates.mobile !== undefined) custUpdates.mobile = normalizedUpdates.mobile;
+      if (normalizedUpdates.altMobile !== undefined) custUpdates.altMobile = normalizedUpdates.altMobile;
+      if (normalizedUpdates.business !== undefined) custUpdates.business = normalizedUpdates.business;
+      if (normalizedUpdates.city !== undefined) custUpdates.city = normalizedUpdates.city;
+      if (normalizedUpdates.state !== undefined) custUpdates.state = normalizedUpdates.state;
+      if (normalizedUpdates.address !== undefined) custUpdates.address = normalizedUpdates.address;
+      if (normalizedUpdates.requiredService !== undefined) custUpdates.requiredService = normalizedUpdates.requiredService;
+      if (normalizedUpdates.estimatedAmount !== undefined) custUpdates.loanRequirement = normalizedUpdates.estimatedAmount;
+      if (normalizedUpdates.documents !== undefined) custUpdates.documents = normalizedUpdates.documents;
 
       if (Object.keys(custUpdates).length > 0) {
         setCustomers(prev => prev.map(c => (c.id === linkedCustId || c.customerId === linkedCustId) ? { ...c, ...custUpdates } : c));

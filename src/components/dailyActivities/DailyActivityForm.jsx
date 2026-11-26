@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useCRM } from '../../context/CRMContext';
 import { useAuth } from '../../context/AuthContext';
+import { formatMobileNumber } from '../../utils/formatters';
 import { PlusCircle, Building2, User, Phone, MapPin, Tag, Share2, UploadCloud, FileSpreadsheet, Download, CheckCircle, AlertTriangle } from 'lucide-react';
 
 const getClean10Digits = (num) => String(num || '').replace(/\D/g, '').slice(-10);
@@ -141,7 +142,7 @@ export const DailyActivityForm = () => {
     }
 
     if (duplicateMatch) {
-      alert(`Mobile number ${duplicateMatch.mobile} already exists in ${duplicateMatch.location} (${duplicateMatch.name}). Duplicate entries cannot be saved!`);
+      alert(`Mobile number ${formatMobileNumber(duplicateMatch.mobile)} already exists in ${duplicateMatch.location} (${duplicateMatch.name}). Duplicate entries cannot be saved!`);
       return;
     }
 
@@ -165,7 +166,7 @@ export const DailyActivityForm = () => {
       return;
     }
 
-    const formattedMobile = `+91 ${cleanEnteredMobile.slice(0, 5)} ${cleanEnteredMobile.slice(5)}`;
+    const formattedMobile = `+91 ${cleanEnteredMobile}`;
 
     const saved = addDailyActivity({
       customerName: customerType === 'known' ? customerName : 'Unknown / Lead',
@@ -279,7 +280,7 @@ export const DailyActivityForm = () => {
               <input
                 type="tel"
                 required
-                placeholder="10-digit mobile (e.g. 98401 23456)"
+                placeholder="10-digit mobile (e.g. 9840123456)"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
                 className={`w-full h-11 text-xs md:text-sm rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-1 transition bg-white ${

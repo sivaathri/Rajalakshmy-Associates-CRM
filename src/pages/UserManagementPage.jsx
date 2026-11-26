@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCRM } from '../context/CRMContext';
 import { Pagination } from '../components/common/Pagination';
+import { formatMobileNumber, matchesMobileSearch } from '../utils/formatters';
 import {
   Users,
   UserPlus,
@@ -98,7 +99,7 @@ export const UserManagementPage = () => {
       department: emp.department || 'Operations',
       location: emp.location || 'Chennai Head Office',
       email: emp.email || '',
-      mobile: emp.mobile || '',
+      mobile: emp.mobile ? formatMobileNumber(emp.mobile) : '',
       password: emp.password || 'password123',
       status: emp.status || 'Active'
     });
@@ -114,6 +115,8 @@ export const UserManagementPage = () => {
       return;
     }
 
+    const formattedMobile = formData.mobile.trim() ? formatMobileNumber(formData.mobile.trim()) : '';
+
     if (editingUserId) {
       // Update existing
       updateEmployee(editingUserId, {
@@ -123,7 +126,7 @@ export const UserManagementPage = () => {
         department: formData.department.trim(),
         location: formData.location.trim(),
         email: formData.email.trim(),
-        mobile: formData.mobile.trim(),
+        mobile: formattedMobile,
         password: formData.password || 'password123',
         status: formData.status
       });
@@ -138,7 +141,7 @@ export const UserManagementPage = () => {
         department: formData.department.trim(),
         location: formData.location.trim(),
         email: formData.email.trim() || `${formData.id.toLowerCase()}@rajalakshmy.com`,
-        mobile: formData.mobile.trim(),
+        mobile: formattedMobile,
         password: formData.password || 'password123',
         status: formData.status
       });
@@ -188,7 +191,7 @@ export const UserManagementPage = () => {
         emp.name?.toLowerCase().includes(q) ||
         emp.id?.toLowerCase().includes(q) ||
         emp.email?.toLowerCase().includes(q) ||
-        emp.mobile?.toLowerCase().includes(q) ||
+        matchesMobileSearch(emp.mobile, searchQuery) ||
         emp.department?.toLowerCase().includes(q) ||
         emp.role?.toLowerCase().includes(q);
 
@@ -476,7 +479,7 @@ export const UserManagementPage = () => {
                         </div>
                         <div className="flex items-center gap-1.5 text-slate-600">
                           <Phone className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span>{emp.mobile || 'N/A'}</span>
+                          <span>{formatMobileNumber(emp.mobile) || 'N/A'}</span>
                         </div>
                       </td>
 
@@ -734,7 +737,7 @@ export const UserManagementPage = () => {
                     type="text"
                     value={formData.mobile}
                     onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                    placeholder="+91 98405 55005"
+                    placeholder="+91 9840555005"
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-[#FAF6EF]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-burgundy-800"
                   />
                 </div>

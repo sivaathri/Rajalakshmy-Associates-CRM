@@ -16,7 +16,7 @@ import {
   Building2,
   CalendarCheck
 } from 'lucide-react';
-import { formatDate, exportToCSV, getStatusBadgeClass } from '../utils/formatters';
+import { formatDate, exportToCSV, getStatusBadgeClass, formatMobileNumber, matchesMobileSearch } from '../utils/formatters';
 import { AddCustomerModal } from '../components/customers/AddCustomerModal';
 import { CustomerDetailModal } from '../components/customers/CustomerDetailModal';
 import { Pagination } from '../components/common/Pagination';
@@ -67,7 +67,7 @@ export const CustomerManagementPage = () => {
     const q = searchTerm.toLowerCase();
     return scopedCustomers.filter(c => {
       const matchesName = c.name && c.name.toLowerCase().includes(q);
-      const matchesMobile = c.mobile && c.mobile.includes(q);
+      const matchesMobile = matchesMobileSearch(c.mobile, searchTerm) || matchesMobileSearch(c.altMobile, searchTerm);
       const matchesBusiness = c.business && c.business.toLowerCase().includes(q);
       const matchesCity = c.city && c.city.toLowerCase().includes(q);
       return matchesName || matchesMobile || matchesBusiness || matchesCity;
@@ -85,8 +85,8 @@ export const CustomerManagementPage = () => {
     const data = filteredCustomers.map(c => ({
       "Customer ID": c.customerId || c.id,
       "Name": c.name,
-      "Mobile Contact": c.mobile,
-      "Alt Mobile": c.altMobile || '-',
+      "Mobile Contact": formatMobileNumber(c.mobile),
+      "Alt Mobile": c.altMobile ? formatMobileNumber(c.altMobile) : '-',
       "Business": c.business || '-',
       "City": c.city || '-',
       "State": c.state,
@@ -241,9 +241,9 @@ export const CustomerManagementPage = () => {
                       </td>
 
                       <td className="px-4 py-3">
-                        <span className="font-semibold text-slate-800">{c.mobile}</span>
+                        <span className="font-semibold text-slate-800">{formatMobileNumber(c.mobile)}</span>
                         {c.altMobile && (
-                          <span className="text-[10px] text-slate-400 block">Alt: {c.altMobile}</span>
+                          <span className="text-[10px] text-slate-400 block">Alt: {formatMobileNumber(c.altMobile)}</span>
                         )}
                       </td>
 

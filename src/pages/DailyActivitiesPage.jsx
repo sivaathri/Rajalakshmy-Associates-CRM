@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { DailyActivityForm } from '../components/dailyActivities/DailyActivityForm';
 import { Pagination } from '../components/common/Pagination';
-import { formatDate, exportToCSV } from '../utils/formatters';
+import { formatDate, exportToCSV, formatMobileNumber } from '../utils/formatters';
 
 export const DailyActivitiesPage = () => {
   const { activities, customers, employees } = useCRM();
@@ -332,7 +332,7 @@ export const DailyActivitiesPage = () => {
                         <tr key={act.id} className="hover:bg-[#FAF6EF]/60 transition">
                           <td className="px-4 py-3 text-center font-bold text-slate-700">{slNo}</td>
                           <td className="px-4 py-3 font-bold text-slate-900">{act.customerName}</td>
-                          <td className="px-4 py-3 font-mono font-medium">{act.mobile}</td>
+                          <td className="px-4 py-3 font-mono font-medium">{formatMobileNumber(act.mobile)}</td>
                           <td className="px-4 py-3">{act.business || 'General Client'}</td>
                           <td className="px-4 py-3">
                             <span className="font-semibold text-slate-800">{act.source}</span>

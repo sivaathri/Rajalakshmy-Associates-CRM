@@ -18,7 +18,7 @@ import {
   Briefcase,
   Upload
 } from 'lucide-react';
-import { formatDate, getStatusBadgeClass } from '../../utils/formatters';
+import { formatDate, getStatusBadgeClass, formatMobileNumber } from '../../utils/formatters';
 
 export const CustomerDetailModal = ({ customer, onClose }) => {
   const {
@@ -187,12 +187,12 @@ export const CustomerDetailModal = ({ customer, onClose }) => {
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between">
                       <span className="text-slate-500">Mobile Number:</span>
-                      <span className="font-bold text-slate-800">{customer.mobile}</span>
+                      <span className="font-bold text-slate-800">{formatMobileNumber(customer.mobile)}</span>
                     </div>
                     {customer.altMobile && (
                       <div className="flex justify-between">
                         <span className="text-slate-500">Alternate Mobile:</span>
-                        <span className="font-semibold text-slate-800">{customer.altMobile}</span>
+                        <span className="font-semibold text-slate-800">{formatMobileNumber(customer.altMobile)}</span>
                       </div>
                     )}
                     <div className="flex justify-between">

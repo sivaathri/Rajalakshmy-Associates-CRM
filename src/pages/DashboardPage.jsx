@@ -31,7 +31,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { formatCurrency, formatDate, getStatusBadgeClass } from '../utils/formatters';
+import { formatCurrency, formatDate, getStatusBadgeClass, formatMobileNumber } from '../utils/formatters';
 import { CaseSubmissionModal } from '../components/performance/CaseSubmissionModal';
 import { CustomerDetailModal } from '../components/customers/CustomerDetailModal';
 
@@ -429,7 +429,7 @@ export const DashboardPage = () => {
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-900">{c.name}</span>
                       <span className="text-[10px] text-burgundy-900 bg-burgundy-50 px-1.5 py-0.5 rounded font-semibold border border-burgundy-100">
-                        {c.mobile}
+                        {formatMobileNumber(c.mobile)}
                       </span>
                     </div>
                     <div className="text-[11px] text-slate-500 mt-0.5 truncate max-w-xs">
@@ -485,7 +485,7 @@ export const DashboardPage = () => {
                       </span>
                     </div>
                     <div className="text-[11px] text-slate-500 mt-0.5">
-                      {act.mobile} • By <span className="font-semibold text-slate-700">{act.submittedByName}</span>
+                      {formatMobileNumber(act.mobile)} • By <span className="font-semibold text-slate-700">{act.submittedByName}</span>
                     </div>
                     <div
                       className={`text-[10px] font-medium ${

@@ -1,16 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { INITIAL_EMPLOYEES } from '../data/mockData';
+import { formatMobileNumber } from '../utils/formatters';
 
 const AuthContext = createContext();
 
 const STORAGE_KEY_AUTH = 'rajalakshmy_auth_user';
+
+const normalizeUserContact = (user) => {
+  if (!user || typeof user !== 'object') return user;
+  return user.mobile ? { ...user, mobile: formatMobileNumber(user.mobile) } : user;
+};
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_AUTH);
       if (saved) {
-        return JSON.parse(saved);
+        return normalizeUserContact(JSON.parse(saved));
       }
     } catch (e) {
       console.error("Error loading user from localStorage:", e);
@@ -47,12 +53,12 @@ export const AuthProvider = ({ children }) => {
       const saved = localStorage.getItem('rajalakshmy_employees_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed.map(normalizeUserContact);
       }
     } catch (e) {
       console.warn(e);
     }
-    return INITIAL_EMPLOYEES;
+    return INITIAL_EMPLOYEES.map(normalizeUserContact);
   };
 
   const login = (employeeId, password) => {
@@ -98,8 +104,9 @@ export const AuthProvider = ({ children }) => {
 
   const switchUser = (userObj) => {
     if (userObj) {
-      setCurrentUser(userObj);
-      showToast(`Switched session to ${userObj.name} (${userObj.id} • ${userObj.role})`, 'info');
+      const normalized = normalizeUserContact(userObj);
+      setCurrentUser(normalized);
+      showToast(`Switched session to ${normalized.name} (${normalized.id} • ${normalized.role})`, 'info');
     }
   };
 

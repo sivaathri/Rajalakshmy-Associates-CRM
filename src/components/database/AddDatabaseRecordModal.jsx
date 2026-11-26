@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCRM } from '../../context/CRMContext';
 import { useAuth } from '../../context/AuthContext';
+import { formatMobileNumber } from '../../utils/formatters';
 import {
   X,
   Database,
@@ -57,7 +58,7 @@ export const AddDatabaseRecordModal = ({
     }
 
     if (existingRecord) {
-      alert(`Telephone number ${existingRecord.mobile} already exists in ${existingRecord.databaseType?.toUpperCase()} Database (${existingRecord.name || 'Unknown'})!`);
+      alert(`Telephone number ${formatMobileNumber(existingRecord.mobile)} already exists in ${existingRecord.databaseType?.toUpperCase()} Database (${existingRecord.name || 'Unknown'})!`);
       return;
     }
 
@@ -66,7 +67,7 @@ export const AddDatabaseRecordModal = ({
       return;
     }
 
-    const formattedMobile = `+91 ${cleanEnteredMobile.slice(0, 5)} ${cleanEnteredMobile.slice(5)}`;
+    const formattedMobile = `+91 ${cleanEnteredMobile}`;
 
     addCustomer({
       name: customerType === 'known' ? (name.trim() || 'Contact Lead') : 'Unknown / Lead',

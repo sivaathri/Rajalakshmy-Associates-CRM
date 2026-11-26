@@ -29,7 +29,7 @@ import {
   Upload,
   Trash2
 } from 'lucide-react';
-import { formatCurrency, formatDate } from '../utils/formatters';
+import { formatCurrency, formatDate, formatMobileNumber, matchesMobileSearch } from '../utils/formatters';
 
 export const LeadsPage = () => {
   const { leads, addLead, assignLead, updateLead, convertLeadToLogin, employees, startCallingCustomer } = useCRM();
@@ -160,7 +160,7 @@ export const LeadsPage = () => {
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
         const mName = lead.customerName?.toLowerCase().includes(q);
-        const mMobile = lead.mobile?.includes(q);
+        const mMobile = matchesMobileSearch(lead.mobile, searchTerm) || matchesMobileSearch(lead.altMobile, searchTerm);
         const mBiz = lead.business?.toLowerCase().includes(q);
         const mCity = lead.city?.toLowerCase().includes(q);
         const mService = lead.requiredService?.toLowerCase().includes(q);
@@ -190,8 +190,7 @@ export const LeadsPage = () => {
     }
 
     const assignedEmp = employees.find(e => e.id === newLeadAssigneeId) || currentUser;
-    const digits = newLeadMobile.replace(/\D/g, '').slice(-10);
-    const formattedMobile = `+91 ${digits}`;
+    const formattedMobile = formatMobileNumber(newLeadMobile);
 
     addLead({
       customerName: newLeadName.trim() || 'Prospect Lead',
@@ -293,8 +292,8 @@ export const LeadsPage = () => {
     if (!lead) return;
     setViewingLeadId(lead.id);
     setEditLeadName(lead.customerName || '');
-    setEditLeadMobile(lead.mobile || '');
-    setEditLeadAltMobile(lead.altMobile || '');
+    setEditLeadMobile(lead.mobile ? formatMobileNumber(lead.mobile) : '');
+    setEditLeadAltMobile(lead.altMobile ? formatMobileNumber(lead.altMobile) : '');
     setEditLeadBusiness(lead.business || '');
     setEditLeadCity(lead.city || '');
     setEditLeadState(lead.state || '');
@@ -358,8 +357,8 @@ export const LeadsPage = () => {
 
     updateLead(viewingLead.id, {
       customerName: editLeadName.trim() || viewingLead.customerName,
-      mobile: editLeadMobile.trim() || viewingLead.mobile,
-      altMobile: editLeadAltMobile.trim(),
+      mobile: editLeadMobile.trim() ? formatMobileNumber(editLeadMobile.trim()) : formatMobileNumber(viewingLead.mobile),
+      altMobile: editLeadAltMobile.trim() ? formatMobileNumber(editLeadAltMobile.trim()) : '',
       business: editLeadBusiness.trim(),
       city: editLeadCity.trim(),
       state: editLeadState.trim(),
@@ -696,7 +695,7 @@ export const LeadsPage = () => {
                           </div>
                         )}
                         <div className="text-[11px] font-mono text-slate-600 mt-0.5">
-                          {lead.mobile}
+                          {formatMobileNumber(lead.mobile)}
                           {lead.city && lead.city.trim() ? ` • ${lead.city}` : ''}
                         </div>
                       </td>
@@ -1004,7 +1003,7 @@ export const LeadsPage = () => {
             <div className="p-6 space-y-4">
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
                 <div className="font-bold text-slate-800">{assigningLead.customerName}</div>
-                <div className="text-slate-600 font-mono mt-0.5">{assigningLead.mobile} • {assigningLead.business}</div>
+                <div className="text-slate-600 font-mono mt-0.5">{formatMobileNumber(assigningLead.mobile)} • {assigningLead.business}</div>
                 <div className="text-emerald-700 font-semibold mt-1">
                   Req: {assigningLead.requiredService} ({formatCurrency(assigningLead.estimatedAmount)})
                 </div>
@@ -1106,7 +1105,7 @@ export const LeadsPage = () => {
               <div className="bg-[#FAF6EF] p-3 rounded-xl border border-gold-200/70 text-xs">
                 <div className="font-bold text-slate-900">{loginAssignLead.customerName}</div>
                 <div className="text-slate-600 font-mono mt-0.5">
-                  {loginAssignLead.mobile}
+                  {formatMobileNumber(loginAssignLead.mobile)}
                   {loginAssignLead.business ? ` • ${loginAssignLead.business}` : ''}
                 </div>
               </div>
@@ -1261,7 +1260,7 @@ export const LeadsPage = () => {
             </h3>
 
             <p className="text-xs text-slate-500 mt-1.5 max-w-xs mx-auto leading-relaxed">
-              This will move <strong className="text-slate-800">{confirmConvertData.lead.customerName}</strong> ({confirmConvertData.lead.mobile}) to Bank Login under{' '}
+              This will move <strong className="text-slate-800">{confirmConvertData.lead.customerName}</strong> ({formatMobileNumber(confirmConvertData.lead.mobile)}) to Bank Login under{' '}
               <strong className="text-burgundy-900">{confirmConvertData.assignee?.name} ({confirmConvertData.assignee?.role})</strong> and generate an official Customer ID.
             </p>
 
@@ -1315,7 +1314,7 @@ export const LeadsPage = () => {
                   </span>
                 </div>
                 <div className="text-emerald-800 font-mono">
-                  {convertingLeadData.lead.mobile}
+                  {formatMobileNumber(convertingLeadData.lead.mobile)}
                   {convertingLeadData.lead.business ? ` • ${convertingLeadData.lead.business}` : ''}
                 </div>
                 <div className="text-[10px] text-emerald-800 font-semibold">
@@ -1709,10 +1708,10 @@ export const LeadsPage = () => {
                     <div className="text-xs font-mono text-slate-700 flex items-center gap-2 flex-wrap">
                       <span className="flex items-center gap-1">
                         <Phone className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{viewingLead.mobile}</span>
+                        <span>{formatMobileNumber(viewingLead.mobile)}</span>
                       </span>
                       {viewingLead.altMobile && (
-                        <span className="text-[11px] text-slate-500">• Alt: {viewingLead.altMobile}</span>
+                        <span className="text-[11px] text-slate-500">• Alt: {formatMobileNumber(viewingLead.altMobile)}</span>
                       )}
                     </div>
                     {[viewingLead.city, viewingLead.state].filter(Boolean).length > 0 && (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
+import { formatMobileNumber } from '../utils/formatters';
 import {
   Settings,
   User,
@@ -209,7 +210,7 @@ export const SettingsPage = () => {
                   </td>
                   <td className="px-4 py-3">{emp.location}</td>
                   <td className="px-4 py-3 font-mono text-slate-600">{emp.email}</td>
-                  <td className="px-4 py-3 font-mono font-medium">{emp.mobile}</td>
+                  <td className="px-4 py-3 font-mono font-medium">{formatMobileNumber(emp.mobile)}</td>
                   <td className="px-4 py-3 text-right">
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>

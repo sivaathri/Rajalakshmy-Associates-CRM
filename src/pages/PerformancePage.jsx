@@ -16,7 +16,7 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
-import { formatCurrency, formatDate, getStatusBadgeClass, exportToCSV } from '../utils/formatters';
+import { formatCurrency, formatDate, getStatusBadgeClass, exportToCSV, formatMobileNumber } from '../utils/formatters';
 import { CaseSubmissionModal } from '../components/performance/CaseSubmissionModal';
 import { RejectCaseModal } from '../components/performance/RejectCaseModal';
 
@@ -71,7 +71,7 @@ export const PerformancePage = () => {
     const data = filteredCases.map(c => ({
       "Case ID": c.id,
       "Customer Name": c.customerName,
-      "Mobile": c.mobile,
+      "Mobile": formatMobileNumber(c.mobile),
       "Sanction Amount": c.caseAmount,
       "Case Date": c.caseDate,
       "Details": c.details,
@@ -220,7 +220,7 @@ export const PerformancePage = () => {
                       <div className="font-bold text-slate-900">{item.customerName}</div>
                       <div className="text-[11px] text-slate-500 truncate max-w-xs">{item.details}</div>
                     </td>
-                    <td className="px-4 py-3 font-mono font-medium">{item.mobile}</td>
+                    <td className="px-4 py-3 font-mono font-medium">{formatMobileNumber(item.mobile)}</td>
                     <td className="px-4 py-3 font-bold text-slate-900 text-sm">
                       {formatCurrency(item.caseAmount)}
                     </td>

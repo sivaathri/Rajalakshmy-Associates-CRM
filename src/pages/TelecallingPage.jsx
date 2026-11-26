@@ -40,7 +40,7 @@ import {
   YAxis,
   CartesianGrid
 } from 'recharts';
-import { formatDate, formatDateTime, getStatusBadgeClass, exportToCSV } from '../utils/formatters';
+import { formatDate, formatDateTime, getStatusBadgeClass, exportToCSV, formatMobileNumber, matchesMobileSearch } from '../utils/formatters';
 import { Pagination } from '../components/common/Pagination';
 
 export const TelecallingPage = () => {
@@ -209,7 +209,7 @@ export const TelecallingPage = () => {
       if (searchQueue.trim()) {
         const q = searchQueue.toLowerCase();
         const mName = c.name && c.name.toLowerCase().includes(q);
-        const mPhone = c.mobile && c.mobile.includes(q);
+        const mPhone = matchesMobileSearch(c.mobile, searchQueue);
         const mBiz = c.business && c.business.toLowerCase().includes(q);
         if (!mName && !mPhone && !mBiz) return false;
       }
@@ -428,7 +428,7 @@ export const TelecallingPage = () => {
       if (!searchMyNumbers.trim()) return true;
       const q = searchMyNumbers.toLowerCase();
       const mName = c.name && c.name.toLowerCase().includes(q);
-      const mPhone = c.mobile && c.mobile.includes(q);
+      const mPhone = matchesMobileSearch(c.mobile, searchMyNumbers);
       const mBiz = c.business && c.business.toLowerCase().includes(q);
       const mCity = c.city && c.city.toLowerCase().includes(q);
       const mSource = c.source && c.source.toLowerCase().includes(q);
@@ -473,7 +473,7 @@ export const TelecallingPage = () => {
     const data = filteredCalls.map((c, idx) => ({
       "Sl No": idx + 1,
       "Customer Name": c.customerName,
-      "Mobile Contact": c.mobile,
+      "Mobile Contact": formatMobileNumber(c.mobile),
       "Telecaller": c.employeeName,
       "Date": formatDate(c.callDate),
       "Time": c.callTime,
@@ -821,7 +821,7 @@ export const TelecallingPage = () => {
                       </div>
                       <div className="inline-block bg-burgundy-50 border border-burgundy-200 px-4 py-2 rounded-xl shadow-sm">
                         <span className="text-xl font-mono font-extrabold text-burgundy-900 tracking-wider">
-                          {currentFocusedContact.mobile}
+                          {formatMobileNumber(currentFocusedContact.mobile)}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 mt-1">
@@ -1184,7 +1184,7 @@ export const TelecallingPage = () => {
                         {item.id === selectedContactId ? '● Selected' : '★ Fresh Number'}
                       </span>
                     </div>
-                    <div className="font-mono text-slate-600 text-[11px] mt-0.5">{item.mobile}</div>
+                    <div className="font-mono text-slate-600 text-[11px] mt-0.5">{formatMobileNumber(item.mobile)}</div>
                     <div className="text-slate-500 text-[10px] truncate mt-0.5">{item.business || item.city}</div>
                   </div>
                 ))
@@ -1266,7 +1266,7 @@ export const TelecallingPage = () => {
                       <tr key={item.id} className="hover:bg-[#FAF6EF]/60 transition">
                         <td className="px-4 py-3 font-semibold text-slate-700">{slNo}</td>
                         <td className="px-4 py-3 font-bold text-slate-900">{item.name}</td>
-                        <td className="px-4 py-3 font-mono font-medium">{item.mobile}</td>
+                        <td className="px-4 py-3 font-mono font-medium">{formatMobileNumber(item.mobile)}</td>
                         <td className="px-4 py-3">{item.business || 'General Client'}</td>
                         <td className="px-4 py-3">{item.city || item.state || '-'}</td>
                         <td className="px-4 py-3">
@@ -1400,7 +1400,7 @@ export const TelecallingPage = () => {
                         <tr key={item.id} className="hover:bg-[#FAF6EF]/60 transition">
                           <td className="px-4 py-3 font-semibold text-slate-700">{slNo}</td>
                           <td className="px-4 py-3 font-bold text-slate-900">{item.name}</td>
-                          <td className="px-4 py-3 font-mono font-medium">{item.mobile}</td>
+                          <td className="px-4 py-3 font-mono font-medium">{formatMobileNumber(item.mobile)}</td>
                           <td className="px-4 py-3">{item.business || 'General Client'}</td>
                           <td className="px-4 py-3">{[item.city, item.state].filter(Boolean).join(', ') || '-'}</td>
                           <td className="px-4 py-3">
@@ -1540,7 +1540,7 @@ export const TelecallingPage = () => {
                         <tr key={item.id} className="hover:bg-[#FAF6EF]/60 transition">
                           <td className="px-4 py-3 font-semibold text-slate-700">{slNo}</td>
                           <td className="px-4 py-3 font-bold text-slate-900">{item.name}</td>
-                          <td className="px-4 py-3 font-mono font-medium">{item.mobile}</td>
+                          <td className="px-4 py-3 font-mono font-medium">{formatMobileNumber(item.mobile)}</td>
                           <td className="px-4 py-3">{item.business || 'General Client'}</td>
                           <td className="px-4 py-3">{[item.city, item.state].filter(Boolean).join(', ') || '-'}</td>
                           <td className="px-4 py-3">
@@ -1799,7 +1799,7 @@ export const TelecallingPage = () => {
                       <tr key={c.id} className="hover:bg-[#FAF6EF]/60 transition">
                         <td className="px-4 py-3 font-semibold text-slate-700">{slNo}</td>
                         <td className="px-4 py-3 font-bold text-slate-900">{c.customerName}</td>
-                      <td className="px-4 py-3 font-mono font-medium">{c.mobile}</td>
+                      <td className="px-4 py-3 font-mono font-medium">{formatMobileNumber(c.mobile)}</td>
                       <td className="px-4 py-3">
                         <span className="font-semibold text-slate-800">{c.employeeName}</span>
                         <span className="text-[10px] text-slate-400 font-mono block">{c.employeeId}</span>
