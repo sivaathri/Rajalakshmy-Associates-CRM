@@ -869,7 +869,14 @@ export const BankLoginPage = () => {
                       {/* Customer Info (Req 6: All are customers) */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-slate-900">{login.customerName}</span>
+                          <button
+                            type="button"
+                            onClick={() => setViewHistoryLogin(login)}
+                            className="font-bold text-slate-900 hover:text-burgundy-900 hover:underline text-left cursor-pointer transition"
+                            title="Click to view customer & file profile"
+                          >
+                            {login.customerName}
+                          </button>
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-burgundy-50 text-burgundy-900 border border-burgundy-200" title={`This customer has ${loginCount} bank file${loginCount > 1 ? 's' : ''} logged`}>
                             {loginCount} {loginCount === 1 ? 'Login' : 'Logins'}
                           </span>
@@ -1917,7 +1924,7 @@ export const BankLoginPage = () => {
                     title="Add another bank loan file for this customer"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>+ Add Another Bank Login</span>
+                    <span>Add Another Bank Login</span>
                   </button>
                   <button
                     type="button"
