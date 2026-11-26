@@ -1506,8 +1506,12 @@ export const CRMProvider = ({ children }) => {
       business: loginData.business || 'General Business',
       city: loginData.city || '',
       bankName: loginData.bankName || 'State Bank of India',
+      bankId: loginData.bankId || '',
+      interestRate: loginData.interestRate || '',
+      clientAskedAmount: loginData.clientAskedAmount || '',
+      bankApprovedAmount: loginData.bankApprovedAmount || '',
       loanType: loginData.loanType || 'Business Loan',
-      loanAmount: Number(loginData.loanAmount) || 1000000,
+      loanAmount: loginData.loanAmount || '',
       loginDate: loginData.loginDate || todayStr,
       lastUpdateDate: todayStr,
       nextFollowUpDate: addTwoDays(loginData.loginDate || todayStr), // Every 2 days reminder (Req 4)

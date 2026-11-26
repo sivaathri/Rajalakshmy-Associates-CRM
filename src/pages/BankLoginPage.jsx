@@ -62,9 +62,13 @@ export const BankLoginPage = () => {
   const [customerMobile, setCustomerMobile] = useState('');
   const [customerBusiness, setCustomerBusiness] = useState('');
   const [customerCity, setCustomerCity] = useState('');
-  const [bankName, setBankName] = useState('State Bank of India');
+  const [bankName, setBankName] = useState('');
+  const [bankId, setBankId] = useState('');
   const [loanType, setLoanType] = useState('Working Capital (CC/OD)');
-  const [loanAmount, setLoanAmount] = useState('2500000');
+  const [loanAmount, setLoanAmount] = useState('');
+  const [interestRate, setInterestRate] = useState('');
+  const [clientAskedAmount, setClientAskedAmount] = useState('');
+  const [bankApprovedAmount, setBankApprovedAmount] = useState('');
   const [loginDate, setLoginDate] = useState(new Date().toISOString().split('T')[0]);
   const [initialNotes, setInitialNotes] = useState('');
   const [showNumberSuggestions, setShowNumberSuggestions] = useState(false);
@@ -209,6 +213,19 @@ export const BankLoginPage = () => {
     setShowNumberSuggestions(false);
   };
 
+  // Helper: display loan amount gracefully whether string or number
+  const renderLoanAmount = (val) => {
+    if (val === undefined || val === null || val === '') return '-';
+    if (typeof val === 'number') return formatCurrency(val);
+    const clean = String(val).trim();
+    if (!clean) return '-';
+    const numClean = clean.replace(/,/g, '');
+    if (/^\d+(\.\d+)?$/.test(numClean)) {
+      return formatCurrency(Number(numClean));
+    }
+    return clean.startsWith('₹') ? clean : `₹ ${clean}`;
+  };
+
   const todayStr = new Date().toISOString().split('T')[0];
 
   // Helper: check if a login is due for 2-day update
@@ -259,9 +276,10 @@ export const BankLoginPage = () => {
         const mMobile = item.mobile?.includes(q);
         const mBiz = item.business?.toLowerCase().includes(q);
         const mBank = item.bankName?.toLowerCase().includes(q);
+        const mBankId = item.bankId?.toLowerCase().includes(q);
         const mLoan = item.loanType?.toLowerCase().includes(q);
         const mId = item.id?.toLowerCase().includes(q);
-        if (!mName && !mMobile && !mBiz && !mBank && !mLoan && !mId) return false;
+        if (!mName && !mMobile && !mBiz && !mBank && !mBankId && !mLoan && !mId) return false;
       }
 
       return true;
@@ -282,7 +300,11 @@ export const BankLoginPage = () => {
   const inProgressCount = bankLogins.filter(b => b.status === 'In Progress').length;
   const updatesDueCount = bankLogins.filter(is2DayUpdateDue).length;
   const disbursedLogins = bankLogins.filter(b => b.status === 'Disbursed');
-  const disbursedVolume = disbursedLogins.reduce((sum, b) => sum + (b.disbursementDetails?.loanAmount || b.loanAmount || 0), 0);
+  const disbursedVolume = disbursedLogins.reduce((sum, b) => {
+    const raw = b.disbursementDetails?.loanAmount ?? b.loanAmount ?? 0;
+    const num = typeof raw === 'number' ? raw : Number(String(raw).replace(/[^\d.-]/g, '')) || 0;
+    return sum + num;
+  }, 0);
   const rejectedCount = bankLogins.filter(b => b.status === 'Rejected').length;
 
   const paginatedLogins = useMemo(() => {
@@ -322,9 +344,13 @@ export const BankLoginPage = () => {
       mobile: formattedMobile,
       business: customerBusiness.trim() || 'General Business',
       city: customerCity.trim(),
-      bankName,
+      bankName: bankName.trim(),
+      bankId: bankId.trim(),
+      interestRate: interestRate.trim(),
+      clientAskedAmount: clientAskedAmount.trim(),
+      bankApprovedAmount: bankApprovedAmount.trim(),
       loanType,
-      loanAmount: Number(loanAmount),
+      loanAmount: loanAmount.trim(),
       loginDate,
       notes: initialNotes.trim() || `Submitted file to ${bankName}`
     });
@@ -337,6 +363,13 @@ export const BankLoginPage = () => {
     setCustomerMobile('');
     setCustomerBusiness('');
     setCustomerCity('');
+    setBankName('');
+    setBankId('');
+    setLoanType('Working Capital (CC/OD)');
+    setLoanAmount('');
+    setInterestRate('');
+    setClientAskedAmount('');
+    setBankApprovedAmount('');
     setInitialNotes('');
     setShowNumberSuggestions(false);
   };
@@ -418,6 +451,13 @@ export const BankLoginPage = () => {
             setCustomerName('');
             setCustomerBusiness('');
             setCustomerCity('');
+            setBankName('');
+            setBankId('');
+            setLoanType('Working Capital (CC/OD)');
+            setLoanAmount('');
+            setInterestRate('');
+            setClientAskedAmount('');
+            setBankApprovedAmount('');
             setInitialNotes('');
             setShowNumberSuggestions(false);
             setIsAddModalOpen(true);
@@ -762,12 +802,30 @@ export const BankLoginPage = () => {
                       {/* Bank & Loan Value */}
                       <td className="px-4 py-3">
                         <div className="font-bold text-slate-800">{login.bankName}</div>
+                        {login.bankId && (
+                          <div className="text-[10px] font-mono text-slate-500">Bank ID: {login.bankId}</div>
+                        )}
                         <div className="text-xs font-bold text-burgundy-900 mt-0.5">
-                          {formatCurrency(login.loanAmount)}
+                          {renderLoanAmount(login.loanAmount)}
                         </div>
                         <div className="text-[10px] text-slate-500 mt-0.5">
                           {login.loanType}
+                          {login.interestRate && <span className="text-amber-800 font-semibold ml-1.5">• ROI: {login.interestRate}</span>}
                         </div>
+                        {(login.clientAskedAmount || login.bankApprovedAmount) && (
+                          <div className="text-[10px] text-slate-500 mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
+                            {login.clientAskedAmount && (
+                              <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">
+                                Asked: <strong className="font-semibold">{login.clientAskedAmount}</strong>
+                              </span>
+                            )}
+                            {login.bankApprovedAmount && (
+                              <span className="bg-emerald-50 px-1.5 py-0.5 rounded text-emerald-800 border border-emerald-200">
+                                Approved: <strong className="font-semibold">{login.bankApprovedAmount}</strong>
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </td>
 
                       {/* 2-Day Reminder & Status Update (Req 4) */}
@@ -1020,17 +1078,7 @@ export const BankLoginPage = () => {
                   Please enter a 10-digit mobile number above to verify database records.
                 </div>
               ) : hasConflict ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-5 text-center space-y-2 shadow-xs">
-                  <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
-                    <XCircle className="w-6 h-6" />
-                  </div>
-                  <h4 className="text-xs font-bold text-rose-900 uppercase tracking-wide">
-                    Customer Details Hidden & Action Blocked
-                  </h4>
-                  <p className="text-[11px] text-rose-800 max-w-sm mx-auto leading-relaxed">
-                    Customer details cannot be displayed and adding a Bank Login file is blocked because another user is currently following or processing this customer.
-                  </p>
-                </div>
+                ''
               ) : (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1074,29 +1122,48 @@ export const BankLoginPage = () => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Bank / Lending Institution <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={bankName}
-                      onChange={(e) => setBankName(e.target.value)}
-                      className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800"
-                    >
-                      <option value="State Bank of India">State Bank of India (SBI)</option>
-                      <option value="HDFC Bank">HDFC Bank</option>
-                      <option value="ICICI Bank">ICICI Bank</option>
-                      <option value="Axis Bank">Axis Bank</option>
-                      <option value="Indian Bank">Indian Bank</option>
-                      <option value="Canara Bank">Canara Bank</option>
-                      <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
-                      <option value="Bank of Baroda">Bank of Baroda</option>
-                      <option value="Punjab National Bank">Punjab National Bank</option>
-                      <option value="Federal Bank">Federal Bank</option>
-                      <option value="Bajaj Finserv">Bajaj Finserv</option>
-                      <option value="Cholamandalam Finance">Cholamandalam Finance</option>
-                      <option value="Sundaram Finance">Sundaram Finance</option>
-                    </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Bank / Lending Institution <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        list="bank-suggestions"
+                        placeholder="e.g. State Bank of India, HDFC..."
+                        value={bankName}
+                        onChange={(e) => setBankName(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                      />
+                      <datalist id="bank-suggestions">
+                        <option value="State Bank of India" />
+                        <option value="HDFC Bank" />
+                        <option value="ICICI Bank" />
+                        <option value="Axis Bank" />
+                        <option value="Indian Bank" />
+                        <option value="Canara Bank" />
+                        <option value="Kotak Mahindra Bank" />
+                        <option value="Bank of Baroda" />
+                        <option value="Punjab National Bank" />
+                        <option value="Federal Bank" />
+                        <option value="Bajaj Finserv" />
+                        <option value="Cholamandalam Finance" />
+                        <option value="Sundaram Finance" />
+                      </datalist>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Bank ID
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. SBI-CH-88219 / Ref No."
+                        value={bankId}
+                        onChange={(e) => setBankId(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1120,13 +1187,54 @@ export const BankLoginPage = () => {
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Loan Amount (₹) <span className="text-rose-500">*</span>
+                        Rate of Interest
                       </label>
                       <input
-                        type="number"
-                        required
-                        value={loanAmount}
-                        onChange={(e) => setLoanAmount(e.target.value)}
+                        type="text"
+                        placeholder="e.g. 8.75% or 9.5% p.a."
+                        value={interestRate}
+                        onChange={(e) => setInterestRate(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Loan Amount <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 25,00,000 or 25 Lakhs"
+                      value={loanAmount}
+                      onChange={(e) => setLoanAmount(e.target.value)}
+                      className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Client Asked Loan Amount
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 30,00,000 or 30 Lakhs"
+                        value={clientAskedAmount}
+                        onChange={(e) => setClientAskedAmount(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Bank Approved Loan Amount
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 25,00,000 or 25 Lakhs"
+                        value={bankApprovedAmount}
+                        onChange={(e) => setBankApprovedAmount(e.target.value)}
                         className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
                       />
                     </div>
@@ -1443,10 +1551,39 @@ export const BankLoginPage = () => {
             </div>
 
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
-                <div className="font-bold text-slate-800">{viewHistoryLogin.bankName} • {viewHistoryLogin.loanType}</div>
-                <div className="text-emerald-700 font-bold mt-0.5">{formatCurrency(viewHistoryLogin.loanAmount)}</div>
-                <div className="text-slate-500 text-[11px] mt-1">Logged on: {formatDate(viewHistoryLogin.loginDate)}</div>
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-slate-800 text-sm">{viewHistoryLogin.bankName}</div>
+                  {viewHistoryLogin.bankId && (
+                    <span className="font-mono text-[11px] bg-slate-200/80 px-2 py-0.5 rounded text-slate-700">
+                      Bank ID: {viewHistoryLogin.bankId}
+                    </span>
+                  )}
+                </div>
+                <div className="text-slate-600 text-[11px]">Loan Type: <span className="font-semibold text-slate-800">{viewHistoryLogin.loanType}</span></div>
+                <div className="text-emerald-700 font-bold text-sm">
+                  {renderLoanAmount(viewHistoryLogin.loanAmount)}
+                  {viewHistoryLogin.interestRate && (
+                    <span className="text-amber-800 font-normal text-xs ml-2">
+                      (ROI: {viewHistoryLogin.interestRate})
+                    </span>
+                  )}
+                </div>
+                {(viewHistoryLogin.clientAskedAmount || viewHistoryLogin.bankApprovedAmount) && (
+                  <div className="pt-1.5 border-t border-slate-200/70 flex flex-wrap gap-3 text-[11px]">
+                    {viewHistoryLogin.clientAskedAmount && (
+                      <div className="text-slate-600">
+                        Client Asked: <strong className="font-semibold text-slate-800">{viewHistoryLogin.clientAskedAmount}</strong>
+                      </div>
+                    )}
+                    {viewHistoryLogin.bankApprovedAmount && (
+                      <div className="text-slate-600">
+                        Bank Approved: <strong className="font-semibold text-emerald-800">{viewHistoryLogin.bankApprovedAmount}</strong>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="text-slate-400 text-[10px] pt-0.5">Logged on: {formatDate(viewHistoryLogin.loginDate)}</div>
               </div>
 
               <div>
