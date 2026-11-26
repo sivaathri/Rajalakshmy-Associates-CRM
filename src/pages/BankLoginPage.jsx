@@ -75,6 +75,12 @@ export const BankLoginPage = () => {
   const [loginDate, setLoginDate] = useState(new Date().toISOString().split('T')[0]);
   const [initialNotes, setInitialNotes] = useState('');
   const [showNumberSuggestions, setShowNumberSuggestions] = useState(false);
+  const [profileLocks, setProfileLocks] = useState({
+    name: false,
+    dob: false,
+    business: false,
+    city: false
+  });
 
   // Update Note State
   const [todayUpdateNote, setTodayUpdateNote] = useState('');
@@ -288,7 +294,13 @@ export const BankLoginPage = () => {
   const hasConflict = Boolean(lookupResult?.alerts?.some(a => a.severity === 'danger'));
   const isExistingCustomer = Boolean(lookupResult?.foundInDb || selectedCustomerId || lookupResult?.matchedCustomer);
 
-  // Auto-fill details when a 10-digit number matches in database
+  const hasMeaningfulValue = (val, disallowed = []) => {
+    const clean = String(val ?? '').trim();
+    if (!clean || clean === '—' || clean === '-') return false;
+    return !disallowed.some(d => clean.toLowerCase() === d.toLowerCase());
+  };
+
+  // Auto-fill details when a 10-digit number matches in database (keep missing fields editable)
   useEffect(() => {
     if (!isAddModalOpen || !lookupResult) return;
     if (hasConflict) {
@@ -298,34 +310,76 @@ export const BankLoginPage = () => {
       setCustomerDob('');
       setCustomerBusiness('');
       setCustomerCity('');
+      setProfileLocks({ name: false, dob: false, business: false, city: false });
       return;
     }
 
     if (lookupResult.foundInDb) {
-      const src = lookupResult.matchedCustomer || lookupResult.matchedLead || lookupResult.matchedActivity || lookupResult.matchedLogins?.[0];
-      if (src) {
-        if (lookupResult.matchedCustomer?.isCustomer) {
-          setSelectedCustomerId(lookupResult.matchedCustomer.customerId || lookupResult.matchedCustomer.id);
-          setSourceCustomerId(lookupResult.matchedCustomer.id);
-        } else if (lookupResult.matchedCustomer) {
-          setSelectedCustomerId('');
-          setSourceCustomerId(lookupResult.matchedCustomer.id);
-        } else if (lookupResult.matchedLogins?.[0]) {
-          setSelectedCustomerId(lookupResult.matchedLogins[0].customerId || lookupResult.matchedLogins[0].id || '');
-          setSourceCustomerId(lookupResult.matchedLogins[0].sourceCustomerId || lookupResult.matchedLogins[0].id || '');
-        } else {
-          setSelectedCustomerId('');
-          setSourceCustomerId('');
-        }
-        const fetchedName = src.name || src.customerName || '';
-        setCustomerName(fetchedName === 'Unknown / Lead' ? '' : fetchedName);
-        setCustomerDob(src.dob || src.dateOfBirth || '');
-        setCustomerBusiness(src.business || '');
-        setCustomerCity(src.city || src.location || '');
+      if (lookupResult.matchedCustomer?.isCustomer) {
+        setSelectedCustomerId(lookupResult.matchedCustomer.customerId || lookupResult.matchedCustomer.id);
+        setSourceCustomerId(lookupResult.matchedCustomer.id);
+      } else if (lookupResult.matchedCustomer) {
+        setSelectedCustomerId('');
+        setSourceCustomerId(lookupResult.matchedCustomer.id);
+      } else if (lookupResult.matchedLogins?.[0]) {
+        setSelectedCustomerId(lookupResult.matchedLogins[0].customerId || lookupResult.matchedLogins[0].id || '');
+        setSourceCustomerId(lookupResult.matchedLogins[0].sourceCustomerId || lookupResult.matchedLogins[0].id || '');
+      } else {
+        setSelectedCustomerId('');
+        setSourceCustomerId('');
       }
+
+      const pickFirst = (candidates, disallowed = []) => {
+        for (const c of candidates) {
+          if (hasMeaningfulValue(c, disallowed)) return String(c).trim();
+        }
+        return '';
+      };
+
+      const fetchedName = pickFirst(
+        [
+          lookupResult.matchedCustomer?.name,
+          lookupResult.matchedLead?.customerName,
+          lookupResult.matchedLogins?.[0]?.customerName,
+          lookupResult.matchedActivity?.customerName
+        ],
+        ['Unknown / Lead']
+      );
+      const fetchedDob = pickFirst([
+        lookupResult.matchedCustomer?.dob,
+        lookupResult.matchedCustomer?.dateOfBirth,
+        lookupResult.matchedLogins?.[0]?.dob,
+        lookupResult.matchedLead?.dob
+      ]);
+      const fetchedBusiness = pickFirst([
+        lookupResult.matchedCustomer?.business,
+        lookupResult.matchedLead?.business,
+        lookupResult.matchedActivity?.business,
+        lookupResult.matchedLogins?.[0]?.business
+      ]);
+      const fetchedCity = pickFirst([
+        lookupResult.matchedCustomer?.city,
+        lookupResult.matchedCustomer?.location,
+        lookupResult.matchedLead?.city,
+        lookupResult.matchedActivity?.city,
+        lookupResult.matchedActivity?.location,
+        lookupResult.matchedLogins?.[0]?.city
+      ]);
+
+      setCustomerName(fetchedName);
+      setCustomerDob(fetchedDob);
+      setCustomerBusiness(fetchedBusiness);
+      setCustomerCity(fetchedCity);
+      setProfileLocks({
+        name: Boolean(fetchedName),
+        dob: Boolean(fetchedDob),
+        business: Boolean(fetchedBusiness),
+        city: Boolean(fetchedCity)
+      });
     } else {
       setSelectedCustomerId('');
       setSourceCustomerId('');
+      setProfileLocks({ name: false, dob: false, business: false, city: false });
     }
   }, [isAddModalOpen, entered10, lookupResult?.foundInDb, hasConflict]);
 
@@ -557,6 +611,7 @@ export const BankLoginPage = () => {
     setInterestRate('');
     setInitialNotes('');
     setShowNumberSuggestions(false);
+    setProfileLocks({ name: false, dob: false, business: false, city: false });
   };
 
   // 2-Day Update Handler
@@ -1394,9 +1449,9 @@ export const BankLoginPage = () => {
                 </div>
               ) : (
                 <>
-                  {/* Customer Profile Details (Non-editable when existing customer is found) */}
+                  {/* Customer Profile Details (Existing values locked; missing fields remain editable) */}
                   <div className="space-y-2.5 pt-1 border-t border-slate-100">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
                         <User className="w-3.5 h-3.5 text-slate-400" />
                         <span>Customer Profile Details</span>
@@ -1404,7 +1459,11 @@ export const BankLoginPage = () => {
                       {isExistingCustomer && (
                         <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 flex items-center gap-1">
                           <Lock className="w-2.5 h-2.5 text-slate-500" />
-                          <span>Profile Data (Non-editable)</span>
+                          <span>
+                            {profileLocks.name && profileLocks.dob && profileLocks.business && profileLocks.city
+                              ? 'Profile Data (Non-editable)'
+                              : 'Existing Data Locked • Missing Fields Editable'}
+                          </span>
                         </span>
                       )}
                     </div>
@@ -1412,18 +1471,18 @@ export const BankLoginPage = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1 truncate">
-                          Customer Name {!isExistingCustomer && <span className="text-rose-500">*</span>}
+                          Customer Name {!profileLocks.name && <span className="text-rose-500">*</span>}
                         </label>
                         <input
                           type="text"
-                          required={!isExistingCustomer}
-                          readOnly={isExistingCustomer}
-                          disabled={isExistingCustomer}
-                          placeholder={isExistingCustomer ? '' : "e.g. S. Ramanathan"}
+                          required={!profileLocks.name}
+                          readOnly={profileLocks.name}
+                          disabled={profileLocks.name}
+                          placeholder={profileLocks.name ? '' : 'e.g. S. Ramanathan'}
                           value={customerName}
                           onChange={(e) => setCustomerName(e.target.value)}
                           className={`w-full text-xs rounded-xl border py-2 px-3 transition focus:outline-none ${
-                            isExistingCustomer
+                            profileLocks.name
                               ? 'bg-slate-100/90 text-slate-700 border-slate-200 cursor-not-allowed select-none font-medium'
                               : 'bg-white border-slate-300 focus:border-burgundy-800'
                           }`}
@@ -1433,12 +1492,12 @@ export const BankLoginPage = () => {
                         <label className="block text-xs font-semibold text-slate-700 mb-1 truncate">
                           Date of Birth
                         </label>
-                        {isExistingCustomer ? (
+                        {profileLocks.dob ? (
                           <input
                             type="text"
                             readOnly
                             disabled
-                            value={customerDob || '—'}
+                            value={customerDob}
                             className="w-full text-xs rounded-xl border border-slate-200 py-2 px-3 bg-slate-100/90 text-slate-700 cursor-not-allowed select-none font-medium focus:outline-none"
                           />
                         ) : (
@@ -1456,13 +1515,13 @@ export const BankLoginPage = () => {
                         </label>
                         <input
                           type="text"
-                          readOnly={isExistingCustomer}
-                          disabled={isExistingCustomer}
-                          placeholder={isExistingCustomer ? '—' : "e.g. Ramanathan Silks & Exports"}
+                          readOnly={profileLocks.business}
+                          disabled={profileLocks.business}
+                          placeholder={profileLocks.business ? '' : 'e.g. Ramanathan Silks & Exports'}
                           value={customerBusiness}
                           onChange={(e) => setCustomerBusiness(e.target.value)}
                           className={`w-full text-xs rounded-xl border py-2 px-3 transition focus:outline-none ${
-                            isExistingCustomer
+                            profileLocks.business
                               ? 'bg-slate-100/90 text-slate-700 border-slate-200 cursor-not-allowed select-none font-medium'
                               : 'bg-white border-slate-300 focus:border-burgundy-800'
                           }`}
@@ -1474,13 +1533,13 @@ export const BankLoginPage = () => {
                         </label>
                         <input
                           type="text"
-                          readOnly={isExistingCustomer}
-                          disabled={isExistingCustomer}
-                          placeholder={isExistingCustomer ? '—' : "e.g. Chennai, Madurai"}
+                          readOnly={profileLocks.city}
+                          disabled={profileLocks.city}
+                          placeholder={profileLocks.city ? '' : 'e.g. Chennai, Madurai'}
                           value={customerCity}
                           onChange={(e) => setCustomerCity(e.target.value)}
                           className={`w-full text-xs rounded-xl border py-2 px-3 transition focus:outline-none ${
-                            isExistingCustomer
+                            profileLocks.city
                               ? 'bg-slate-100/90 text-slate-700 border-slate-200 cursor-not-allowed select-none font-medium'
                               : 'bg-white border-slate-300 focus:border-burgundy-800'
                           }`}
