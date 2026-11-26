@@ -1704,7 +1704,7 @@ export const BankLoginPage = () => {
       {/* ---------------------------------------------------- */}
       {viewHistoryLogin && (
         <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+          <div className="relative w-full max-w-4xl xl:max-w-5xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
               <div>
@@ -1739,14 +1739,14 @@ export const BankLoginPage = () => {
               </div>
             </div>
 
-            <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs text-slate-700">
+            <div className="p-6 space-y-4 max-h-[85vh] overflow-y-auto text-xs text-slate-700">
               {/* Section 1: Customer Personal & Contact Details */}
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
                 <div className="flex items-center gap-2 text-burgundy-900 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200/80 pb-2">
                   <User className="w-4 h-4 text-burgundy-900" />
                   <span>Customer Profile Details</span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   <div>
                     <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Customer Name</span>
                     <span className="text-xs font-bold text-slate-900 mt-0.5 block">{viewHistoryLogin.customerName}</span>
@@ -1794,7 +1794,7 @@ export const BankLoginPage = () => {
                     </div>
                     <span className="text-[10px] text-slate-500">Click a file below to switch view</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                     {viewCustomerAllLogins.map(bl => (
                       <div
                         key={bl.id}
@@ -1840,7 +1840,7 @@ export const BankLoginPage = () => {
                   <Building2 className="w-4 h-4 text-burgundy-900" />
                   <span>Bank Syndication & Loan Specifications</span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   <div>
                     <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Bank / Institution</span>
                     <span className="text-xs font-bold text-slate-900 mt-0.5 block">{viewHistoryLogin.bankName}</span>
