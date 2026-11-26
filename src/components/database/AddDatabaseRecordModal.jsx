@@ -23,7 +23,7 @@ export const AddDatabaseRecordModal = ({
   const { addCustomer, customers } = useCRM();
   const { currentUser, showToast } = useAuth();
 
-  const [databaseType, setDatabaseType] = useState(defaultDatabase); // 'old' | 'new'
+  const databaseType = 'new'; // All records are automatically saved to New Database
   const [customerType, setCustomerType] = useState(defaultType); // 'known' | 'unknown'
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
@@ -36,10 +36,9 @@ export const AddDatabaseRecordModal = ({
   // Sync defaults when modal opens with new props
   React.useEffect(() => {
     if (isOpen) {
-      setDatabaseType(defaultDatabase || 'new');
       setCustomerType(defaultType || 'known');
     }
-  }, [isOpen, defaultDatabase, defaultType]);
+  }, [isOpen, defaultType]);
 
   if (!isOpen) return null;
 
@@ -109,8 +108,8 @@ export const AddDatabaseRecordModal = ({
               <Database className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[10px] uppercase tracking-wider font-bold text-gold-300 block">Database Partition</span>
-              <h3 className="text-base font-bold text-white">Add Database Record (Old & New)</h3>
+              <span className="text-[10px] uppercase tracking-wider font-bold text-gold-300 block">New Database Lead</span>
+              <h3 className="text-base font-bold text-white">Add Database Record</h3>
             </div>
           </div>
           <button
@@ -122,40 +121,6 @@ export const AddDatabaseRecordModal = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-          {/* Partition Selector: Old vs New Database */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-              Select Database Partition <span className="text-rose-500">*</span>
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setDatabaseType('old')}
-                className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
-                  databaseType === 'old'
-                    ? 'border-burgundy-800 bg-burgundy-50 text-burgundy-950 ring-2 ring-burgundy-800/10'
-                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                <Database className="w-4 h-4 text-amber-600" />
-                <span>Old Database</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setDatabaseType('new')}
-                className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
-                  databaseType === 'new'
-                    ? 'border-burgundy-800 bg-burgundy-50 text-burgundy-950 ring-2 ring-burgundy-800/10'
-                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                <Database className="w-4 h-4 text-emerald-600" />
-                <span>New Database</span>
-              </button>
-            </div>
-          </div>
-
           {/* Classification Selector: Known vs Unknown */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
