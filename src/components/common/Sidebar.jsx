@@ -7,10 +7,8 @@ import {
   User,
   UserX,
   CreditCard,
-  Award,
   Users,
   CalendarCheck,
-  BarChart3,
   Settings,
   PhoneCall,
   Building2,
@@ -250,31 +248,6 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         {/* 5. Daily Activities (for non-Sales Manager roles) */}
         {!isSalesManager && dailyActivitiesMenu}
 
-        {/* 4. Performance (Case Disposition) */}
-        {canAccessRoute('performance') && (
-          <NavLink
-            to="/performance"
-            onClick={() => isMobile && setIsOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition ${
-                isActive
-                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
-                  : 'text-white/80 hover:bg-white/10 hover:text-white'
-              }`
-            }
-          >
-            <div className="flex items-center gap-3 truncate">
-              <Award className="w-4 h-4 shrink-0 text-yellow-400" />
-              {isExpanded && <span>Performance</span>}
-            </div>
-            {isExpanded && pendingCasesCount > 0 && (
-              <span className="text-[10px] bg-amber-400 text-amber-950 font-bold px-1.5 py-0.5 rounded-full">
-                {pendingCasesCount}
-              </span>
-            )}
-          </NavLink>
-        )}
-
         {/* 5. Attendance Menu (Available to All Roles - Punch In Only) */}
         {canAccessRoute('attendance') && (
           <NavLink
@@ -358,24 +331,6 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
                 {pendingResignationCount}
               </span>
             )}
-          </NavLink>
-        )}
-
-        {/* 7. Reports */}
-        {canAccessRoute('reports') && (
-          <NavLink
-            to="/reports"
-            onClick={() => isMobile && setIsOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition ${
-                isActive
-                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
-                  : 'text-white/80 hover:bg-white/10 hover:text-white'
-              }`
-            }
-          >
-            <BarChart3 className="w-4 h-4 shrink-0 text-violet-300" />
-            {isExpanded && <span>Reports</span>}
           </NavLink>
         )}
 
