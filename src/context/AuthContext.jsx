@@ -125,6 +125,7 @@ export const AuthProvider = ({ children }) => {
     switch (route) {
       case 'dashboard':
       case 'notifications':
+      case 'assigned-leads':
       case 'attendance':
       case 'login':
       case 'logins':

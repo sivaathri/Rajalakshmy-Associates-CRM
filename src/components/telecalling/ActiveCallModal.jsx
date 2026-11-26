@@ -14,6 +14,7 @@ import {
   PhoneMissed,
   XCircle,
   CalendarClock,
+  UserCheck,
   X
 } from 'lucide-react';
 
@@ -24,13 +25,29 @@ export const ActiveCallModal = () => {
     isCallingModalOpen,
     setIsCallingModalOpen,
     logCall,
-    calls
+    calls,
+    employees = []
   } = useCRM();
   const { currentUser } = useAuth();
 
   const [selectedOutcome, setSelectedOutcome] = useState('OK');
   const [remarks, setRemarks] = useState('');
   const [reminderDate, setReminderDate] = useState('');
+  const [assignOption, setAssignOption] = useState('none');
+  const [assigneeId, setAssigneeId] = useState('');
+  const [docCollectionNote, setDocCollectionNote] = useState('');
+
+  const activeEmployeesByRole = React.useMemo(() => {
+    const groups = {};
+    (employees || [])
+      .filter(e => e.status !== 'Inactive' && e.id !== currentUser?.id)
+      .forEach(emp => {
+        const roleLabel = emp.role || 'Staff';
+        if (!groups[roleLabel]) groups[roleLabel] = [];
+        groups[roleLabel].push(emp);
+      });
+    return Object.entries(groups);
+  }, [employees, currentUser?.id]);
 
   useEffect(() => {
     if (isCallingModalOpen && activeCallContact) {
@@ -41,6 +58,9 @@ export const ActiveCallModal = () => {
       );
       setRemarks(activeCallContact.reminderRemark || '');
       setReminderDate(activeCallContact.reminderDate || '');
+      setAssignOption('none');
+      setAssigneeId('');
+      setDocCollectionNote('');
     }
   }, [isCallingModalOpen, activeCallContact]);
 
@@ -57,12 +77,21 @@ export const ActiveCallModal = () => {
       return;
     }
 
+    const isPositive = selectedOutcome === 'OK' || selectedOutcome === 'Field Visit';
+    if (isPositive && (assignOption === 'collect_docs' || assignOption === 'transfer_case') && !assigneeId) {
+      alert('Please select a user to assign this customer to');
+      return;
+    }
+
     logCall({
       customerId: activeCallContact.id,
       outcome: selectedOutcome,
       duration: 'Manual Call',
       remarks: remarks.trim() || `Customer call response: ${selectedOutcome}`,
-      reminderDate: (selectedOutcome === 'Reminder' || selectedOutcome === 'Field Visit') ? reminderDate : ''
+      reminderDate: (selectedOutcome === 'Reminder' || selectedOutcome === 'Field Visit') ? reminderDate : '',
+      assignmentType: isPositive ? assignOption : 'none',
+      assigneeId: isPositive && assignOption !== 'none' ? assigneeId : '',
+      docCollectionNote: isPositive && assignOption === 'collect_docs' ? docCollectionNote.trim() : ''
     });
 
     setIsCallingModalOpen(false);
@@ -293,6 +322,63 @@ export const ActiveCallModal = () => {
                 onChange={(e) => setRemarks(e.target.value)}
                 className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:outline-none focus:border-burgundy-800"
               />
+            </div>
+          )}
+
+          {/* Conditional Lead Assignment Options */}
+          {(selectedOutcome === 'OK' || selectedOutcome === 'Field Visit') && (
+            <div className="rounded-xl border border-burgundy-200 bg-[#FAF6EF] p-3.5 space-y-2.5">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-burgundy-950">
+                <UserCheck className="w-4 h-4 text-burgundy-800" />
+                <span>Lead Assignment Option (Optional)</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  { id: 'none', title: 'Handle Myself', desc: 'Keep with yourself' },
+                  { id: 'collect_docs', title: '1. Collect Docs Only', desc: 'Assignee only collects docs' },
+                  { id: 'transfer_case', title: '2. Assign Case', desc: 'Transfer for Bank Login' }
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setAssignOption(opt.id);
+                      if (opt.id === 'none') {
+                        setAssigneeId('');
+                        setDocCollectionNote('');
+                      }
+                    }}
+                    className={`p-2 rounded-lg border text-left text-[11px] transition ${
+                      assignOption === opt.id
+                        ? 'border-burgundy-800 bg-white ring-1 ring-burgundy-800 font-bold text-burgundy-950'
+                        : 'border-slate-200 bg-white/70 text-slate-700 hover:bg-white'
+                    }`}
+                  >
+                    <div>{opt.title}</div>
+                    <div className="text-[10px] font-normal text-slate-500">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+              {assignOption !== 'none' && (
+                <div className="pt-1">
+                  <select
+                    value={assigneeId}
+                    onChange={(e) => setAssigneeId(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-slate-300 px-2.5 py-1.5 bg-white"
+                  >
+                    <option value="">-- Select Staff User --</option>
+                    {activeEmployeesByRole.map(([roleName, empList]) => (
+                      <optgroup key={roleName} label={roleName}>
+                        {empList.map(emp => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.name} ({emp.role})
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
 

@@ -265,15 +265,21 @@ export const BankLoginPage = () => {
       });
     }
 
-    const followerId = matchedCustomer?.actionedBy || matchedCustomer?.assignedTo;
-    const followerName = matchedCustomer?.actionedByName || matchedCustomer?.assignedName;
-    if (followerId && currentUser?.id && followerId !== currentUser.id) {
+    const isTransferredToCurrentUser = Boolean(
+      currentUser?.id &&
+      matchedLead?.assignmentType === 'transfer_case' &&
+      matchedLead?.assignedToId === currentUser.id
+    );
+
+    const followerId = matchedCustomer?.assignedTo || matchedCustomer?.actionedBy;
+    const followerName = matchedCustomer?.assignedName || matchedCustomer?.actionedByName;
+    if (!isTransferredToCurrentUser && followerId && currentUser?.id && followerId !== currentUser.id) {
       alerts.push({
         type: 'follow',
         severity: 'danger',
         message: `Alert: Another user (${followerName || followerId}) is following this customer (Status: ${matchedCustomer.callingStatus || 'Active'}${matchedCustomer.reminderDate ? `, Follow-up: ${formatDate(matchedCustomer.reminderDate)}` : ''}).`
       });
-    } else if (matchedLead && matchedLead.assignedToId && currentUser?.id && matchedLead.assignedToId !== currentUser.id) {
+    } else if (!isTransferredToCurrentUser && matchedLead && matchedLead.assignedToId && currentUser?.id && matchedLead.assignedToId !== currentUser.id) {
       alerts.push({
         type: 'follow',
         severity: 'danger',

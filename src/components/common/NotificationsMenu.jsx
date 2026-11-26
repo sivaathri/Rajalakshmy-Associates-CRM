@@ -13,6 +13,7 @@ import {
   AlertCircle,
   ArrowRight,
   ExternalLink,
+  UserCheck,
   X
 } from 'lucide-react';
 
@@ -41,6 +42,7 @@ export const NotificationsMenu = () => {
       currentUser,
       customers: crm.customers,
       bankLogins: crm.bankLogins,
+      leads: crm.leads,
       leaves: crm.leaves,
       advanceAmounts: crm.advanceAmounts,
       resignations: crm.resignations,
@@ -114,6 +116,8 @@ export const NotificationsMenu = () => {
         return <CalendarCheck className="w-4 h-4 text-amber-600" />;
       case 'bank_login':
         return <FileCheck className="w-4 h-4 text-emerald-600" />;
+      case 'lead_assign':
+        return <UserCheck className="w-4 h-4 text-burgundy-700" />;
       case 'attendance':
         return <Clock className="w-4 h-4 text-rose-600" />;
       case 'approval':

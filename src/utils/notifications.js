@@ -1,9 +1,10 @@
-import { formatDateDDMMYYYY } from './formatters';
+import { formatDateDDMMYYYY, formatMobileNumber } from './formatters';
 
 export const getSystemNotifications = ({
   currentUser,
   customers = [],
   bankLogins = [],
+  leads = [],
   leaves = [],
   advanceAmounts = [],
   resignations = [],
@@ -69,6 +70,57 @@ export const getSystemNotifications = ({
       priority: 'high',
       createdAt: b.nextFollowUpDate || b.loginDate || todayIso
     });
+  });
+
+  // 2b. Assigned Leads & Document Collection Tasks for Current User
+  (leads || []).forEach(l => {
+    if (!currentUser?.id) return;
+    const isCollectDocsAssignee =
+      l.assignmentType === 'collect_docs' &&
+      (l.docCollectionAssigneeId === currentUser.id || l.assignedToId === currentUser.id) &&
+      l.docCollectionAssignedById !== currentUser.id &&
+      l.docCollectionStatus !== 'Documents Collected';
+
+    const cleanMob = String(l.mobile || '').replace(/\D/g, '').slice(-10);
+    const hasMyBankLogin = bankLogins.some(
+      b =>
+        ((cleanMob && String(b.mobile || '').replace(/\D/g, '').slice(-10) === cleanMob) ||
+          (l.customerId && b.customerId === l.customerId)) &&
+        (b.createdBy === currentUser.id || b.assignedRMId === currentUser.id)
+    );
+
+    const isCaseTransferAssignee =
+      l.assignmentType === 'transfer_case' &&
+      l.assignedToId === currentUser.id &&
+      l.assignedBy !== currentUser.id &&
+      l.status !== 'Converted to Login' &&
+      !hasMyBankLogin;
+
+    if (isCollectDocsAssignee) {
+      notifications.push({
+        id: `notif-assign-doc-${l.id}`,
+        type: 'lead_assign',
+        category: 'Assign Lead',
+        title: `Collect Documents Only: ${l.customerName}`,
+        message: `${formatMobileNumber(l.mobile)} • From ${l.docCollectionAssignedByName || l.assignedByName || 'RM'}${l.docCollectionNote ? ` (${l.docCollectionNote})` : ''}`,
+        time: l.docCollectionAssignedAt || l.assignedAt || 'Action Needed',
+        link: '/assigned-leads',
+        priority: 'high',
+        createdAt: l.docCollectionAssignedAt || l.assignedAt || todayIso
+      });
+    } else if (isCaseTransferAssignee) {
+      notifications.push({
+        id: `notif-assign-case-${l.id}`,
+        type: 'lead_assign',
+        category: 'Assign Lead',
+        title: `Assigned Lead: ${l.customerName}`,
+        message: `${formatMobileNumber(l.mobile)} • Assigned by ${l.assignedByName || l.originalRmName || 'RM'} — Copy number & add Bank Login`,
+        time: l.assignedAt || 'New Lead',
+        link: '/assigned-leads',
+        priority: 'high',
+        createdAt: l.assignedAt || todayIso
+      });
+    }
   });
 
   // 3. Attendance Alert (if not punched in today)

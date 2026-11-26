@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Filter,
   Search,
+  UserCheck,
   Trash2
 } from 'lucide-react';
 
@@ -41,6 +42,7 @@ export const NotificationsPage = () => {
       currentUser,
       customers: crm.customers,
       bankLogins: crm.bankLogins,
+      leads: crm.leads,
       leaves: crm.leaves,
       advanceAmounts: crm.advanceAmounts,
       resignations: crm.resignations,
@@ -111,6 +113,8 @@ export const NotificationsPage = () => {
         return <CalendarCheck className="w-5 h-5 text-amber-600" />;
       case 'bank_login':
         return <FileCheck className="w-5 h-5 text-emerald-600" />;
+      case 'lead_assign':
+        return <UserCheck className="w-5 h-5 text-burgundy-700" />;
       case 'attendance':
         return <Clock className="w-5 h-5 text-rose-600" />;
       case 'approval':
@@ -160,6 +164,7 @@ export const NotificationsPage = () => {
             { id: 'all', label: `All (${allNotifications.length})` },
             { id: 'unread', label: `Unread (${unreadCount})` },
             { id: 'Telecalling', label: 'Call Reminders' },
+            { id: 'Assign Lead', label: 'Assign Leads' },
             { id: 'Bank File', label: 'Bank 2-Day Due' },
             { id: 'Attendance', label: 'Attendance' },
             ...(currentUser?.role === 'Admin' || currentUser?.role === 'Manager' ? [{ id: 'Leave Approval', label: 'Approvals' }] : [])

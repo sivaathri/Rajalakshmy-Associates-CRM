@@ -17,6 +17,7 @@ import {
   Menu,
   FileCheck,
   UserCog,
+  UserCheck,
   LogOut,
   Bell,
   X
@@ -26,7 +27,7 @@ import { getSystemNotifications } from '../../utils/notifications';
 
 export const Sidebar = ({ isOpen, setIsOpen }) => {
   const { currentUser, canAccessRoute, logout, confirmAndLogout } = useAuth();
-  const { customers, performanceCases, advanceAmounts, resignations, attendance = [], bankLogins = [], leaves = [], employees = [] } = useCRM();
+  const { customers, performanceCases, advanceAmounts, resignations, attendance = [], bankLogins = [], leads = [], leaves = [], employees = [] } = useCRM();
 
   const isSalesManager = currentUser?.role === 'Sales Manager';
 
@@ -69,6 +70,30 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
     b => b.status === 'In Progress' && (!b.nextFollowUpDate || b.nextFollowUpDate <= todayIso)
   ).length;
 
+  // Pending Assigned Leads count for current user (Collect Docs + Case Assignments)
+  const pendingAssignedLeadsCount = React.useMemo(() => {
+    if (!currentUser?.id) return 0;
+    return (leads || []).filter(l => {
+      if (l.assignmentType === 'collect_docs') {
+        return (
+          (l.docCollectionAssigneeId === currentUser.id || l.assignedToId === currentUser.id) &&
+          l.docCollectionStatus !== 'Documents Collected'
+        );
+      }
+      if (l.assignmentType === 'transfer_case') {
+        const cleanMob = String(l.mobile || '').replace(/\D/g, '').slice(-10);
+        const alreadyLogged = (bankLogins || []).some(
+          b =>
+            ((cleanMob && String(b.mobile || '').replace(/\D/g, '').slice(-10) === cleanMob) ||
+              (l.customerId && b.customerId === l.customerId)) &&
+            (b.createdBy === currentUser.id || b.assignedRMId === currentUser.id)
+        );
+        return l.assignedToId === currentUser.id && l.assignedBy !== currentUser.id && l.status !== 'Converted to Login' && !alreadyLogged;
+      }
+      return false;
+    }).length;
+  }, [leads, bankLogins, currentUser?.id]);
+
   // Unread System Notifications count
   const unreadNotificationsCount = React.useMemo(() => {
     try {
@@ -76,6 +101,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         currentUser,
         customers,
         bankLogins,
+        leads,
         leaves,
         advanceAmounts,
         resignations,
@@ -87,7 +113,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
     } catch {
       return 0;
     }
-  }, [currentUser, customers, bankLogins, leaves, advanceAmounts, resignations, performanceCases, attendance]);
+  }, [currentUser, customers, bankLogins, leads, leaves, advanceAmounts, resignations, performanceCases, attendance]);
 
   const NavContent = ({ isExpanded = true, isMobile = false }) => {
     const dailyActivitiesMenu = canAccessRoute('daily-activities') && (
@@ -232,6 +258,31 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
               <PhoneCall className="w-4 h-4 shrink-0 text-emerald-400" />
               {isExpanded && <span>Telecalling</span>}
             </div>
+          </NavLink>
+        )}
+
+        {/* Assign Lead Menu (Collect Docs Only & Case Assignments) */}
+        {canAccessRoute('assigned-leads') && (
+          <NavLink
+            to="/assigned-leads"
+            onClick={() => isMobile && setIsOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition group ${
+                isActive
+                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            <div className="flex items-center gap-3 truncate">
+              <UserCheck className="w-4 h-4 shrink-0 text-gold-300" />
+              {isExpanded && <span>Assign Lead</span>}
+            </div>
+            {isExpanded && pendingAssignedLeadsCount > 0 && (
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gold-400 px-1.5 text-[10px] font-extrabold text-amber-950 shadow-sm">
+                {pendingAssignedLeadsCount}
+              </span>
+            )}
           </NavLink>
         )}
 

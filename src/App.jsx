@@ -21,6 +21,7 @@ import { ResignationPage } from './pages/ResignationPage';
 import { AdvanceAmountPage } from './pages/AdvanceAmountPage';
 import { AttendancePage } from './pages/AttendancePage';
 import { BankLoginPage } from './pages/BankLoginPage';
+import { AssignLeadsPage } from './pages/AssignLeadsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { UserManagementPage } from './pages/UserManagementPage';
@@ -46,6 +47,7 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
     if (path.startsWith('/dashboard')) return 'Executive Dashboard';
     if (path.startsWith('/notifications')) return 'Notification Center & Alerts';
     if (path.startsWith('/telecalling')) return 'RM Telecalling';
+    if (path.startsWith('/assigned-leads')) return 'Assign Lead • Tasks & Case Transfers';
     if (path === '/customers') return 'Customer Management Directory';
     if (path.startsWith('/customers/old/known') || path.startsWith('/database/old/known')) return 'Database • Old Known Numbers';
     if (path.startsWith('/customers/old/unknown') || path.startsWith('/database/old/unknown')) return 'Database • Old Unknown Numbers';
@@ -121,6 +123,15 @@ export function App() {
               element={
                 <ProtectedLayout requiredRoute="telecalling">
                   <TelecallingPage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/assigned-leads"
+              element={
+                <ProtectedLayout requiredRoute="assigned-leads">
+                  <AssignLeadsPage />
                 </ProtectedLayout>
               }
             />

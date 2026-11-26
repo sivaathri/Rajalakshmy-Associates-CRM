@@ -25,9 +25,11 @@ import {
   Database,
   UserCheck,
   MapPin,
-  Plus
+  Plus,
+  GitBranch
 } from 'lucide-react';
 import { AddDatabaseRecordModal } from '../components/database/AddDatabaseRecordModal';
+import { NumberLifecycleModal } from '../components/common/NumberLifecycleModal';
 import {
   PieChart,
   Pie,
@@ -47,6 +49,8 @@ export const TelecallingPage = () => {
   const {
     customers,
     calls,
+    leads = [],
+    bankLogins = [],
     logCall,
     employees = [],
     callLocks,
@@ -72,6 +76,22 @@ export const TelecallingPage = () => {
   const [outcome, setOutcome] = useState('');
   const [remarks, setRemarks] = useState('');
   const [reminderDate, setReminderDate] = useState('');
+  const [assignOption, setAssignOption] = useState('none'); // 'none' | 'collect_docs' | 'transfer_case'
+  const [assigneeId, setAssigneeId] = useState('');
+  const [docCollectionNote, setDocCollectionNote] = useState('');
+  const [trackingFlowTarget, setTrackingFlowTarget] = useState(null);
+
+  const activeEmployeesByRole = useMemo(() => {
+    const groups = {};
+    (employees || [])
+      .filter(e => e.status !== 'Inactive' && e.id !== currentUser?.id)
+      .forEach(emp => {
+        const roleLabel = emp.role || 'Staff';
+        if (!groups[roleLabel]) groups[roleLabel] = [];
+        groups[roleLabel].push(emp);
+      });
+    return Object.entries(groups);
+  }, [employees, currentUser?.id]);
 
   // Calling Reports Filter
   const [reportDateRange, setReportDateRange] = useState('this-month'); // 'today' | 'range' | 'this-month'
@@ -159,6 +179,96 @@ export const TelecallingPage = () => {
   const myActionedCount = useMemo(() => {
     return assignedCustomers.filter(c => ['OK', 'Not Attend', 'No Need', 'Field Visit'].includes(c.callingStatus) && c.actionedBy === currentUser?.id).length;
   }, [assignedCustomers, currentUser]);
+
+  // Customers / Leads that current logged-in RM sent out via Option 1 (Collect Docs) or Option 2 (Transfer Case)
+  const myAssignedFlowList = useMemo(() => {
+    if (!currentUser?.id) return [];
+    const clean10 = (v) => String(v || '').replace(/\D/g, '').slice(-10);
+
+    return (leads || [])
+      .filter(l => {
+        if (l.assignmentType !== 'collect_docs' && l.assignmentType !== 'transfer_case') return false;
+        const sentByMe =
+          l.assignedBy === currentUser.id ||
+          l.originalRmId === currentUser.id ||
+          l.docCollectionAssignedById === currentUser.id;
+        if (!sentByMe) return false;
+
+        if (selectedDb && l.databaseType && l.databaseType !== selectedDb) return false;
+        if (selectedType && l.customerType && l.customerType !== selectedType) return false;
+
+        if (searchQueue.trim()) {
+          const q = searchQueue.toLowerCase();
+          const mName = l.customerName?.toLowerCase().includes(q);
+          const mMob = matchesMobileSearch(l.mobile, searchQueue);
+          const mAssignee = (l.assignedToName || l.docCollectionAssigneeName || '').toLowerCase().includes(q);
+          if (!mName && !mMob && !mAssignee) return false;
+        }
+        return true;
+      })
+      .map(l => {
+        const mob10 = clean10(l.mobile);
+        const linkedCustomer = customers.find(
+          c =>
+            (l.sourceCustomerId && c.id === l.sourceCustomerId) ||
+            (l.customerId && (c.id === l.customerId || c.customerId === l.customerId)) ||
+            (mob10 && clean10(c.mobile) === mob10)
+        );
+        const linkedLogins = bankLogins.filter(
+          b =>
+            (mob10 && clean10(b.mobile) === mob10) ||
+            (l.customerId && b.customerId === l.customerId)
+        );
+        const docs = (l.documents && l.documents.length > 0) ? l.documents : (linkedCustomer?.documents || []);
+        const disbursedLogin = linkedLogins.find(b => b.status === 'Disbursed');
+        const rejectedLogin = !disbursedLogin && linkedLogins.length > 0 && linkedLogins.every(b => b.status === 'Rejected')
+          ? linkedLogins[0]
+          : null;
+        const activeLogin = !disbursedLogin && !rejectedLogin ? linkedLogins[0] : null;
+
+        let flowLabel = 'Assigned';
+        let flowTone = 'bg-slate-100 text-slate-700 border-slate-200';
+        let flowDetail = '';
+
+        if (disbursedLogin) {
+          flowLabel = `Disbursed (${disbursedLogin.disbursementDetails?.bankName || disbursedLogin.bankName})`;
+          flowTone = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+          flowDetail = `By ${disbursedLogin.disbursementDetails?.disbursedByName || disbursedLogin.assignedRMName || 'RM'} • ${formatDate(disbursedLogin.disbursementDetails?.disbursementDate || disbursedLogin.lastUpdateDate)}`;
+        } else if (rejectedLogin) {
+          flowLabel = `Rejected (${rejectedLogin.bankName})`;
+          flowTone = 'bg-rose-50 text-rose-800 border-rose-200';
+          flowDetail = rejectedLogin.rejectionRemarks || 'Rejected by Bank';
+        } else if (activeLogin) {
+          flowLabel = `Bank Login (${activeLogin.bankName})`;
+          flowTone = 'bg-blue-50 text-blue-800 border-blue-200';
+          flowDetail = `${activeLogin.status} • Cust ID: ${activeLogin.customerId || l.customerId || '—'}`;
+        } else if (l.assignmentType === 'collect_docs') {
+          if (l.docCollectionStatus === 'Documents Collected') {
+            flowLabel = `Documents Collected (${docs.length})`;
+            flowTone = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+            flowDetail = `By ${l.docCollectedBy || l.docCollectionAssigneeName || 'Staff'} • ${l.docCollectedAt ? formatDate(l.docCollectedAt) : ''}`;
+          } else {
+            flowLabel = 'Pending Document Collection';
+            flowTone = 'bg-amber-50 text-amber-900 border-amber-200';
+            flowDetail = `Waiting on ${l.docCollectionAssigneeName || l.assignedToName || 'Assignee'}`;
+          }
+        } else {
+          flowLabel = 'Case Assigned — Pending Bank Login';
+          flowTone = 'bg-indigo-50 text-indigo-800 border-indigo-200';
+          flowDetail = `With ${l.assignedToName || 'Assignee'} (${l.assignedToRole || 'User'})`;
+        }
+
+        return {
+          ...l,
+          linkedCustomer,
+          linkedLogins,
+          docsCount: docs.length,
+          flowLabel,
+          flowTone,
+          flowDetail
+        };
+      });
+  }, [leads, customers, bankLogins, currentUser?.id, selectedDb, selectedType, searchQueue]);
 
   // Active RMs sorted deterministically so each RM gets a distinct Queue Leads order
   // and concurrent RMs don't dial the same #1 contact at the same time
@@ -321,6 +431,9 @@ export const TelecallingPage = () => {
       );
       setRemarks(currentFocusedContact.reminderRemark || '');
       setReminderDate(currentFocusedContact.reminderDate || '');
+      setAssignOption('none');
+      setAssigneeId('');
+      setDocCollectionNote('');
     }
   }, [currentFocusedContact?.id]);
 
@@ -337,6 +450,12 @@ export const TelecallingPage = () => {
       return;
     }
 
+    const isPositive = outcome === 'OK' || outcome === 'Field Visit';
+    if (isPositive && (assignOption === 'collect_docs' || assignOption === 'transfer_case') && !assigneeId) {
+      alert('Please select a user to assign this customer to');
+      return;
+    }
+
     const currentIdx = focusedIndex;
     const remainingContacts = displayQueue.filter(c => c.id !== currentFocusedContact.id);
 
@@ -345,13 +464,19 @@ export const TelecallingPage = () => {
       outcome,
       duration: 'Manual Call',
       remarks: remarks.trim() || `Customer call response: ${outcome}`,
-      reminderDate: (outcome === 'Reminder' || outcome === 'Field Visit') ? reminderDate : ''
+      reminderDate: (outcome === 'Reminder' || outcome === 'Field Visit') ? reminderDate : '',
+      assignmentType: isPositive ? assignOption : 'none',
+      assigneeId: isPositive && assignOption !== 'none' ? assigneeId : '',
+      docCollectionNote: isPositive && assignOption === 'collect_docs' ? docCollectionNote.trim() : ''
     });
 
-    // Reset remarks for the next lead
+    // Reset remarks & assign options for the next lead
     setRemarks('');
     setReminderDate('');
     setOutcome('');
+    setAssignOption('none');
+    setAssigneeId('');
+    setDocCollectionNote('');
 
     if (andNext && remainingContacts.length > 0) {
       const nextCandidate = remainingContacts[Math.min(Math.max(currentIdx, 0), remainingContacts.length - 1)] || remainingContacts[0];
@@ -405,8 +530,11 @@ export const TelecallingPage = () => {
 
   const paginatedQueue = useMemo(() => {
     const start = (queuePage - 1) * itemsPerPage;
+    if (queueFilter === 'assigned-flow') {
+      return myAssignedFlowList.slice(start, start + itemsPerPage);
+    }
     return displayQueue.slice(start, start + itemsPerPage);
-  }, [displayQueue, queuePage, itemsPerPage]);
+  }, [displayQueue, myAssignedFlowList, queueFilter, queuePage, itemsPerPage]);
 
   // Pagination for Call History (minimum 15 items per page)
   const [historyPage, setHistoryPage] = useState(1);
@@ -694,7 +822,7 @@ export const TelecallingPage = () => {
           }`}
         >
           <Layers className="w-4 h-4 text-burgundy-800" />
-          <span>Assigned Queue ({myRemindersCount + myActionedCount})</span>
+          <span>Assigned Queue ({myRemindersCount + myActionedCount + myAssignedFlowList.length})</span>
         </button>
 
         <button
@@ -1010,6 +1138,105 @@ export const TelecallingPage = () => {
                     </div>
                   )}
 
+                  {/* Conditional Assignment Options when Outcome is OK or Field Visit */}
+                  {(outcome === 'OK' || outcome === 'Field Visit') && (
+                    <div className="rounded-xl border-2 border-burgundy-100 bg-[#FAF6EF]/80 p-4 space-y-3 animate-fade-in">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2 text-xs font-bold text-burgundy-950">
+                          <UserCheck className="w-4 h-4 text-burgundy-800" />
+                          <span>Lead Assignment Option</span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 font-medium">
+                          Optional: Handle yourself or assign to another team member
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAssignOption('none');
+                            setAssigneeId('');
+                            setDocCollectionNote('');
+                          }}
+                          className={`p-3 rounded-xl border-2 text-left transition ${
+                            assignOption === 'none'
+                              ? 'border-burgundy-800 bg-white ring-2 ring-burgundy-800/15 shadow-xs'
+                              : 'border-slate-200 bg-white/70 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="text-xs font-bold text-slate-900">Handle Myself</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">
+                            Keep this lead assigned to yourself.
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAssignOption('collect_docs');
+                            setAssigneeId('');
+                          }}
+                          className={`p-3 rounded-xl border-2 text-left transition ${
+                            assignOption === 'collect_docs'
+                              ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-500/20 shadow-xs'
+                              : 'border-slate-200 bg-white/70 hover:border-amber-300'
+                          }`}
+                        >
+                          <div className="text-xs font-bold text-amber-950">1. Assign — Collect Only Document</div>
+                          <div className="text-[10px] text-amber-800/90 mt-0.5">
+                            Other user only collects docs in Assign Lead &amp; receives notification.
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAssignOption('transfer_case');
+                            setAssigneeId('');
+                            setDocCollectionNote('');
+                          }}
+                          className={`p-3 rounded-xl border-2 text-left transition ${
+                            assignOption === 'transfer_case'
+                              ? 'border-indigo-600 bg-indigo-50 ring-2 ring-indigo-500/20 shadow-xs'
+                              : 'border-slate-200 bg-white/70 hover:border-indigo-300'
+                          }`}
+                        >
+                          <div className="text-xs font-bold text-indigo-950">2. Assign Case to User</div>
+                          <div className="text-[10px] text-indigo-800/90 mt-0.5">
+                            Other user gets notification, views Assign Lead, copies number &amp; adds Bank Login.
+                          </div>
+                        </button>
+                      </div>
+
+                      {assignOption !== 'none' && (
+                        <div className="pt-2 border-t border-burgundy-100/80">
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                              Select Staff Member to Assign <span className="text-rose-500">*</span>
+                            </label>
+                            <select
+                              value={assigneeId}
+                              onChange={(e) => setAssigneeId(e.target.value)}
+                              className="w-full text-xs rounded-xl border border-slate-300 px-3 py-2 bg-white focus:outline-none focus:border-burgundy-800"
+                            >
+                              <option value="">-- Select User (Any Role) --</option>
+                              {activeEmployeesByRole.map(([roleName, empList]) => (
+                                <optgroup key={roleName} label={roleName}>
+                                  {empList.map(emp => (
+                                    <option key={emp.id} value={emp.id}>
+                                      {emp.name} ({emp.role} • {emp.id})
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Action Buttons */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
                     <span className="text-[11px] text-slate-400">
@@ -1219,6 +1446,17 @@ export const TelecallingPage = () => {
               >
                 <span>My Due Reminders ({myRemindersCount})</span>
               </button>
+              <button
+                onClick={() => setQueueFilter('assigned-flow')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 ${
+                  queueFilter === 'assigned-flow'
+                    ? 'bg-indigo-700 text-white border-indigo-700 shadow-sm'
+                    : 'bg-white text-indigo-800 border-indigo-200 hover:bg-indigo-50'
+                }`}
+              >
+                <GitBranch className="w-3.5 h-3.5" />
+                <span>My Assigned Lead Flow ({myAssignedFlowList.length})</span>
+              </button>
             </div>
 
             <div className="relative w-64">
@@ -1233,7 +1471,120 @@ export const TelecallingPage = () => {
             </div>
           </div>
 
-          {/* Full Queue Table */}
+          {/* Full Queue Table OR Sender Assigned Lead Flow Table */}
+          {queueFilter === 'assigned-flow' ? (
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div className="px-5 py-3 bg-indigo-50/70 border-b border-indigo-100 flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-indigo-950">
+                  <GitBranch className="w-4 h-4 text-indigo-700" />
+                  <span>Customer Flow Tracker — Leads You Assigned to Other Users</span>
+                </div>
+                <span className="text-[11px] text-indigo-700">
+                  Live status from Document Collection → Bank Login → Disbursed / Rejected
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-700 min-w-[820px]">
+                  <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3">Sl.No</th>
+                      <th className="px-4 py-3">Customer &amp; Mobile</th>
+                      <th className="px-4 py-3">Assign Option</th>
+                      <th className="px-4 py-3">Assigned To</th>
+                      <th className="px-4 py-3">Docs</th>
+                      <th className="px-4 py-3">Live Customer Flow</th>
+                      <th className="px-4 py-3 text-right">Track Flow</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {paginatedQueue.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-10 text-center text-xs text-slate-400 italic">
+                          You have not assigned any leads to other users yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedQueue.map((item, idx) => {
+                        const slNo = (queuePage - 1) * itemsPerPage + idx + 1;
+                        const isDocOnly = item.assignmentType === 'collect_docs';
+                        return (
+                          <tr key={item.id} className="hover:bg-[#FAF6EF]/60 transition">
+                            <td className="px-4 py-3 font-semibold text-slate-700">{slNo}</td>
+                            <td className="px-4 py-3">
+                              <div className="font-bold text-slate-900">{item.customerName}</div>
+                              <div className="font-mono text-[11px] text-slate-600">{formatMobileNumber(item.mobile)}</div>
+                              {item.business && (
+                                <div className="text-[10px] text-slate-400 truncate max-w-[180px]">{item.business}</div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isDocOnly ? (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                                  1. Collect Only Doc
+                                </span>
+                              ) : (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">
+                                  2. Case Assigned
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="font-bold text-slate-800">
+                                {item.docCollectionAssigneeName || item.assignedToName || '—'}
+                              </div>
+                              <div className="text-[10px] text-slate-500">
+                                {item.docCollectionAssigneeRole || item.assignedToRole || ''}
+                                {(item.docCollectionAssignedAt || item.assignedAt) ? ` • ${formatDate(item.docCollectionAssignedAt || item.assignedAt)}` : ''}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                item.docsCount > 0
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  : 'bg-slate-100 text-slate-600 border-slate-200'
+                              }`}>
+                                {item.docsCount} File{item.docsCount !== 1 ? 's' : ''}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${item.flowTone}`}>
+                                {item.flowLabel}
+                              </span>
+                              {item.flowDetail && (
+                                <div className="text-[10px] text-slate-500 mt-0.5 max-w-xs truncate">
+                                  {item.flowDetail}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => setTrackingFlowTarget(item)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 text-[11px] font-bold text-amber-950 transition shadow-2xs"
+                                title="View full step-by-step audit flow"
+                              >
+                                <History className="w-3.5 h-3.5 text-amber-800" />
+                                <span>View Flow</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <Pagination
+                currentPage={queuePage}
+                totalItems={myAssignedFlowList.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setQueuePage}
+                summaryLabel="assigned leads"
+              />
+            </div>
+          ) : (
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
@@ -1307,6 +1658,7 @@ export const TelecallingPage = () => {
               summaryLabel={queueFilter === 'reminders' ? 'reminders' : 'actioned calls'}
             />
           </div>
+          )}
         </div>
       )}
         </>
@@ -1704,6 +2056,12 @@ export const TelecallingPage = () => {
         onClose={() => setIsAddModalOpen(false)}
         defaultDatabase={selectedDb || 'new'}
         defaultType={selectedType || 'known'}
+      />
+
+      {/* Full Number Lifecycle Flow Modal */}
+      <NumberLifecycleModal
+        target={trackingFlowTarget}
+        onClose={() => setTrackingFlowTarget(null)}
       />
     </div>
   );

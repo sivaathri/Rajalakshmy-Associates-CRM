@@ -919,26 +919,44 @@ export const CRMProvider = ({ children }) => {
   // ----------------------------------------------------
   // TELECALLING & CALL OUTCOMES
   // ----------------------------------------------------
-  const logCall = ({ customerId, outcome, duration = '1m 30s', remarks = '', reminderDate = '' }) => {
+  const logCall = ({
+    customerId,
+    outcome,
+    duration = '1m 30s',
+    remarks = '',
+    reminderDate = '',
+    assignmentType = 'none',
+    assigneeId = '',
+    docCollectionNote = ''
+  }) => {
     const customer = customers.find(c => c.id === customerId);
     if (!customer) return;
 
     const now = new Date();
     const callDate = now.toISOString().split('T')[0];
     const callTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const actionUser = currentUser || { id: 'EMP004', name: 'Ananya Subramanian', role: 'RM' };
+    const isPositiveLead = outcome === 'OK' || outcome === 'Field Visit';
+    const targetAssignee = isPositiveLead && (assignmentType === 'collect_docs' || assignmentType === 'transfer_case') && assigneeId
+      ? employees.find(e => e.id === assigneeId)
+      : null;
+    const effectiveAssign = targetAssignee ? assignmentType : 'none';
 
     const newCall = {
       id: `CALL-${Date.now().toString().slice(-4)}`,
       customerId,
       customerName: customer.name,
       mobile: customer.mobile,
-      employeeId: currentUser?.id || 'EMP004',
-      employeeName: currentUser?.name || 'Ananya Subramanian',
+      employeeId: actionUser.id,
+      employeeName: actionUser.name,
       callDate,
       callTime,
       duration,
       outcome, // 'OK' | 'Not Attend' | 'No Need' | 'Reminder' | 'Field Visit'
       remarks,
+      assignmentType: effectiveAssign,
+      assigneeName: targetAssignee?.name || '',
+      assigneeRole: targetAssignee?.role || '',
       reminderDate: (outcome === 'Reminder' || outcome === 'Field Visit') ? reminderDate : ''
     };
 
@@ -953,24 +971,45 @@ export const CRMProvider = ({ children }) => {
       action: `Call Attended (${outcome})`,
       fromStatus: prevCallingStatus,
       toStatus: outcome,
-      actorId: currentUser?.id || 'EMP004',
-      actorName: currentUser?.name || 'Ananya Subramanian',
-      actorRole: currentUser?.role || 'RM',
-      assigneeId: currentUser?.id || 'EMP004',
-      assigneeName: currentUser?.name || 'Ananya Subramanian',
-      assigneeRole: currentUser?.role || 'RM',
-      details: `${remarks ? `Response: "${remarks}"` : 'No remarks'}${reminderDate ? ` • Follow-up date: ${reminderDate}` : ''} • Duration: ${duration}`
+      actorId: actionUser.id,
+      actorName: actionUser.name,
+      actorRole: actionUser.role || 'RM',
+      assigneeId: targetAssignee?.id || actionUser.id,
+      assigneeName: targetAssignee?.name || actionUser.name,
+      assigneeRole: targetAssignee?.role || actionUser.role || 'RM',
+      details: `${remarks ? `Response: "${remarks}"` : 'No remarks'}${reminderDate ? ` • Follow-up date: ${reminderDate}` : ''}${effectiveAssign === 'collect_docs' ? ` • Doc Collection Assigned to ${targetAssignee.name} (${targetAssignee.role})` : effectiveAssign === 'transfer_case' ? ` • Case Assigned to ${targetAssignee.name} (${targetAssignee.role})` : ''} • Duration: ${duration}`
     });
 
-    // Update customer's status AND claim/assign number to the user who took action so it follows them
+    // Update customer's status AND ownership/assignment metadata
     const customerUpdates = {
       callingStatus: outcome,
       lastCallDate: callDate,
-      assignedTo: currentUser?.id || 'EMP004',
-      assignedName: currentUser?.name || 'Ananya Subramanian',
-      actionedBy: currentUser?.id || 'EMP004',
-      actionedByName: currentUser?.name || 'Ananya Subramanian'
+      assignedTo: effectiveAssign === 'transfer_case' ? targetAssignee.id : actionUser.id,
+      assignedName: effectiveAssign === 'transfer_case' ? targetAssignee.name : actionUser.name,
+      actionedBy: effectiveAssign === 'transfer_case' ? targetAssignee.id : actionUser.id,
+      actionedByName: effectiveAssign === 'transfer_case' ? targetAssignee.name : actionUser.name
     };
+
+    if (effectiveAssign === 'collect_docs') {
+      customerUpdates.assignmentType = 'collect_docs';
+      customerUpdates.docCollectionAssigneeId = targetAssignee.id;
+      customerUpdates.docCollectionAssigneeName = targetAssignee.name;
+      customerUpdates.docCollectionAssigneeRole = targetAssignee.role || '';
+      customerUpdates.docCollectionAssignedById = actionUser.id;
+      customerUpdates.docCollectionAssignedByName = actionUser.name;
+      customerUpdates.docCollectionAssignedAt = callDate;
+      customerUpdates.docCollectionNote = docCollectionNote || '';
+      customerUpdates.docCollectionStatus = 'Pending Collection';
+      customerUpdates.originalRmId = actionUser.id;
+      customerUpdates.originalRmName = actionUser.name;
+    } else if (effectiveAssign === 'transfer_case') {
+      customerUpdates.assignmentType = 'transfer_case';
+      customerUpdates.assignedBy = actionUser.id;
+      customerUpdates.assignedByName = actionUser.name;
+      customerUpdates.originalRmId = actionUser.id;
+      customerUpdates.originalRmName = actionUser.name;
+      customerUpdates.transferredAt = callDate;
+    }
 
     if (outcome === 'Reminder' || outcome === 'Field Visit') {
       customerUpdates.reminderDate = reminderDate;
@@ -993,9 +1032,55 @@ export const CRMProvider = ({ children }) => {
     if (outcome === 'OK' || outcome === 'Field Visit') {
       const leadStatus = outcome === 'Field Visit' ? 'Field Visit Scheduled' : 'Discussion in Progress';
       const cleanCustomerMobile = customer.mobile ? customer.mobile.replace(/\D/g, '') : '';
-      const actionUser = currentUser || { id: 'EMP004', name: 'Ananya Subramanian', role: 'RM' };
-
       const currentLeadRemarks = remarks ? remarks.trim() : '';
+
+      const assignmentLeadFields = effectiveAssign === 'collect_docs'
+        ? {
+            assignmentType: 'collect_docs',
+            docCollectionAssigneeId: targetAssignee.id,
+            docCollectionAssigneeName: targetAssignee.name,
+            docCollectionAssigneeRole: targetAssignee.role || '',
+            docCollectionAssignedById: actionUser.id,
+            docCollectionAssignedByName: actionUser.name,
+            docCollectionAssignedAt: callDate,
+            docCollectionNote: docCollectionNote || '',
+            docCollectionStatus: 'Pending Collection',
+            assignedToId: targetAssignee.id,
+            assignedToName: targetAssignee.name,
+            assignedToRole: targetAssignee.role || '',
+            assignedBy: actionUser.id,
+            assignedByName: actionUser.name,
+            originalRmId: actionUser.id,
+            originalRmName: actionUser.name,
+            originalRmRole: actionUser.role || 'RM',
+            assignedAt: callDate,
+            callOutcome: outcome
+          }
+        : effectiveAssign === 'transfer_case'
+        ? {
+            assignmentType: 'transfer_case',
+            assignedToId: targetAssignee.id,
+            assignedToName: targetAssignee.name,
+            assignedToRole: targetAssignee.role || '',
+            assignedBy: actionUser.id,
+            assignedByName: actionUser.name,
+            originalRmId: actionUser.id,
+            originalRmName: actionUser.name,
+            originalRmRole: actionUser.role || 'RM',
+            assignedAt: callDate,
+            transferredAt: callDate,
+            callOutcome: outcome
+          }
+        : {
+            assignmentType: 'self',
+            assignedToId: actionUser.id,
+            assignedToName: actionUser.name,
+            assignedToRole: actionUser.role || 'RM',
+            assignedBy: actionUser.id,
+            assignedByName: actionUser.name,
+            assignedAt: callDate,
+            callOutcome: outcome
+          };
 
       setLeads(prevLeads => {
         // Check if lead already exists for this customer or mobile number
@@ -1011,13 +1096,10 @@ export const CRMProvider = ({ children }) => {
             ...updated[existingIndex],
             sourceCustomerId: updated[existingIndex].sourceCustomerId || customer.id,
             status: leadStatus,
-            assignedToId: actionUser.id,
-            assignedToName: actionUser.name,
-            assignedToRole: actionUser.role || 'RM',
-            actionedBy: actionUser.id,
-            actionedByName: actionUser.name,
-            assignedAt: callDate,
-            remarks: currentLeadRemarks || updated[existingIndex].remarks || ''
+            actionedBy: effectiveAssign === 'transfer_case' ? targetAssignee.id : actionUser.id,
+            actionedByName: effectiveAssign === 'transfer_case' ? targetAssignee.name : actionUser.name,
+            remarks: currentLeadRemarks || updated[existingIndex].remarks || '',
+            ...assignmentLeadFields
           };
           return updated;
         } else {
@@ -1032,42 +1114,79 @@ export const CRMProvider = ({ children }) => {
             business: customer.business || '',
             city: customer.city || '',
             state: customer.state || '',
+            databaseType: customer.databaseType || '',
+            referenceFrom: customer.referenceFrom || '',
+            documents: customer.documents || [],
             requiredService: customer.services?.[0]?.name || customer.requiredService || '',
             estimatedAmount: Number(customer.loanRequirement) || Number(customer.estimatedAmount) || 0,
             source: customer.source || 'Database',
             status: leadStatus,
-            assignedToRole: actionUser.role || 'RM',
-            assignedToId: actionUser.id,
-            assignedToName: actionUser.name,
-            assignedBy: actionUser.id,
-            assignedByName: actionUser.name,
-            assignedAt: callDate,
-            actionedBy: actionUser.id,
-            actionedByName: actionUser.name,
-            remarks: currentLeadRemarks
+            actionedBy: effectiveAssign === 'transfer_case' ? targetAssignee.id : actionUser.id,
+            actionedByName: effectiveAssign === 'transfer_case' ? targetAssignee.name : actionUser.name,
+            remarks: currentLeadRemarks,
+            ...assignmentLeadFields
           };
           return [newLead, ...prevLeads];
         }
       });
 
-      recordLifecycleEvent({
-        mobile: customer.mobile,
-        customerId: customer.isCustomer ? (customer.customerId || customer.id) : '',
-        customerName: customer.name,
-        stage: 'Lead Pipeline',
-        action: `Status Changed to ${leadStatus}`,
-        fromStatus: customer.callingStatus || 'Pending',
-        toStatus: leadStatus,
-        actorId: actionUser.id,
-        actorName: actionUser.name,
-        actorRole: actionUser.role || 'RM',
-        assigneeId: actionUser.id,
-        assigneeName: actionUser.name,
-        assigneeRole: actionUser.role || 'RM',
-        details: currentLeadRemarks || `Auto-moved to Lead Pipeline from Telecalling (${outcome})`
-      });
-
-      showToast(`Contact converted into Lead! Assigned strictly to you (${actionUser.name})`, 'success');
+      if (effectiveAssign === 'collect_docs') {
+        recordLifecycleEvent({
+          mobile: customer.mobile,
+          customerId: customer.isCustomer ? (customer.customerId || customer.id) : '',
+          customerName: customer.name,
+          stage: 'Document Collection',
+          action: 'Assigned to Collect Documents Only',
+          fromStatus: leadStatus,
+          toStatus: 'Pending Collection',
+          actorId: actionUser.id,
+          actorName: actionUser.name,
+          actorRole: actionUser.role || 'RM',
+          assigneeId: targetAssignee.id,
+          assigneeName: targetAssignee.name,
+          assigneeRole: targetAssignee.role || '',
+          details: docCollectionNote
+            ? `Docs needed: ${docCollectionNote}${currentLeadRemarks ? ` • Call notes: ${currentLeadRemarks}` : ''}`
+            : `Assigned to ${targetAssignee.name} (${targetAssignee.role}) for document collection`
+        });
+        showToast(`Sent for Document Collection to ${targetAssignee.name} (${targetAssignee.role})!`, 'success');
+      } else if (effectiveAssign === 'transfer_case') {
+        recordLifecycleEvent({
+          mobile: customer.mobile,
+          customerId: customer.isCustomer ? (customer.customerId || customer.id) : '',
+          customerName: customer.name,
+          stage: 'Lead Assignment',
+          action: 'Case Assigned to Other User',
+          fromStatus: leadStatus,
+          toStatus: `Assigned to ${targetAssignee.name} (${targetAssignee.role})`,
+          actorId: actionUser.id,
+          actorName: actionUser.name,
+          actorRole: actionUser.role || 'RM',
+          assigneeId: targetAssignee.id,
+          assigneeName: targetAssignee.name,
+          assigneeRole: targetAssignee.role || '',
+          details: `Transferred to ${targetAssignee.name} (${targetAssignee.role})${currentLeadRemarks ? ` • ${currentLeadRemarks}` : ''}`
+        });
+        showToast(`Case assigned to ${targetAssignee.name} (${targetAssignee.role})! Notification sent.`, 'success');
+      } else {
+        recordLifecycleEvent({
+          mobile: customer.mobile,
+          customerId: customer.isCustomer ? (customer.customerId || customer.id) : '',
+          customerName: customer.name,
+          stage: 'Lead Pipeline',
+          action: `Status Changed to ${leadStatus}`,
+          fromStatus: customer.callingStatus || 'Pending',
+          toStatus: leadStatus,
+          actorId: actionUser.id,
+          actorName: actionUser.name,
+          actorRole: actionUser.role || 'RM',
+          assigneeId: actionUser.id,
+          assigneeName: actionUser.name,
+          assigneeRole: actionUser.role || 'RM',
+          details: currentLeadRemarks || `Auto-moved to Lead Pipeline from Telecalling (${outcome})`
+        });
+        showToast(`Contact saved as ${outcome}!`, 'success');
+      }
     } else {
       showToast(`Response saved! Number now follows you (${currentUser?.name || 'RM'})`, 'success');
     }
@@ -1939,6 +2058,125 @@ export const CRMProvider = ({ children }) => {
     return createdLogin;
   };
 
+  // Upload Document / Mark Document Collection Completed for Assigned Leads (Option 1: Collect Documents Only)
+  const collectAssignedLeadDocument = (leadId, doc) => {
+    const existingLead = leads.find(l => l.id === leadId);
+    if (!existingLead) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const newDocItem = {
+      id: `DOC-${Date.now().toString().slice(-4)}`,
+      category: doc.category || 'KYC 1',
+      name: doc.name || 'document_upload.pdf',
+      size: doc.size || '1.2 MB',
+      uploadDate: todayStr,
+      uploadedBy: currentUser?.name || 'Staff',
+      url: doc.url || ''
+    };
+
+    setLeads(prev => prev.map(l => {
+      if (l.id === leadId) {
+        return {
+          ...l,
+          documents: [...(l.documents || []), newDocItem],
+          docCollectionStatus: 'Documents Collected',
+          docCollectedBy: currentUser?.name || 'Staff',
+          docCollectedById: currentUser?.id || '',
+          docCollectedAt: todayStr
+        };
+      }
+      return l;
+    }));
+
+    const cleanMob = getClean10Digits(existingLead.mobile);
+    setCustomers(prev => prev.map(c => {
+      const matches =
+        (existingLead.sourceCustomerId && c.id === existingLead.sourceCustomerId) ||
+        (existingLead.customerId && (c.id === existingLead.customerId || c.customerId === existingLead.customerId)) ||
+        (cleanMob && getClean10Digits(c.mobile) === cleanMob);
+      if (matches) {
+        return {
+          ...c,
+          documents: [...(c.documents || []), newDocItem],
+          docCollectionStatus: 'Documents Collected',
+          docCollectedBy: currentUser?.name || 'Staff',
+          docCollectedAt: todayStr
+        };
+      }
+      return c;
+    }));
+
+    recordLifecycleEvent({
+      mobile: existingLead.mobile,
+      customerId: existingLead.customerId || '',
+      leadId: existingLead.id,
+      customerName: existingLead.customerName,
+      stage: 'Document Collection',
+      action: `Document Uploaded (${newDocItem.category})`,
+      fromStatus: existingLead.docCollectionStatus || 'Pending Collection',
+      toStatus: 'Documents Collected',
+      date: todayStr,
+      time: timeStr,
+      actorId: currentUser?.id || '',
+      actorName: currentUser?.name || 'Staff',
+      actorRole: currentUser?.role || '',
+      details: `${newDocItem.name} (${newDocItem.size})`
+    });
+
+    showToast(`Document "${newDocItem.name}" uploaded & synced to Lead`, 'success');
+  };
+
+  const markAssignedDocsCompleted = (leadId, note = '') => {
+    const existingLead = leads.find(l => l.id === leadId);
+    if (!existingLead) return;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+    setLeads(prev => prev.map(l => l.id === leadId ? {
+      ...l,
+      docCollectionStatus: 'Documents Collected',
+      docCollectedBy: currentUser?.name || 'Staff',
+      docCollectedById: currentUser?.id || '',
+      docCollectedAt: todayStr,
+      docCollectionCompletionNote: note || l.docCollectionCompletionNote || ''
+    } : l));
+
+    const cleanMob = getClean10Digits(existingLead.mobile);
+    setCustomers(prev => prev.map(c => {
+      const matches =
+        (existingLead.sourceCustomerId && c.id === existingLead.sourceCustomerId) ||
+        (existingLead.customerId && (c.id === existingLead.customerId || c.customerId === existingLead.customerId)) ||
+        (cleanMob && getClean10Digits(c.mobile) === cleanMob);
+      return matches ? {
+        ...c,
+        docCollectionStatus: 'Documents Collected',
+        docCollectedBy: currentUser?.name || 'Staff',
+        docCollectedAt: todayStr
+      } : c;
+    }));
+
+    recordLifecycleEvent({
+      mobile: existingLead.mobile,
+      customerId: existingLead.customerId || '',
+      leadId: existingLead.id,
+      customerName: existingLead.customerName,
+      stage: 'Document Collection',
+      action: 'Document Collection Marked Completed',
+      fromStatus: existingLead.docCollectionStatus || 'Pending Collection',
+      toStatus: 'Documents Collected',
+      date: todayStr,
+      time: timeStr,
+      actorId: currentUser?.id || '',
+      actorName: currentUser?.name || 'Staff',
+      actorRole: currentUser?.role || '',
+      details: note || 'Documents collected and returned to RM'
+    });
+
+    showToast('Document collection marked as completed!', 'success');
+  };
+
   // Add 2-Day Update / Note (Req 4: remind every 2 days for do next or wt today update)
   const addLoginUpdate = (loginId, updateNote) => {
     const todayStr = new Date().toISOString().split('T')[0];
@@ -2176,6 +2414,8 @@ export const CRMProvider = ({ children }) => {
         addLead,
         assignLead,
         updateLead,
+        collectAssignedLeadDocument,
+        markAssignedDocsCompleted,
         convertLeadToLogin,
         addBankLogin,
         addLoginUpdate,
