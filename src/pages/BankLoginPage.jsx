@@ -13,7 +13,6 @@ import {
   Plus,
   Search,
   Filter,
-  Download,
   IndianRupee,
   User,
   History,
@@ -26,7 +25,7 @@ import {
   FileSpreadsheet,
   Check
 } from 'lucide-react';
-import { formatCurrency, formatDate, exportToCSV } from '../utils/formatters';
+import { formatCurrency, formatDate } from '../utils/formatters';
 
 export const BankLoginPage = () => {
   const { bankLogins, addBankLogin, addLoginUpdate, disburseLogin, rejectLogin, customers } = useCRM();
@@ -272,30 +271,6 @@ export const BankLoginPage = () => {
     setRejectingLogin(null);
   };
 
-  // Export
-  const handleExport = () => {
-    const exportData = filteredLogins.map(l => ({
-      "Customer ID": l.customerId || l.id,
-      "Customer Name": l.customerName,
-      "Mobile Contact": l.mobile,
-      "Business": l.business,
-      "Location": l.city,
-      "Bank / Institution": l.bankName,
-      "Loan Type": l.loanType,
-      "Applied Amount": l.loanAmount,
-      "Login Date": l.loginDate,
-      "Last Update Date": l.lastUpdateDate,
-      "Next 2-Day Due Date": l.nextFollowUpDate,
-      "File Status": l.status,
-      "Disbursed Bank": l.disbursementDetails?.bankName || '-',
-      "Disbursed Amount": l.disbursementDetails?.loanAmount || '-',
-      "Disbursed Loan Type": l.disbursementDetails?.loanType || '-',
-      "Disbursed Date": l.disbursementDetails?.disbursementDate || '-',
-      "Rejection Remarks": l.rejectionRemarks || '-'
-    }));
-    exportToCSV(exportData, 'rajalakshmy_bank_logins.csv');
-  };
-
   return (
     <div className="space-y-6">
       {/* Action Bar */}
@@ -306,13 +281,6 @@ export const BankLoginPage = () => {
         >
           <Plus className="w-4 h-4" />
           <span>Add Bank Login</span>
-        </button>
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-700 transition shadow-sm"
-        >
-          <Download className="w-3.5 h-3.5 text-slate-500" />
-          <span>Export CSV</span>
         </button>
       </div>
 
