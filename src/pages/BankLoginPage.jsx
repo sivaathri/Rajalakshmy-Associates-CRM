@@ -75,6 +75,7 @@ export const BankLoginPage = () => {
   const [loginDate, setLoginDate] = useState(new Date().toISOString().split('T')[0]);
   const [initialNotes, setInitialNotes] = useState('');
   const [showNumberSuggestions, setShowNumberSuggestions] = useState(false);
+  const [isNumberConfirmed, setIsNumberConfirmed] = useState(false);
   const [profileLocks, setProfileLocks] = useState({
     name: false,
     dob: false,
@@ -178,12 +179,13 @@ export const BankLoginPage = () => {
     setCustomerCity(cust.city || '');
 
     setViewHistoryLogin(null);
+    setIsNumberConfirmed(true);
     setIsAddModalOpen(true);
   };
 
   // Matching suggestions as user types mobile number
   const matchingPhoneRecords = useMemo(() => {
-    if (!enteredDigits || enteredDigits.length < 3 || entered10.length === 10) return [];
+    if (!enteredDigits || enteredDigits.length < 3) return [];
     const seen = new Set();
     const results = [];
     customers.forEach(c => {
@@ -306,9 +308,9 @@ export const BankLoginPage = () => {
     return !disallowed.some(d => clean.toLowerCase() === d.toLowerCase());
   };
 
-  // Auto-fill details when a 10-digit number matches in database (keep missing fields editable)
+  // Auto-fill details when user confirms a 10-digit number (keep missing fields editable)
   useEffect(() => {
-    if (!isAddModalOpen || !lookupResult) return;
+    if (!isAddModalOpen || !isNumberConfirmed || !lookupResult) return;
     if (hasConflict) {
       setSelectedCustomerId('');
       setSourceCustomerId('');
@@ -387,12 +389,13 @@ export const BankLoginPage = () => {
       setSourceCustomerId('');
       setProfileLocks({ name: false, dob: false, business: false, city: false });
     }
-  }, [isAddModalOpen, entered10, lookupResult?.foundInDb, hasConflict]);
+  }, [isAddModalOpen, isNumberConfirmed, entered10, lookupResult?.foundInDb, hasConflict]);
 
   // Handle selecting a number from suggestions
   const handleSelectSuggestedRecord = (rec) => {
     setCustomerMobile(formatMobileNumber(rec.mobile));
     setShowNumberSuggestions(false);
+    setIsNumberConfirmed(true);
   };
 
   // Helper: Format customer ID so it starts with 1 (e.g. RA-CUST-1 instead of RA-CUST-1001)
@@ -617,6 +620,7 @@ export const BankLoginPage = () => {
     setInterestRate('');
     setInitialNotes('');
     setShowNumberSuggestions(false);
+    setIsNumberConfirmed(false);
     setProfileLocks({ name: false, dob: false, business: false, city: false });
   };
 
@@ -705,6 +709,8 @@ export const BankLoginPage = () => {
             setInterestRate('');
             setInitialNotes('');
             setShowNumberSuggestions(false);
+            setIsNumberConfirmed(false);
+            setProfileLocks({ name: false, dob: false, business: false, city: false });
             setIsAddModalOpen(true);
           }}
           className="flex items-center gap-2 rounded-xl bg-gold-500 hover:bg-gold-600 px-4 py-2.5 text-xs font-bold text-amber-950 shadow-sm transition"
@@ -1310,28 +1316,48 @@ export const BankLoginPage = () => {
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   1. Mobile Number <span className="text-rose-500">*</span>
                 </label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
-                  <input
-                    type="tel"
-                    required
-                    autoFocus
-                    placeholder="Enter 10-digit mobile number to check database..."
-                    value={customerMobile}
-                    onChange={(e) => {
-                      setCustomerMobile(e.target.value);
-                      setShowNumberSuggestions(true);
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+                    <input
+                      type="tel"
+                      required
+                      autoFocus
+                      placeholder="Enter or paste 10-digit mobile number, then click Check Details..."
+                      value={customerMobile}
+                      onChange={(e) => {
+                        setCustomerMobile(e.target.value);
+                        setIsNumberConfirmed(false);
+                        setShowNumberSuggestions(true);
+                      }}
+                      onFocus={() => setShowNumberSuggestions(true)}
+                      className="w-full text-xs rounded-xl border border-slate-300 py-2 pl-9 pr-3 focus:outline-none focus:border-burgundy-800 focus:ring-1 focus:ring-burgundy-800"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={entered10.length !== 10}
+                    onClick={() => {
+                      setIsNumberConfirmed(true);
+                      setShowNumberSuggestions(false);
                     }}
-                    onFocus={() => setShowNumberSuggestions(true)}
-                    className="w-full text-xs rounded-xl border border-slate-300 py-2 pl-9 pr-3 focus:outline-none focus:border-burgundy-800 focus:ring-1 focus:ring-burgundy-800"
-                  />
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap shrink-0 ${
+                      entered10.length === 10
+                        ? isNumberConfirmed
+                          ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs'
+                          : 'bg-burgundy-900 hover:bg-burgundy-800 text-white shadow-xs'
+                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    {isNumberConfirmed ? '✓ Verified' : 'Check & Show Details'}
+                  </button>
                 </div>
 
                 {/* Matching Number Suggestions Dropdown */}
-                {showNumberSuggestions && matchingPhoneRecords.length > 0 && (
+                {!isNumberConfirmed && showNumberSuggestions && matchingPhoneRecords.length > 0 && (
                   <div className="mt-1 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden divide-y divide-slate-100">
                     <div className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                      Select Matching Number from Database
+                      Click Matching Number to Load Customer Details
                     </div>
                     {matchingPhoneRecords.map((rec) => (
                       <button
@@ -1358,7 +1384,7 @@ export const BankLoginPage = () => {
                 )}
 
                 {/* Lookup Status Banner */}
-                {entered10.length === 10 && lookupResult && (
+                {isNumberConfirmed && entered10.length === 10 && lookupResult && (
                   <div className="mt-2 space-y-2">
                     {/* Processing / Follow-up Conflict Alerts */}
                     {lookupResult.alerts.map((al, i) => (
@@ -1435,9 +1461,11 @@ export const BankLoginPage = () => {
                 )}
               </div>
 
-              {entered10.length < 10 ? (
+              {!isNumberConfirmed || entered10.length < 10 ? (
                 <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-center text-xs text-slate-500">
-                  Please enter a 10-digit mobile number above to verify database records.
+                  {entered10.length < 10
+                    ? 'Please enter a 10-digit mobile number above, then click a matching record or "Check & Show Details".'
+                    : 'Click "Check & Show Details" (or click a matching number above) to load customer and bank login details.'}
                 </div>
               ) : hasConflict ? (
                 <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-5 text-center my-2">
@@ -1680,9 +1708,9 @@ export const BankLoginPage = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={hasConflict || entered10.length !== 10}
+                  disabled={hasConflict || !isNumberConfirmed || entered10.length !== 10}
                   className={`px-5 py-2 text-xs font-bold rounded-xl transition flex items-center gap-1.5 ${
-                    hasConflict || entered10.length !== 10
+                    hasConflict || !isNumberConfirmed || entered10.length !== 10
                       ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                       : 'text-white bg-burgundy-900 hover:bg-burgundy-800 shadow-md'
                   }`}
@@ -1691,6 +1719,8 @@ export const BankLoginPage = () => {
                       ? 'Creation Restricted: Contact followed by another user'
                       : entered10.length !== 10
                       ? 'Enter 10-digit mobile number first'
+                      : !isNumberConfirmed
+                      ? 'Click Check & Show Details first'
                       : 'Create Bank Login'
                   }
                 >
