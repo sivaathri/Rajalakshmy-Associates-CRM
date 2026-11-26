@@ -140,6 +140,7 @@ export const AuthProvider = ({ children }) => {
       case 'dashboard':
       case 'notifications':
       case 'assigned-leads':
+      case 'statement':
       case 'attendance':
       case 'login':
       case 'logins':

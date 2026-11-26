@@ -16,6 +16,7 @@ import {
   Clock,
   Menu,
   FileCheck,
+  FileText,
   UserCog,
   UserCheck,
   LogOut,
@@ -340,6 +341,24 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
                 </span>
               )
             )}
+          </NavLink>
+        )}
+
+        {/* Statement Analyzer Menu */}
+        {canAccessRoute('statement') && (
+          <NavLink
+            to="/statement"
+            onClick={() => isMobile && setIsOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition ${
+                isActive
+                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            <FileText className="w-4 h-4 shrink-0 text-amber-300" />
+            {isExpanded && <span>Statement</span>}
           </NavLink>
         )}
 
