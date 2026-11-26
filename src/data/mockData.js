@@ -258,6 +258,8 @@ export const INITIAL_CUSTOMERS = [
     databaseType: "old",
     customerType: "known",
     source: "Bills",
+    submittedBy: "EMP004",
+    submittedByName: "Ananya Subramanian",
     assignedTo: "EMP004", // Ananya (RM)
     assignedName: "Ananya Subramanian",
     callingStatus: "Reminder",
@@ -870,6 +872,8 @@ export const INITIAL_CUSTOMERS = [
     customerType: "known",
     source: "Reference",
     referenceFrom: "Rajesh Kannan (MD)",
+    submittedBy: "EMP004",
+    submittedByName: "Ananya Subramanian",
     assignedTo: "EMP004", // Ananya
     assignedName: "Ananya Subramanian",
     callingStatus: "OK",

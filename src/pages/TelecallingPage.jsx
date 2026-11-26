@@ -136,8 +136,18 @@ export const TelecallingPage = () => {
   const newKnownCount = newKnownFreshCount;
   const newUnknownCount = newUnknownFreshCount;
 
-  // Filter assigned contacts matching Step 1 (Database) and Step 2 (Classification)
+  // Filter assigned contacts:
+  // For Assigned Queue: show all baseCustomers if no partition is selected; filter if user selects Database and/or Classification
   const assignedCustomers = useMemo(() => {
+    return baseCustomers.filter(c => {
+      if (selectedDb && c.databaseType !== selectedDb) return false;
+      if (selectedType && c.customerType !== selectedType) return false;
+      return true;
+    });
+  }, [baseCustomers, selectedDb, selectedType]);
+
+  // For Focused Mode: strictly requires both Step 1 (Database) and Step 2 (Classification)
+  const focusedCustomers = useMemo(() => {
     if (!selectedDb || !selectedType) return [];
     return baseCustomers.filter(c => c.databaseType === selectedDb && c.customerType === selectedType);
   }, [baseCustomers, selectedDb, selectedType]);
@@ -193,7 +203,8 @@ export const TelecallingPage = () => {
   // In Focused Telecalling Mode: STRICTLY show ONLY fresh numbers, partitioned/rotated per RM!
   // In Assigned Queue Table: Toggle between My Due Reminders and My Actioned Calls
   const displayQueue = useMemo(() => {
-    const filtered = assignedCustomers.filter(c => {
+    const sourceCustomers = activeTab === 'focused' ? focusedCustomers : assignedCustomers;
+    const filtered = sourceCustomers.filter(c => {
       if (activeTab === 'focused') {
         // Focused Calling strictly shows fresh numbers
         if (!isFreshNumber(c)) return false;
@@ -238,7 +249,7 @@ export const TelecallingPage = () => {
     }
 
     return filtered;
-  }, [assignedCustomers, activeTab, queueFilter, searchQueue, currentUser, rmQueueInfo, callLocks]);
+  }, [focusedCustomers, assignedCustomers, activeTab, queueFilter, searchQueue, currentUser, rmQueueInfo, callLocks]);
 
   // Derived focused contact from explicit selectedContactId
   const focusedIndex = useMemo(() => {
@@ -410,12 +421,17 @@ export const TelecallingPage = () => {
   }, [filteredCalls, historyPage, itemsPerPage]);
 
   // Numbers added/submitted by current RM / logged-in user
+  // Shows all added numbers by default; if user selects Database and/or Classification, filters accordingly
   const myAddedCustomers = useMemo(() => {
-    return customers.filter(c =>
-      (currentUser?.id && c.submittedBy === currentUser.id) ||
-      (currentUser?.name && c.submittedByName === currentUser.name)
-    );
-  }, [customers, currentUser]);
+    return customers.filter(c => {
+      const isMine = (currentUser?.id && c.submittedBy === currentUser.id) ||
+                     (currentUser?.name && c.submittedByName === currentUser.name);
+      if (!isMine) return false;
+      if (selectedDb && c.databaseType !== selectedDb) return false;
+      if (selectedType && c.customerType !== selectedType) return false;
+      return true;
+    });
+  }, [customers, currentUser, selectedDb, selectedType]);
 
   const myAddedCount = myAddedCustomers.length;
 
@@ -526,18 +542,32 @@ export const TelecallingPage = () => {
       {/* 2-Step Database & Classification Selector Card */}
       <div className="rounded-2xl border-2 border-burgundy-100 bg-white p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
-         
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+              Database & Classification Filter
+            </span>
+            {(activeTab === 'queue' || activeTab === 'my-numbers') && (
+              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                Optional: Showing all data by default
+              </span>
+            )}
+            {activeTab === 'focused' && (
+              <span className="text-[11px] font-semibold text-burgundy-800 bg-burgundy-50 px-2.5 py-0.5 rounded-full border border-burgundy-200">
+                Select Step 1 & Step 2 for Focused Dialing
+              </span>
+            )}
+          </div>
 
-          {selectedDb && (
+          {(selectedDb || selectedType) && (
             <button
               onClick={() => {
                 setSelectedDb(null);
                 setSelectedType(null);
                 clearSelectedContact();
               }}
-              className="text-xs font-semibold text-burgundy-900 hover:text-burgundy-700 underline self-start sm:self-auto"
+              className="text-xs font-bold text-burgundy-900 hover:text-burgundy-700 underline self-start sm:self-auto flex items-center gap-1"
             >
-              Reset / Change Selection
+              <span>✕ Clear Filter (Show All)</span>
             </button>
           )}
         </div>
@@ -549,12 +579,16 @@ export const TelecallingPage = () => {
               <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-burgundy-900 text-white text-[11px] font-bold">1</span>
                 <span>Select Database</span>
-                <span className="text-rose-500">*</span>
+                {activeTab === 'focused' && <span className="text-rose-500">*</span>}
               </label>
-              {selectedDb && (
+              {selectedDb ? (
                 <span className="text-[11px] font-bold text-emerald-700">
                   Selected: {selectedDb === 'old' ? 'Old Database' : 'New Database'}
                 </span>
+              ) : (
+                (activeTab === 'queue' || activeTab === 'my-numbers') && (
+                  <span className="text-[10px] text-slate-400 font-semibold">(All Databases)</span>
+                )
               )}
             </div>
 
@@ -562,7 +596,7 @@ export const TelecallingPage = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedDb('old');
+                  setSelectedDb(selectedDb === 'old' ? null : 'old');
                   clearSelectedContact();
                 }}
                 className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between ${
@@ -584,7 +618,7 @@ export const TelecallingPage = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedDb('new');
+                  setSelectedDb(selectedDb === 'new' ? null : 'new');
                   clearSelectedContact();
                 }}
                 className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between ${
@@ -610,29 +644,32 @@ export const TelecallingPage = () => {
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${
-                  selectedDb ? 'bg-gold-500 text-amber-950' : 'bg-slate-300 text-slate-600'
+                  selectedType ? 'bg-gold-500 text-amber-950' : 'bg-slate-300 text-slate-600'
                 }`}>2</span>
                 <span>Select Classification</span>
-                <span className="text-rose-500">*</span>
+                {activeTab === 'focused' && <span className="text-rose-500">*</span>}
               </label>
-              {!selectedDb ? (
-                <span className="text-[10px] text-slate-400 font-semibold">(Pick Step 1 first)</span>
-              ) : selectedType ? (
+              {selectedType ? (
                 <span className="text-[11px] font-bold text-emerald-700">
                   Selected: {selectedType === 'known' ? 'Known' : 'Unknown'}
                 </span>
-              ) : null}
+              ) : (
+                (activeTab === 'queue' || activeTab === 'my-numbers') ? (
+                  <span className="text-[10px] text-slate-400 font-semibold">(All Classifications)</span>
+                ) : (
+                  <span className="text-[10px] text-slate-400 font-semibold">(Pick Step 1 first)</span>
+                )
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
-                disabled={!selectedDb}
                 onClick={() => {
-                  setSelectedType('known');
+                  setSelectedType(selectedType === 'known' ? null : 'known');
                   clearSelectedContact();
                 }}
-                className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between disabled:opacity-40 disabled:cursor-not-allowed ${
+                className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between ${
                   selectedType === 'known'
                     ? 'border-gold-600 bg-gold-50/90 text-amber-950 ring-2 ring-gold-600/20 shadow-sm'
                     : 'border-slate-200 hover:border-gold-400 hover:bg-slate-50 text-slate-700'
@@ -644,18 +681,17 @@ export const TelecallingPage = () => {
                 </div>
                 <div className="text-[10px] text-slate-500 mt-1">Verified Enterprise Profiles</div>
                 <span className="mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 inline-block self-start">
-                  {selectedDb ? (selectedDb === 'old' ? oldKnownCount : newKnownCount) : '—'} Fresh Numbers
+                  {selectedDb ? (selectedDb === 'old' ? oldKnownCount : newKnownCount) : (oldKnownCount + newKnownCount)} Fresh Numbers
                 </span>
               </button>
 
               <button
                 type="button"
-                disabled={!selectedDb}
                 onClick={() => {
-                  setSelectedType('unknown');
+                  setSelectedType(selectedType === 'unknown' ? null : 'unknown');
                   clearSelectedContact();
                 }}
-                className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between disabled:opacity-40 disabled:cursor-not-allowed ${
+                className={`p-3 rounded-xl border-2 transition text-left flex flex-col justify-between ${
                   selectedType === 'unknown'
                     ? 'border-gold-600 bg-gold-50/90 text-amber-950 ring-2 ring-gold-600/20 shadow-sm'
                     : 'border-slate-200 hover:border-gold-400 hover:bg-slate-50 text-slate-700'
@@ -667,7 +703,7 @@ export const TelecallingPage = () => {
                 </div>
                 <div className="text-[10px] text-slate-500 mt-1">Field Direct Mobile Contacts</div>
                 <span className="mt-2 text-[10px] font-bold px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 inline-block self-start">
-                  {selectedDb ? (selectedDb === 'old' ? oldUnknownCount : newUnknownCount) : '—'} Fresh Numbers
+                  {selectedDb ? (selectedDb === 'old' ? oldUnknownCount : newUnknownCount) : (oldUnknownCount + newUnknownCount)} Fresh Numbers
                 </span>
               </button>
             </div>
@@ -726,8 +762,8 @@ export const TelecallingPage = () => {
         </button>
       </div>
 
-      {/* If neither or only one is selected and on focused/queue tab, show selection guidance */}
-      {(!selectedDb || !selectedType) && activeTab !== 'history' && activeTab !== 'my-numbers' ? (
+      {/* If neither or only one is selected and on focused tab, show selection guidance */}
+      {(!selectedDb || !selectedType) && activeTab === 'focused' ? (
         <div className="rounded-2xl border-2 border-dashed border-burgundy-200 bg-white p-12 text-center shadow-sm">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-burgundy-50 text-burgundy-900 border border-burgundy-200 mb-4 shadow-sm">
             <PhoneCall className="w-8 h-8 text-burgundy-900" />
