@@ -911,15 +911,20 @@ export const CRMProvider = ({ children }) => {
     const isKnown = activity.customerType === 'known';
     const classification = isKnown ? 'New Database - Known' : 'New Database - Unknown';
 
+    const resolvedReference = (activity.source === 'Reference' || activity.source === 'Bills') ? (activity.referenceFrom || '') : '';
+    const resolvedCity = activity.city || activity.location || '';
+
     const newActivity = {
       id: `ACT-${Date.now().toString().slice(-4)}`,
       customerName: isKnown ? (activity.customerName || 'Customer') : 'Unknown / Lead',
       mobile: activity.mobile,
       business: activity.business || 'Business / Trading',
       customerType: activity.customerType,
-      state: activity.state || 'Tamil Nadu',
+      city: resolvedCity,
+      location: resolvedCity,
+      state: activity.state || '',
       source: activity.source,
-      referenceFrom: activity.source === 'Reference' ? activity.referenceFrom : '',
+      referenceFrom: resolvedReference,
       submittedBy: currentUser?.id || 'EMP005',
       submittedByName: currentUser?.name || 'Murugan Velu',
       submissionDate: dateStr,
@@ -935,11 +940,12 @@ export const CRMProvider = ({ children }) => {
       name: newActivity.customerName,
       mobile: newActivity.mobile,
       business: newActivity.business,
+      city: resolvedCity,
       state: newActivity.state,
       databaseType: 'new',
       customerType: activity.customerType,
       source: activity.source,
-      referenceFrom: activity.source === 'Reference' ? activity.referenceFrom : '',
+      referenceFrom: resolvedReference,
       submittedBy: newActivity.submittedBy,
       submittedByName: newActivity.submittedByName,
       assignedTo: currentUser?.role === 'RM' ? currentUser.id : '',

@@ -14,8 +14,9 @@ export const DailyActivityForm = () => {
   const [customerName, setCustomerName] = useState('');
   const [mobile, setMobile] = useState('');
   const [business, setBusiness] = useState('');
-  const [source, setSource] = useState(''); // '' | 'Bills' | 'Open Source' | 'Reference'
+  const [source, setSource] = useState(''); // '' | 'Bills' | 'Open Source' | 'Reference' | 'Activities'
   const [referenceFrom, setReferenceFrom] = useState('');
+  const [location, setLocation] = useState('');
 
   // Bulk Excel Upload state for Open Source
   const fileInputRef = useRef(null);
@@ -159,6 +160,11 @@ export const DailyActivityForm = () => {
       return;
     }
 
+    if (source === 'Activities' && !location.trim()) {
+      alert('Please enter the Location for Activities');
+      return;
+    }
+
     const formattedMobile = `+91 ${cleanEnteredMobile.slice(0, 5)} ${cleanEnteredMobile.slice(5)}`;
 
     const saved = addDailyActivity({
@@ -167,9 +173,10 @@ export const DailyActivityForm = () => {
       business: business.trim(),
       customerType,
       state: '',
-      city: '',
+      city: source === 'Activities' ? location.trim() : '',
+      location: source === 'Activities' ? location.trim() : '',
       source,
-      referenceFrom
+      referenceFrom: (source === 'Reference' || source === 'Bills') ? referenceFrom.trim() : ''
     });
 
     if (!saved) return;
@@ -180,6 +187,7 @@ export const DailyActivityForm = () => {
     setBusiness('');
     setSource('');
     setReferenceFrom('');
+    setLocation('');
   };
 
   return (
@@ -326,24 +334,49 @@ export const DailyActivityForm = () => {
               <option value="Bills" className="text-slate-800">1. Bills</option>
               <option value="Open Source" className="text-slate-800">2. Open Source</option>
               <option value="Reference" className="text-slate-800">3. Reference</option>
+              <option value="Activities" className="text-slate-800">4. Activities</option>
             </select>
           </div>
 
-          {/* Conditional Field: Reference From / Who? */}
-          {source === 'Reference' && (
+          {/* Conditional Field: Reference (Shown for Bills or Reference) */}
+          {(source === 'Reference' || source === 'Bills') && (
             <div className="animate-fade-in">
               <label className="block text-xs font-semibold text-amber-900 mb-1">
-                Reference From / Who? <span className="text-rose-500">*</span>
+                {source === 'Reference' ? (
+                  <>Reference From / Who? <span className="text-rose-500">*</span></>
+                ) : (
+                  'Reference'
+                )}
               </label>
               <div className="relative">
                 <Share2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-600 pointer-events-none" />
                 <input
                   type="text"
-                  required
-                  placeholder="Enter recommender or client name"
+                  required={source === 'Reference'}
+                  placeholder={source === 'Reference' ? 'Enter recommender or client name' : 'Enter reference'}
                   value={referenceFrom}
                   onChange={(e) => setReferenceFrom(e.target.value)}
                   className="w-full h-11 text-xs md:text-sm rounded-xl border border-amber-300 py-2.5 pl-10 pr-3 bg-amber-50/50 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 transition"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Conditional Field: Location (Shown for Activities) */}
+          {source === 'Activities' && (
+            <div className="animate-fade-in">
+              <label className="block text-xs font-semibold text-emerald-900 mb-1">
+                Location <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600 pointer-events-none" />
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full h-11 text-xs md:text-sm rounded-xl border border-emerald-300 py-2.5 pl-10 pr-3 bg-emerald-50/50 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 transition"
                 />
               </div>
             </div>

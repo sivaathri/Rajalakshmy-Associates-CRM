@@ -133,7 +133,8 @@ export const DailyActivitiesPage = () => {
   const sourceCounts = {
     Bills: filteredActivities.filter(a => a.source === 'Bills').length,
     OpenSource: filteredActivities.filter(a => a.source === 'Open Source').length,
-    Reference: filteredActivities.filter(a => a.source === 'Reference').length
+    Reference: filteredActivities.filter(a => a.source === 'Reference').length,
+    Activities: filteredActivities.filter(a => a.source === 'Activities').length
   };
 
   // Pagination State (Show minimum 15 items per page)
@@ -197,7 +198,7 @@ export const DailyActivitiesPage = () => {
       {activeTab === 'reports' && (
         <div className="space-y-6">
           {/* Summary KPIs */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Records (Filtered)</span>
               <span className="text-2xl font-black text-slate-900 mt-1 block">{filteredActivities.length}</span>
@@ -216,6 +217,11 @@ export const DailyActivitiesPage = () => {
             <div className="rounded-xl border border-purple-200 bg-purple-50/60 p-4 shadow-sm">
               <span className="text-[10px] uppercase font-bold text-purple-800 block">Source: 3. Reference</span>
               <span className="text-2xl font-black text-purple-900 mt-1 block">{sourceCounts.Reference}</span>
+            </div>
+
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm">
+              <span className="text-[10px] uppercase font-bold text-emerald-800 block">Source: 4. Activities</span>
+              <span className="text-2xl font-black text-emerald-900 mt-1 block">{sourceCounts.Activities}</span>
             </div>
           </div>
 
@@ -249,6 +255,7 @@ export const DailyActivitiesPage = () => {
                   <option value="Bills">Bills</option>
                   <option value="Open Source">Open Source</option>
                   <option value="Reference">Reference</option>
+                  <option value="Activities">Activities</option>
                 </select>
               </div>
 
@@ -332,6 +339,11 @@ export const DailyActivitiesPage = () => {
                             {act.referenceFrom && (
                               <span className="text-[10px] text-amber-900 block font-medium">
                                 Ref: {act.referenceFrom}
+                              </span>
+                            )}
+                            {(act.city || act.location) && (
+                              <span className="text-[10px] text-emerald-800 block font-medium">
+                                Loc: {act.city || act.location}
                               </span>
                             )}
                           </td>
