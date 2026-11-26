@@ -95,18 +95,21 @@ export const BankLoginPage = () => {
       const d = clean10Digits(c.mobile);
       if (d && d.includes(enteredDigits) && !seen.has(d)) {
         seen.add(d);
+        const followerId = c.actionedBy || c.assignedTo;
+        const isConflict = Boolean(followerId && currentUser?.id && followerId !== currentUser.id);
         results.push({
           id: c.id,
           customerId: c.isCustomer ? (c.customerId || c.id) : '',
-          name: c.name || 'Unknown / Lead',
+          name: isConflict ? 'Confidential (Other User)' : (c.name || 'Unknown / Lead'),
           mobile: c.mobile,
-          business: c.business || '',
-          city: c.city || ''
+          business: isConflict ? '—' : (c.business || ''),
+          city: isConflict ? '—' : (c.city || ''),
+          isConflict
         });
       }
     });
     return results.slice(0, 6);
-  }, [enteredDigits, entered10, customers]);
+  }, [enteredDigits, entered10, customers, currentUser]);
 
   // Exact match lookup in Database (customers, activities, leads, bankLogins)
   const lookupResult = useMemo(() => {
@@ -162,9 +165,20 @@ export const BankLoginPage = () => {
     };
   }, [entered10, customers, activities, leads, bankLogins, currentUser]);
 
+  const hasConflict = Boolean(lookupResult?.alerts?.some(a => a.severity === 'danger'));
+
   // Auto-fill details when a 10-digit number matches in database
   useEffect(() => {
     if (!isAddModalOpen || !lookupResult) return;
+    if (hasConflict) {
+      setSelectedCustomerId('');
+      setSourceCustomerId('');
+      setCustomerName('');
+      setCustomerBusiness('');
+      setCustomerCity('');
+      return;
+    }
+
     if (lookupResult.foundInDb) {
       const src = lookupResult.matchedCustomer || lookupResult.matchedLead || lookupResult.matchedActivity;
       if (src) {
@@ -187,16 +201,11 @@ export const BankLoginPage = () => {
       setSelectedCustomerId('');
       setSourceCustomerId('');
     }
-  }, [isAddModalOpen, entered10, lookupResult?.foundInDb]);
+  }, [isAddModalOpen, entered10, lookupResult?.foundInDb, hasConflict]);
 
   // Handle selecting a number from suggestions
   const handleSelectSuggestedRecord = (rec) => {
     setCustomerMobile(rec.mobile || '');
-    setSelectedCustomerId(rec.customerId || '');
-    setSourceCustomerId(rec.id || '');
-    setCustomerName(rec.name === 'Unknown / Lead' ? '' : (rec.name || ''));
-    setCustomerBusiness(rec.business || '');
-    setCustomerCity(rec.city || '');
     setShowNumberSuggestions(false);
   };
 
@@ -289,10 +298,18 @@ export const BankLoginPage = () => {
       return;
     }
 
+    if (hasConflict) {
+      alert('Cannot create bank login: This customer is currently being followed or processed by another user.');
+      return;
+    }
+
     if (lookupResult?.alerts?.length > 0) {
-      const alertMsgs = lookupResult.alerts.map(a => a.message).join('\n');
-      const proceed = window.confirm(`${alertMsgs}\n\nDo you still want to proceed with registering this Bank Login?`);
-      if (!proceed) return;
+      const nonDangerAlerts = lookupResult.alerts.filter(a => a.severity !== 'danger');
+      if (nonDangerAlerts.length > 0) {
+        const alertMsgs = nonDangerAlerts.map(a => a.message).join('\n');
+        const proceed = window.confirm(`${alertMsgs}\n\nDo you still want to proceed with registering this Bank Login?`);
+        if (!proceed) return;
+      }
     }
 
     const digits = customerMobile.replace(/\D/g, '').slice(-10);
@@ -394,7 +411,17 @@ export const BankLoginPage = () => {
       {/* Action Bar */}
       <div className="flex flex-wrap items-center justify-end gap-2.5">
         <button
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={() => {
+            setCustomerMobile('');
+            setSelectedCustomerId('');
+            setSourceCustomerId('');
+            setCustomerName('');
+            setCustomerBusiness('');
+            setCustomerCity('');
+            setInitialNotes('');
+            setShowNumberSuggestions(false);
+            setIsAddModalOpen(true);
+          }}
           className="flex items-center gap-2 rounded-xl bg-gold-500 hover:bg-gold-600 px-4 py-2.5 text-xs font-bold text-amber-950 shadow-sm transition"
         >
           <Plus className="w-4 h-4" />
@@ -939,162 +966,191 @@ export const BankLoginPage = () => {
                 {/* Lookup Status Banner */}
                 {entered10.length === 10 && lookupResult && (
                   <div className="mt-2 space-y-2">
-                    {lookupResult.foundInDb ? (
-                      <div className="flex items-start gap-2 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3 py-2 text-[11px] text-emerald-900">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-bold block">Existing Customer Found — Details Fetched</span>
-                          <span className="text-emerald-800">
-                            {lookupResult.matchedCustomer?.isCustomer
-                              ? `Customer ID: ${lookupResult.matchedCustomer.customerId || lookupResult.matchedCustomer.id}`
-                              : 'Found in Database / Activity records — you can review or update details below.'}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50/80 px-3 py-2 text-[11px] text-blue-900">
-                        <User className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-bold block">New Customer Number</span>
-                          <span className="text-blue-800">Not found in database. Enter customer details below to add and save.</span>
-                        </div>
-                      </div>
-                    )}
-
                     {/* Processing / Follow-up Conflict Alerts */}
                     {lookupResult.alerts.map((al, i) => (
                       <div
                         key={i}
                         className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-[11px] font-semibold ${
                           al.severity === 'danger'
-                            ? 'border-rose-300 bg-rose-50 text-rose-900'
+                            ? 'border-rose-300 bg-rose-50 text-rose-900 shadow-xs'
                             : 'border-amber-300 bg-amber-50 text-amber-900'
                         }`}
                       >
                         <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${al.severity === 'danger' ? 'text-rose-600' : 'text-amber-600'}`} />
-                        <span>{al.message}</span>
+                        <div>
+                          <span>{al.message}</span>
+                          {al.severity === 'danger' && (
+                            <p className="mt-0.5 text-[10px] font-normal text-rose-700">
+                              Customer details are hidden and Bank Login file creation is strictly disallowed because this contact is actively managed by another executive.
+                            </p>
+                          )}
+                        </div>
                       </div>
                     ))}
+
+                    {!hasConflict && (
+                      lookupResult.foundInDb ? (
+                        <div className="flex items-start gap-2 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3 py-2 text-[11px] text-emerald-900">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold block">Existing Customer Found — Details Fetched</span>
+                            <span className="text-emerald-800">
+                              {lookupResult.matchedCustomer?.isCustomer
+                                ? `Customer ID: ${lookupResult.matchedCustomer.customerId || lookupResult.matchedCustomer.id}`
+                                : 'Found in Database / Activity records — you can review or update details below.'}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50/80 px-3 py-2 text-[11px] text-blue-900">
+                          <User className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold block">New Customer Number</span>
+                            <span className="text-blue-800">Not found in database. Enter customer details below to add and save.</span>
+                          </div>
+                        </div>
+                      )
+                    )}
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Customer Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. S. Ramanathan"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                  />
+              {entered10.length < 10 ? (
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-center text-xs text-slate-500">
+                  Please enter a 10-digit mobile number above to verify database records.
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Location / City
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Chennai, Madurai"
-                    value={customerCity}
-                    onChange={(e) => setCustomerCity(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                  />
+              ) : hasConflict ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-5 text-center space-y-2 shadow-xs">
+                  <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+                    <XCircle className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-xs font-bold text-rose-900 uppercase tracking-wide">
+                    Customer Details Hidden & Action Blocked
+                  </h4>
+                  <p className="text-[11px] text-rose-800 max-w-sm mx-auto leading-relaxed">
+                    Customer details cannot be displayed and adding a Bank Login file is blocked because another user is currently following or processing this customer.
+                  </p>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Customer Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. S. Ramanathan"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Location / City
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Chennai, Madurai"
+                        value={customerCity}
+                        onChange={(e) => setCustomerCity(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                      />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Business / Enterprise
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Ramanathan Silks & Exports"
-                  value={customerBusiness}
-                  onChange={(e) => setCustomerBusiness(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Business / Enterprise
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ramanathan Silks & Exports"
+                      value={customerBusiness}
+                      onChange={(e) => setCustomerBusiness(e.target.value)}
+                      className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Bank / Lending Institution <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800"
-                >
-                  <option value="State Bank of India">State Bank of India (SBI)</option>
-                  <option value="HDFC Bank">HDFC Bank</option>
-                  <option value="ICICI Bank">ICICI Bank</option>
-                  <option value="Axis Bank">Axis Bank</option>
-                  <option value="Indian Bank">Indian Bank</option>
-                  <option value="Canara Bank">Canara Bank</option>
-                  <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
-                  <option value="Bank of Baroda">Bank of Baroda</option>
-                  <option value="Punjab National Bank">Punjab National Bank</option>
-                  <option value="Federal Bank">Federal Bank</option>
-                  <option value="Bajaj Finserv">Bajaj Finserv</option>
-                  <option value="Cholamandalam Finance">Cholamandalam Finance</option>
-                  <option value="Sundaram Finance">Sundaram Finance</option>
-                </select>
-              </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Bank / Lending Institution <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800"
+                    >
+                      <option value="State Bank of India">State Bank of India (SBI)</option>
+                      <option value="HDFC Bank">HDFC Bank</option>
+                      <option value="ICICI Bank">ICICI Bank</option>
+                      <option value="Axis Bank">Axis Bank</option>
+                      <option value="Indian Bank">Indian Bank</option>
+                      <option value="Canara Bank">Canara Bank</option>
+                      <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
+                      <option value="Bank of Baroda">Bank of Baroda</option>
+                      <option value="Punjab National Bank">Punjab National Bank</option>
+                      <option value="Federal Bank">Federal Bank</option>
+                      <option value="Bajaj Finserv">Bajaj Finserv</option>
+                      <option value="Cholamandalam Finance">Cholamandalam Finance</option>
+                      <option value="Sundaram Finance">Sundaram Finance</option>
+                    </select>
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Loan Type <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={loanType}
-                    onChange={(e) => setLoanType(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800"
-                  >
-                    <option value="Working Capital (CC/OD)">Working Capital (CC/OD)</option>
-                    <option value="Term Loan for Machinery">Term Loan for Machinery</option>
-                    <option value="Business Loan">Business Loan</option>
-                    <option value="Commercial Vehicle Finance">Commercial Vehicle Finance</option>
-                    <option value="LAP (Loan Against Property)">LAP (Loan Against Property)</option>
-                    <option value="Solar Project Finance">Solar Project Finance</option>
-                    <option value="Home Loan">Home Loan</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Loan Amount (₹) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    value={loanAmount}
-                    onChange={(e) => setLoanAmount(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Loan Type <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={loanType}
+                        onChange={(e) => setLoanType(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800"
+                      >
+                        <option value="Working Capital (CC/OD)">Working Capital (CC/OD)</option>
+                        <option value="Term Loan for Machinery">Term Loan for Machinery</option>
+                        <option value="Business Loan">Business Loan</option>
+                        <option value="Commercial Vehicle Finance">Commercial Vehicle Finance</option>
+                        <option value="LAP (Loan Against Property)">LAP (Loan Against Property)</option>
+                        <option value="Solar Project Finance">Solar Project Finance</option>
+                        <option value="Home Loan">Home Loan</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Loan Amount (₹) <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        value={loanAmount}
+                        onChange={(e) => setLoanAmount(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                      />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Login Submission Notes
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="e.g. Branch ref no., submitted to branch manager, initial document checklist cleared"
-                  value={initialNotes}
-                  onChange={(e) => setInitialNotes(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:outline-none focus:border-burgundy-800"
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Login Submission Notes
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. Branch ref no., submitted to branch manager, initial document checklist cleared"
+                      value={initialNotes}
+                      onChange={(e) => setInitialNotes(e.target.value)}
+                      className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:outline-none focus:border-burgundy-800"
+                    />
+                  </div>
 
-              <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-[11px] text-amber-900 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-amber-700 shrink-0" />
-                <span>Routine 2-day reminder will automatically trigger for bank follow-up after login.</span>
-              </div>
+                  <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-[11px] text-amber-900 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-700 shrink-0" />
+                    <span>Routine 2-day reminder will automatically trigger for bank follow-up after login.</span>
+                  </div>
+                </>
+              )}
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
@@ -1106,9 +1162,21 @@ export const BankLoginPage = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-burgundy-900 hover:bg-burgundy-800 rounded-xl shadow-md transition"
+                  disabled={hasConflict || entered10.length !== 10}
+                  className={`px-5 py-2 text-xs font-bold rounded-xl transition flex items-center gap-1.5 ${
+                    hasConflict || entered10.length !== 10
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                      : 'text-white bg-burgundy-900 hover:bg-burgundy-800 shadow-md'
+                  }`}
+                  title={
+                    hasConflict
+                      ? 'Creation Restricted: Contact followed by another user'
+                      : entered10.length !== 10
+                      ? 'Enter 10-digit mobile number first'
+                      : 'Create Bank Login'
+                  }
                 >
-                  Create Bank Login
+                  {hasConflict ? 'Creation Restricted' : 'Create Bank Login'}
                 </button>
               </div>
             </form>
