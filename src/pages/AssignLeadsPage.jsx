@@ -424,28 +424,29 @@ export const AssignLeadsPage = () => {
                               <span>{docsCollected ? 'Docs' : 'Upload Docs'}</span>
                             </button>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleCopyNumber(item);
-                                navigate('/bank-logins');
-                              }}
-                              className="inline-flex items-center gap-1 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 text-white px-2.5 py-1.5 text-[11px] font-bold shadow-2xs transition whitespace-nowrap"
-                              title="Copy mobile number & go to Add Bank Login"
-                            >
-                              <Copy className="w-3 h-3 text-gold-300" />
-                              <span>Add Bank Login</span>
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleCopyNumber(item);
+                                  navigate('/bank-logins');
+                                }}
+                                className="inline-flex items-center gap-1 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 text-white px-2.5 py-1.5 text-[11px] font-bold shadow-2xs transition whitespace-nowrap"
+                                title="Copy mobile number & go to Add Bank Login"
+                              >
+                                <Copy className="w-3 h-3 text-gold-300" />
+                                <span>Add Bank Login</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTrackingLead(item)}
+                                className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-slate-600 hover:text-amber-900 transition"
+                                title="Track Flow & Audit Trail"
+                              >
+                                <History className="w-3.5 h-3.5" />
+                              </button>
+                            </>
                           )}
-
-                          <button
-                            type="button"
-                            onClick={() => setTrackingLead(item)}
-                            className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-slate-600 hover:text-amber-900 transition"
-                            title="Track Flow & Audit Trail"
-                          >
-                            <History className="w-3.5 h-3.5" />
-                          </button>
                         </div>
                       </td>
                     </tr>
