@@ -1198,16 +1198,7 @@ export const TelecallingPage = () => {
           {/* Queue Filter Bar */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => setQueueFilter('reminders')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 ${
-                  queueFilter === 'reminders'
-                    ? 'bg-amber-700 text-white border-amber-700 shadow-sm'
-                    : 'bg-white text-amber-800 border-amber-200 hover:bg-amber-50'
-                }`}
-              >
-                <span>My Due Reminders ({myRemindersCount})</span>
-              </button>
+              
               <button
                 onClick={() => setQueueFilter('completed')}
                 className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 ${
@@ -1217,6 +1208,16 @@ export const TelecallingPage = () => {
                 }`}
               >
                 <span>My Actioned Calls ({myActionedCount})</span>
+              </button>
+              <button
+                onClick={() => setQueueFilter('reminders')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 ${
+                  queueFilter === 'reminders'
+                    ? 'bg-amber-700 text-white border-amber-700 shadow-sm'
+                    : 'bg-white text-amber-800 border-amber-200 hover:bg-amber-50'
+                }`}
+              >
+                <span>My Due Reminders ({myRemindersCount})</span>
               </button>
             </div>
 
