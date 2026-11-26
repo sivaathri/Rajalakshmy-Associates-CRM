@@ -89,6 +89,51 @@ export const BankLoginPage = () => {
   const enteredDigits = String(customerMobile || '').replace(/\D/g, '');
   const entered10 = enteredDigits.length >= 10 ? enteredDigits.slice(-10) : '';
 
+  // Count of bank logins per customer mobile
+  const customerLoginsCountMap = useMemo(() => {
+    const map = {};
+    bankLogins.forEach(b => {
+      const d = clean10Digits(b.mobile);
+      if (d) {
+        map[d] = (map[d] || 0) + 1;
+      }
+    });
+    return map;
+  }, [bankLogins]);
+
+  // All bank logins for customer currently viewed in Modal 5 (Eye icon)
+  const viewCustomerAllLogins = useMemo(() => {
+    if (!viewHistoryLogin?.mobile) return [];
+    const d = clean10Digits(viewHistoryLogin.mobile);
+    return bankLogins.filter(b => clean10Digits(b.mobile) === d);
+  }, [viewHistoryLogin, bankLogins]);
+
+  // Handler: Open Add Bank Login modal pre-filled for an existing customer
+  const handleOpenAddModalForCustomer = (cust) => {
+    if (!cust) return;
+    setBankName('');
+    setBankId('');
+    setLoanType('Personal Loan');
+    setLoanAmount('');
+    setInterestRate('');
+    setInitialNotes('');
+    setShowNumberSuggestions(false);
+
+    const digits = clean10Digits(cust.mobile);
+    const formatted = digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : (cust.mobile || '');
+    setCustomerMobile(formatted);
+    setSelectedCustomerId(cust.customerId || cust.id || '');
+    setSourceCustomerId(cust.sourceCustomerId || cust.id || '');
+    const cName = cust.customerName || cust.name || '';
+    setCustomerName(cName === 'Unknown / Lead' ? '' : cName);
+    setCustomerDob(cust.dob || cust.dateOfBirth || '');
+    setCustomerBusiness(cust.business || '');
+    setCustomerCity(cust.city || '');
+
+    setViewHistoryLogin(null);
+    setIsAddModalOpen(true);
+  };
+
   // Matching suggestions as user types mobile number
   const matchingPhoneRecords = useMemo(() => {
     if (!enteredDigits || enteredDigits.length < 3 || entered10.length === 10) return [];
@@ -100,6 +145,7 @@ export const BankLoginPage = () => {
         seen.add(d);
         const followerId = c.actionedBy || c.assignedTo;
         const isConflict = Boolean(followerId && currentUser?.id && followerId !== currentUser.id);
+        const lCount = customerLoginsCountMap[d] || 0;
         results.push({
           id: c.id,
           customerId: c.isCustomer ? (c.customerId || c.id) : '',
@@ -107,12 +153,33 @@ export const BankLoginPage = () => {
           mobile: c.mobile,
           business: isConflict ? '—' : (c.business || ''),
           city: isConflict ? '—' : (c.city || ''),
-          isConflict
+          isConflict,
+          loginCount: lCount
+        });
+      }
+    });
+
+    bankLogins.forEach(b => {
+      const d = clean10Digits(b.mobile);
+      if (d && d.includes(enteredDigits) && !seen.has(d)) {
+        seen.add(d);
+        const followerId = b.assignedRMId;
+        const isConflict = Boolean(followerId && currentUser?.id && followerId !== currentUser.id);
+        const lCount = customerLoginsCountMap[d] || 1;
+        results.push({
+          id: b.id,
+          customerId: b.customerId || '',
+          name: isConflict ? 'Confidential (Other User)' : (b.customerName || 'Customer'),
+          mobile: b.mobile,
+          business: isConflict ? '—' : (b.business || ''),
+          city: isConflict ? '—' : (b.city || ''),
+          isConflict,
+          loginCount: lCount
         });
       }
     });
     return results.slice(0, 6);
-  }, [enteredDigits, entered10, customers, currentUser]);
+  }, [enteredDigits, entered10, customers, bankLogins, currentUser, customerLoginsCountMap]);
 
   // Exact match lookup in Database (customers, activities, leads, bankLogins)
   const lookupResult = useMemo(() => {
@@ -125,20 +192,29 @@ export const BankLoginPage = () => {
     const matchedLead = leads.find(
       l => clean10Digits(l.mobile) === entered10 || clean10Digits(l.altMobile) === entered10
     );
-    const matchedLogin = bankLogins.find(b => clean10Digits(b.mobile) === entered10);
+    const matchedLogins = bankLogins.filter(b => clean10Digits(b.mobile) === entered10);
 
-    const foundInDb = Boolean(matchedCustomer || matchedActivity || matchedLead);
+    const foundInDb = Boolean(matchedCustomer || matchedActivity || matchedLead || matchedLogins.length > 0);
 
     // Build conflict/processing alerts
     const alerts = [];
-    if (matchedLogin) {
-      const isOtherUser = currentUser?.id && matchedLogin.assignedRMId && matchedLogin.assignedRMId !== currentUser.id;
+    const otherUserLogin = matchedLogins.find(
+      b => currentUser?.id && b.assignedRMId && b.assignedRMId !== currentUser.id
+    );
+
+    if (otherUserLogin) {
       alerts.push({
         type: 'login',
         severity: 'danger',
-        message: isOtherUser
-          ? `Alert: Another user (${matchedLogin.assignedRMName || 'RM'}) is already processing this customer's Bank Login (${matchedLogin.bankName} — Status: ${matchedLogin.status}). Duplicate bank login cannot be created.`
-          : `Alert: This customer already has an active Bank Login entry (${matchedLogin.bankName} — Status: ${matchedLogin.status}). Duplicate bank login cannot be created.`
+        message: `Alert: Another user (${otherUserLogin.assignedRMName || 'RM'}) is managing a Bank Login for this customer (${otherUserLogin.bankName} — Status: ${otherUserLogin.status}).`
+      });
+    } else if (matchedLogins.length > 0) {
+      alerts.push({
+        type: 'existing-logins',
+        severity: 'info',
+        count: matchedLogins.length,
+        logins: matchedLogins,
+        message: `Customer already has ${matchedLogins.length} Bank Login${matchedLogins.length > 1 ? 's' : ''} on file: ${matchedLogins.map(l => `${l.bankName} (${l.status})`).join(', ')}. You can add an additional bank login below.`
       });
     }
 
@@ -163,7 +239,7 @@ export const BankLoginPage = () => {
       matchedCustomer,
       matchedActivity,
       matchedLead,
-      matchedLogin,
+      matchedLogins,
       alerts
     };
   }, [entered10, customers, activities, leads, bankLogins, currentUser]);
@@ -184,7 +260,7 @@ export const BankLoginPage = () => {
     }
 
     if (lookupResult.foundInDb) {
-      const src = lookupResult.matchedCustomer || lookupResult.matchedLead || lookupResult.matchedActivity;
+      const src = lookupResult.matchedCustomer || lookupResult.matchedLead || lookupResult.matchedActivity || lookupResult.matchedLogins?.[0];
       if (src) {
         if (lookupResult.matchedCustomer?.isCustomer) {
           setSelectedCustomerId(lookupResult.matchedCustomer.customerId || lookupResult.matchedCustomer.id);
@@ -192,6 +268,9 @@ export const BankLoginPage = () => {
         } else if (lookupResult.matchedCustomer) {
           setSelectedCustomerId('');
           setSourceCustomerId(lookupResult.matchedCustomer.id);
+        } else if (lookupResult.matchedLogins?.[0]) {
+          setSelectedCustomerId(lookupResult.matchedLogins[0].customerId || lookupResult.matchedLogins[0].id || '');
+          setSourceCustomerId(lookupResult.matchedLogins[0].sourceCustomerId || lookupResult.matchedLogins[0].id || '');
         } else {
           setSelectedCustomerId('');
           setSourceCustomerId('');
@@ -322,18 +401,14 @@ export const BankLoginPage = () => {
     }
 
     if (hasConflict) {
-      if (lookupResult?.matchedLogin) {
-        alert(`Cannot create bank login: This customer already has a Bank Login entry (${lookupResult.matchedLogin.bankName} — Status: ${lookupResult.matchedLogin.status}). Duplicate bank logins are not permitted.`);
-      } else {
-        alert('Cannot create bank login: This customer is currently being followed or processed by another user.');
-      }
+      alert('Cannot create bank login: This customer is currently being followed or processed by another user.');
       return;
     }
 
     if (lookupResult?.alerts?.length > 0) {
-      const nonDangerAlerts = lookupResult.alerts.filter(a => a.severity !== 'danger');
-      if (nonDangerAlerts.length > 0) {
-        const alertMsgs = nonDangerAlerts.map(a => a.message).join('\n');
+      const warningAlerts = lookupResult.alerts.filter(a => a.severity === 'warning');
+      if (warningAlerts.length > 0) {
+        const alertMsgs = warningAlerts.map(a => a.message).join('\n');
         const proceed = window.confirm(`${alertMsgs}\n\nDo you still want to proceed with registering this Bank Login?`);
         if (!proceed) return;
       }
@@ -778,6 +853,8 @@ export const BankLoginPage = () => {
                 paginatedLogins.map(login => {
                   const isDue = is2DayUpdateDue(login);
                   const lastUpdate = login.updates?.[0];
+                  const cDigits = clean10Digits(login.mobile);
+                  const loginCount = customerLoginsCountMap[cDigits] || 1;
 
                   return (
                     <tr key={login.id} className={`hover:bg-slate-50/80 transition ${
@@ -791,7 +868,12 @@ export const BankLoginPage = () => {
 
                       {/* Customer Info (Req 6: All are customers) */}
                       <td className="px-4 py-3">
-                        <div className="font-bold text-slate-900">{login.customerName}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-slate-900">{login.customerName}</span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-burgundy-50 text-burgundy-900 border border-burgundy-200" title={`This customer has ${loginCount} bank file${loginCount > 1 ? 's' : ''} logged`}>
+                            {loginCount} {loginCount === 1 ? 'Login' : 'Logins'}
+                          </span>
+                        </div>
                         <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                           <Building2 className="w-3 h-3 text-slate-400" />
                           <span>{login.business} • {login.city}</span>
@@ -873,6 +955,17 @@ export const BankLoginPage = () => {
                       {/* Actions */}
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {/* Add Login Button (Users create multiple logins for same customer) */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAddModalForCustomer(login)}
+                            className="px-2 py-1 rounded-lg border border-burgundy-200 bg-burgundy-50 hover:bg-burgundy-100 text-burgundy-900 text-[11px] font-bold transition flex items-center gap-1 shadow-2xs"
+                            title={`Add another bank login for ${login.customerName}`}
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>+ Login</span>
+                          </button>
+
                           {/* 2-Day Update Button (Req 4) */}
                           {login.status === 'In Progress' && (
                             <button
@@ -1002,9 +1095,14 @@ export const BankLoginPage = () => {
                         onClick={() => handleSelectSuggestedRecord(rec)}
                         className="w-full text-left px-3 py-2 hover:bg-burgundy-50/70 transition flex items-center justify-between gap-2 text-xs"
                       >
-                        <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-mono font-bold text-burgundy-900">{rec.mobile}</span>
-                          <span className="ml-2 font-semibold text-slate-800">{rec.name}</span>
+                          <span className="font-semibold text-slate-800">{rec.name}</span>
+                          {rec.loginCount > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-burgundy-50 text-burgundy-800 border border-burgundy-200">
+                              {rec.loginCount} {rec.loginCount === 1 ? 'Login' : 'Logins'}
+                            </span>
+                          )}
                         </div>
                         <span className="text-[10px] text-slate-500 truncate max-w-[160px]">
                           {rec.business || rec.city || 'Database'}
@@ -1024,18 +1122,33 @@ export const BankLoginPage = () => {
                         className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-[11px] font-semibold ${
                           al.severity === 'danger'
                             ? 'border-rose-300 bg-rose-50 text-rose-900 shadow-xs'
+                            : al.severity === 'info'
+                            ? 'border-blue-300 bg-blue-50/90 text-blue-950 shadow-xs'
                             : 'border-amber-300 bg-amber-50 text-amber-900'
                         }`}
                       >
-                        <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${al.severity === 'danger' ? 'text-rose-600' : 'text-amber-600'}`} />
+                        {al.severity === 'danger' ? (
+                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                        ) : al.severity === 'info' ? (
+                          <Building2 className="w-4 h-4 shrink-0 mt-0.5 text-blue-600" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+                        )}
                         <div>
                           <span>{al.message}</span>
                           {al.severity === 'danger' && (
                             <p className="mt-0.5 text-[10px] font-normal text-rose-700">
-                              {al.type === 'login'
-                                ? 'Customer details are hidden and creating a duplicate bank login is strictly disallowed because an active file already exists for this number.'
-                                : 'Customer details are hidden and Bank Login file creation is strictly disallowed because this contact is actively managed by another executive.'}
+                              Customer details are hidden and Bank Login file creation is strictly disallowed because this contact is actively managed by another executive.
                             </p>
+                          )}
+                          {al.severity === 'info' && al.logins && (
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              {al.logins.map((b, idx) => (
+                                <span key={idx} className="bg-white px-2 py-0.5 rounded border border-blue-200 text-[10px] font-semibold text-blue-900">
+                                  {b.bankName} • {renderLoanAmount(b.loanAmount)} ({b.status})
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1046,11 +1159,20 @@ export const BankLoginPage = () => {
                         <div className="flex items-start gap-2 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3 py-2 text-[11px] text-emerald-900">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                           <div>
-                            <span className="font-bold block">Existing Customer Found — Details Fetched</span>
+                            <span className="font-bold flex items-center gap-1.5">
+                              <span>Existing Customer Found — Details Fetched</span>
+                              {lookupResult.matchedLogins?.length > 0 && (
+                                <span className="font-normal text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-300">
+                                  {lookupResult.matchedLogins.length} {lookupResult.matchedLogins.length === 1 ? 'Login on File' : 'Logins on File'}
+                                </span>
+                              )}
+                            </span>
                             <span className="text-emerald-800">
                               {lookupResult.matchedCustomer?.isCustomer
                                 ? `Customer ID: ${lookupResult.matchedCustomer.customerId || lookupResult.matchedCustomer.id}`
-                                : 'Found in Database / Activity records — you can review or update details below.'}
+                                : lookupResult.matchedLogins?.[0]?.customerId
+                                ? `Customer ID: ${lookupResult.matchedLogins[0].customerId}`
+                                : 'Found in Database records — you can review details below and add a new bank login.'}
                             </span>
                           </div>
                         </div>
@@ -1269,16 +1391,16 @@ export const BankLoginPage = () => {
                   }`}
                   title={
                     hasConflict
-                      ? (lookupResult?.matchedLogin
-                          ? `Cannot create duplicate bank login: Customer already has a login entry (${lookupResult.matchedLogin.bankName})`
-                          : 'Creation Restricted: Contact followed by another user')
+                      ? 'Creation Restricted: Contact followed by another user'
                       : entered10.length !== 10
                       ? 'Enter 10-digit mobile number first'
                       : 'Create Bank Login'
                   }
                 >
                   {hasConflict
-                    ? (lookupResult?.matchedLogin ? 'Login Already Exists' : 'Creation Restricted')
+                    ? 'Creation Restricted'
+                    : lookupResult?.matchedLogins?.length > 0
+                    ? '+ Add Additional Bank Login'
                     : 'Create Bank Login'}
                 </button>
               </div>
@@ -1553,6 +1675,9 @@ export const BankLoginPage = () => {
                 </h3>
               </div>
               <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-white/15 text-gold-200 border border-white/20">
+                  {viewCustomerAllLogins.length} {viewCustomerAllLogins.length === 1 ? 'Bank Login' : 'Bank Logins'}
+                </span>
                 <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
                   viewHistoryLogin.status === 'Disbursed'
                     ? 'bg-emerald-500 text-white shadow-xs'
@@ -1608,8 +1733,64 @@ export const BankLoginPage = () => {
                     <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Location / City</span>
                     <span className="text-xs font-semibold text-slate-800 mt-0.5 block">{viewHistoryLogin.city || '—'}</span>
                   </div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Total Bank Logins</span>
+                    <span className="text-xs font-bold text-burgundy-900 mt-0.5 block">
+                      {viewCustomerAllLogins.length} {viewCustomerAllLogins.length === 1 ? 'Login on File' : 'Logins on File'}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              {/* Multiple Bank Files List for this Customer */}
+              {viewCustomerAllLogins.length > 1 && (
+                <div className="rounded-2xl border border-burgundy-200/80 bg-burgundy-50/30 p-4 space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between border-b border-burgundy-100 pb-2">
+                    <div className="flex items-center gap-2 text-burgundy-900 font-bold uppercase tracking-wider text-[11px]">
+                      <Building2 className="w-4 h-4 text-burgundy-900" />
+                      <span>All Bank Logins for this Customer ({viewCustomerAllLogins.length})</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500">Click a file below to switch view</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {viewCustomerAllLogins.map(bl => (
+                      <div
+                        key={bl.id}
+                        onClick={() => setViewHistoryLogin(bl)}
+                        className={`p-2.5 rounded-xl border text-xs transition cursor-pointer flex items-center justify-between ${
+                          bl.id === viewHistoryLogin.id
+                            ? 'border-burgundy-700 bg-white ring-2 ring-burgundy-700/20 shadow-xs'
+                            : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/80'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-slate-900">{bl.bankName}</span>
+                            {bl.id === viewHistoryLogin.id && (
+                              <span className="text-[9px] bg-burgundy-100 text-burgundy-900 px-1 rounded font-bold">Viewing</span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-slate-500 block mt-0.5">
+                            {bl.loanType} • {renderLoanAmount(bl.loanAmount)}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            bl.status === 'Disbursed'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : bl.status === 'Rejected'
+                              ? 'bg-rose-100 text-rose-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {bl.status}
+                          </span>
+                          <span className="text-[9px] text-slate-400 block mt-0.5">{formatDate(bl.loginDate)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Section 2: Bank & Loan File Details */}
               <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-xs">
@@ -1731,15 +1912,32 @@ export const BankLoginPage = () => {
                 )}
               </div>
 
-              {/* Close Button */}
-              <div className="flex justify-end pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setViewHistoryLogin(null)}
-                  className="px-5 py-2 text-xs font-bold text-white bg-burgundy-900 hover:bg-burgundy-800 rounded-xl shadow-sm transition"
-                >
-                  Close
-                </button>
+              {/* Modal Footer Actions */}
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100 flex-wrap gap-2">
+                <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5">
+                  <span>Customer Logins:</span>
+                  <strong className="text-burgundy-900 font-bold bg-burgundy-50 px-2 py-0.5 rounded border border-burgundy-200">
+                    {viewCustomerAllLogins.length} {viewCustomerAllLogins.length === 1 ? 'Bank File' : 'Bank Files'}
+                  </strong>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAddModalForCustomer(viewHistoryLogin)}
+                    className="px-4 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-xs transition flex items-center gap-1.5"
+                    title="Add another bank loan file for this customer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Another Bank Login</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewHistoryLogin(null)}
+                    className="px-5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>
