@@ -391,53 +391,24 @@ export const StatementPage = () => {
         </div>
 
         {uploadMode === 'file' ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Customer Name / Reference (Optional)
-              </label>
+          <div>
+            <label className="flex w-full items-center justify-center gap-2 h-11 rounded-xl border-2 border-dashed border-burgundy-300 bg-[#FAF6EF] hover:bg-burgundy-50/60 px-4 text-xs font-bold text-burgundy-950 cursor-pointer transition">
+              <Upload className="w-4 h-4 text-burgundy-800" />
+              <span>
+                {isParsing ? 'Analyzing Bank Statement...' : 'Select Bank Statement (PDF, Excel, CSV, TXT)'}
+              </span>
               <input
-                type="text"
-                placeholder="Auto-detected from statement if blank"
-                value={customerLabel}
-                onChange={(e) => setCustomerLabel(e.target.value)}
-                className="w-full h-10 text-xs rounded-xl border border-slate-300 px-3 bg-white focus:outline-none focus:border-burgundy-800"
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.xlsx,.xls,.csv,.txt"
+                disabled={isParsing}
+                onChange={handleFileChange}
+                className="hidden"
               />
-            </div>
-
-            <div className="md:col-span-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <label className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl border-2 border-dashed border-burgundy-300 bg-[#FAF6EF] hover:bg-burgundy-50/60 px-4 text-xs font-bold text-burgundy-950 cursor-pointer transition">
-                <Upload className="w-4 h-4 text-burgundy-800" />
-                <span>
-                  {isParsing ? 'Analyzing Bank Statement...' : 'Select Bank Statement (PDF, Excel, CSV, TXT)'}
-                </span>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.xlsx,.xls,.csv,.txt"
-                  disabled={isParsing}
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </label>
-            </div>
+            </label>
           </div>
         ) : (
           <form onSubmit={handleAnalyzePastedText} className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Customer Name / Reference (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Sivaathri - Axis Bank"
-                  value={customerLabel}
-                  onChange={(e) => setCustomerLabel(e.target.value)}
-                  className="w-full h-9 text-xs rounded-xl border border-slate-300 px-3 bg-white focus:outline-none focus:border-burgundy-800"
-                />
-              </div>
-            </div>
             <textarea
               rows={4}
               placeholder="Paste raw bank statement text lines here..."
