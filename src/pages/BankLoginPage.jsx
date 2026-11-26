@@ -28,7 +28,7 @@ import {
 import { formatCurrency, formatDate } from '../utils/formatters';
 
 export const BankLoginPage = () => {
-  const { bankLogins, addBankLogin, addLoginUpdate, disburseLogin, rejectLogin, customers } = useCRM();
+  const { bankLogins, addBankLogin, addLoginUpdate, disburseLogin, rejectLogin, customers, activities = [], leads = [] } = useCRM();
   const { currentUser, showToast } = useAuth();
 
   // Filters
@@ -57,15 +57,17 @@ export const BankLoginPage = () => {
 
   // Add Form State
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [sourceCustomerId, setSourceCustomerId] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [customerBusiness, setCustomerBusiness] = useState('');
-  const [customerCity, setCustomerCity] = useState('Chennai');
+  const [customerCity, setCustomerCity] = useState('');
   const [bankName, setBankName] = useState('State Bank of India');
   const [loanType, setLoanType] = useState('Working Capital (CC/OD)');
   const [loanAmount, setLoanAmount] = useState('2500000');
   const [loginDate, setLoginDate] = useState(new Date().toISOString().split('T')[0]);
   const [initialNotes, setInitialNotes] = useState('');
+  const [showNumberSuggestions, setShowNumberSuggestions] = useState(false);
 
   // Update Note State
   const [todayUpdateNote, setTodayUpdateNote] = useState('');
@@ -80,16 +82,122 @@ export const BankLoginPage = () => {
   // Rejection Modal State (Req 5: if reject enter remarks)
   const [rejectionRemarks, setRejectionRemarks] = useState('');
 
-  // Handle auto-filling when picking an existing customer (Req 6: Login persons all are as a customers)
-  const handleSelectCustomer = (custId) => {
-    setSelectedCustomerId(custId);
-    const found = customers.find(c => c.id === custId);
-    if (found) {
-      setCustomerName(found.name || '');
-      setCustomerMobile(found.mobile || '');
-      setCustomerBusiness(found.business || '');
-      setCustomerCity(found.city || 'Chennai');
+  const clean10Digits = (num) => String(num || '').replace(/\D/g, '').slice(-10);
+  const enteredDigits = String(customerMobile || '').replace(/\D/g, '');
+  const entered10 = enteredDigits.length >= 10 ? enteredDigits.slice(-10) : '';
+
+  // Matching suggestions as user types mobile number
+  const matchingPhoneRecords = useMemo(() => {
+    if (!enteredDigits || enteredDigits.length < 3 || entered10.length === 10) return [];
+    const seen = new Set();
+    const results = [];
+    customers.forEach(c => {
+      const d = clean10Digits(c.mobile);
+      if (d && d.includes(enteredDigits) && !seen.has(d)) {
+        seen.add(d);
+        results.push({
+          id: c.id,
+          customerId: c.isCustomer ? (c.customerId || c.id) : '',
+          name: c.name || 'Unknown / Lead',
+          mobile: c.mobile,
+          business: c.business || '',
+          city: c.city || ''
+        });
+      }
+    });
+    return results.slice(0, 6);
+  }, [enteredDigits, entered10, customers]);
+
+  // Exact match lookup in Database (customers, activities, leads, bankLogins)
+  const lookupResult = useMemo(() => {
+    if (entered10.length !== 10) return null;
+
+    const matchedCustomer = customers.find(
+      c => clean10Digits(c.mobile) === entered10 || clean10Digits(c.altMobile) === entered10
+    );
+    const matchedActivity = activities.find(a => clean10Digits(a.mobile) === entered10);
+    const matchedLead = leads.find(
+      l => clean10Digits(l.mobile) === entered10 || clean10Digits(l.altMobile) === entered10
+    );
+    const matchedLogin = bankLogins.find(b => clean10Digits(b.mobile) === entered10);
+
+    const foundInDb = Boolean(matchedCustomer || matchedActivity || matchedLead);
+
+    // Build conflict/processing alerts
+    const alerts = [];
+    if (matchedLogin) {
+      const isOtherUser = currentUser?.id && matchedLogin.assignedRMId && matchedLogin.assignedRMId !== currentUser.id;
+      alerts.push({
+        type: 'login',
+        severity: isOtherUser ? 'danger' : 'warning',
+        message: isOtherUser
+          ? `Alert: Another user (${matchedLogin.assignedRMName || 'RM'}) is already processing this customer's Bank Login (${matchedLogin.bankName} — Status: ${matchedLogin.status}).`
+          : `Note: This customer already has a Bank Login entry (${matchedLogin.bankName} — Status: ${matchedLogin.status}).`
+      });
     }
+
+    const followerId = matchedCustomer?.actionedBy || matchedCustomer?.assignedTo;
+    const followerName = matchedCustomer?.actionedByName || matchedCustomer?.assignedName;
+    if (followerId && currentUser?.id && followerId !== currentUser.id) {
+      alerts.push({
+        type: 'follow',
+        severity: 'danger',
+        message: `Alert: Another user (${followerName || followerId}) is following this customer (Status: ${matchedCustomer.callingStatus || 'Active'}${matchedCustomer.reminderDate ? `, Follow-up: ${formatDate(matchedCustomer.reminderDate)}` : ''}).`
+      });
+    } else if (matchedLead && matchedLead.assignedToId && currentUser?.id && matchedLead.assignedToId !== currentUser.id) {
+      alerts.push({
+        type: 'follow',
+        severity: 'danger',
+        message: `Alert: Another user (${matchedLead.assignedToName || matchedLead.assignedToId}) is following this customer in Leads (${matchedLead.status}).`
+      });
+    }
+
+    return {
+      foundInDb,
+      matchedCustomer,
+      matchedActivity,
+      matchedLead,
+      matchedLogin,
+      alerts
+    };
+  }, [entered10, customers, activities, leads, bankLogins, currentUser]);
+
+  // Auto-fill details when a 10-digit number matches in database
+  useEffect(() => {
+    if (!isAddModalOpen || !lookupResult) return;
+    if (lookupResult.foundInDb) {
+      const src = lookupResult.matchedCustomer || lookupResult.matchedLead || lookupResult.matchedActivity;
+      if (src) {
+        if (lookupResult.matchedCustomer?.isCustomer) {
+          setSelectedCustomerId(lookupResult.matchedCustomer.customerId || lookupResult.matchedCustomer.id);
+          setSourceCustomerId(lookupResult.matchedCustomer.id);
+        } else if (lookupResult.matchedCustomer) {
+          setSelectedCustomerId('');
+          setSourceCustomerId(lookupResult.matchedCustomer.id);
+        } else {
+          setSelectedCustomerId('');
+          setSourceCustomerId('');
+        }
+        const fetchedName = src.name || src.customerName || '';
+        setCustomerName(fetchedName === 'Unknown / Lead' ? '' : fetchedName);
+        setCustomerBusiness(src.business || '');
+        setCustomerCity(src.city || src.location || '');
+      }
+    } else {
+      setSelectedCustomerId('');
+      setSourceCustomerId('');
+    }
+  }, [isAddModalOpen, entered10, lookupResult?.foundInDb]);
+
+  // Handle selecting a number from suggestions
+  const handleSelectSuggestedRecord = (rec) => {
+    setCustomerMobile(rec.mobile || '');
+    setSelectedCustomerId(rec.customerId || '');
+    setSourceCustomerId(rec.id || '');
+    setCustomerName(rec.name === 'Unknown / Lead' ? '' : (rec.name || ''));
+    setCustomerBusiness(rec.business || '');
+    setCustomerCity(rec.city || '');
+    setShowNumberSuggestions(false);
   };
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -181,15 +289,22 @@ export const BankLoginPage = () => {
       return;
     }
 
+    if (lookupResult?.alerts?.length > 0) {
+      const alertMsgs = lookupResult.alerts.map(a => a.message).join('\n');
+      const proceed = window.confirm(`${alertMsgs}\n\nDo you still want to proceed with registering this Bank Login?`);
+      if (!proceed) return;
+    }
+
     const digits = customerMobile.replace(/\D/g, '').slice(-10);
     const formattedMobile = `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
 
     addBankLogin({
       customerId: selectedCustomerId,
+      sourceCustomerId,
       customerName: customerName.trim() || 'New Loan Client',
       mobile: formattedMobile,
       business: customerBusiness.trim() || 'General Business',
-      city: customerCity,
+      city: customerCity.trim(),
       bankName,
       loanType,
       loanAmount: Number(loanAmount),
@@ -200,10 +315,13 @@ export const BankLoginPage = () => {
     // Reset
     setIsAddModalOpen(false);
     setSelectedCustomerId('');
+    setSourceCustomerId('');
     setCustomerName('');
     setCustomerMobile('');
     setCustomerBusiness('');
+    setCustomerCity('');
     setInitialNotes('');
+    setShowNumberSuggestions(false);
   };
 
   // 2-Day Update Handler
@@ -771,23 +889,94 @@ export const BankLoginPage = () => {
             </div>
 
             <form onSubmit={handleCreateLogin} className="p-6 space-y-3.5 max-h-[75vh] overflow-y-auto">
-              {/* Pick from Existing Customer (Req 6) */}
-              <div>
+              {/* Step 1: Enter / Select Mobile Number */}
+              <div className="relative">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Select Existing Customer (or enter details below)
+                  1. Mobile Number <span className="text-rose-500">*</span>
                 </label>
-                <select
-                  value={selectedCustomerId}
-                  onChange={(e) => handleSelectCustomer(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800"
-                >
-                  <option value="">-- Choose from Customer Directory (Optional) --</option>
-                  {customers.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.id}) • {c.mobile} • {c.business || 'General'}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <input
+                    type="tel"
+                    required
+                    autoFocus
+                    placeholder="Enter 10-digit mobile number to check database..."
+                    value={customerMobile}
+                    onChange={(e) => {
+                      setCustomerMobile(e.target.value);
+                      setShowNumberSuggestions(true);
+                    }}
+                    onFocus={() => setShowNumberSuggestions(true)}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 pl-9 pr-3 focus:outline-none focus:border-burgundy-800 focus:ring-1 focus:ring-burgundy-800"
+                  />
+                </div>
+
+                {/* Matching Number Suggestions Dropdown */}
+                {showNumberSuggestions && matchingPhoneRecords.length > 0 && (
+                  <div className="mt-1 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden divide-y divide-slate-100">
+                    <div className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Select Matching Number from Database
+                    </div>
+                    {matchingPhoneRecords.map((rec) => (
+                      <button
+                        key={rec.id}
+                        type="button"
+                        onClick={() => handleSelectSuggestedRecord(rec)}
+                        className="w-full text-left px-3 py-2 hover:bg-burgundy-50/70 transition flex items-center justify-between gap-2 text-xs"
+                      >
+                        <div>
+                          <span className="font-mono font-bold text-burgundy-900">{rec.mobile}</span>
+                          <span className="ml-2 font-semibold text-slate-800">{rec.name}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 truncate max-w-[160px]">
+                          {rec.business || rec.city || 'Database'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Lookup Status Banner */}
+                {entered10.length === 10 && lookupResult && (
+                  <div className="mt-2 space-y-2">
+                    {lookupResult.foundInDb ? (
+                      <div className="flex items-start gap-2 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3 py-2 text-[11px] text-emerald-900">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold block">Existing Customer Found — Details Fetched</span>
+                          <span className="text-emerald-800">
+                            {lookupResult.matchedCustomer?.isCustomer
+                              ? `Customer ID: ${lookupResult.matchedCustomer.customerId || lookupResult.matchedCustomer.id}`
+                              : 'Found in Database / Activity records — you can review or update details below.'}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50/80 px-3 py-2 text-[11px] text-blue-900">
+                        <User className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold block">New Customer Number</span>
+                          <span className="text-blue-800">Not found in database. Enter customer details below to add and save.</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Processing / Follow-up Conflict Alerts */}
+                    {lookupResult.alerts.map((al, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-[11px] font-semibold ${
+                          al.severity === 'danger'
+                            ? 'border-rose-300 bg-rose-50 text-rose-900'
+                            : 'border-amber-300 bg-amber-50 text-amber-900'
+                        }`}
+                      >
+                        <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${al.severity === 'danger' ? 'text-rose-600' : 'text-amber-600'}`} />
+                        <span>{al.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -806,34 +995,6 @@ export const BankLoginPage = () => {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Mobile Number <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="10-digit mobile"
-                    value={customerMobile}
-                    onChange={(e) => setCustomerMobile(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Business / Enterprise
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Ramanathan Silks & Exports"
-                    value={customerBusiness}
-                    onChange={(e) => setCustomerBusiness(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Location / City
                   </label>
                   <input
@@ -844,6 +1005,19 @@ export const BankLoginPage = () => {
                     className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Business / Enterprise
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Ramanathan Silks & Exports"
+                  value={customerBusiness}
+                  onChange={(e) => setCustomerBusiness(e.target.value)}
+                  className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                />
               </div>
 
               <div>
