@@ -190,7 +190,7 @@ export const BankLoginPage = () => {
       const d = clean10Digits(c.mobile);
       if (d && d.includes(enteredDigits) && !seen.has(d)) {
         seen.add(d);
-        const followerId = c.actionedBy || c.assignedTo;
+        const followerId = c.assignedTo || c.actionedBy;
         const isConflict = Boolean(followerId && currentUser?.id && followerId !== currentUser.id);
         const lCount = customerLoginsCountMap[d] || 0;
         results.push({

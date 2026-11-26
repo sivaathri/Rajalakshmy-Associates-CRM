@@ -112,16 +112,43 @@ export const AssignLeadsPage = () => {
     return filteredLeads.slice(start, start + itemsPerPage);
   }, [filteredLeads, currentPage, itemsPerPage]);
 
-  const handleCopyNumber = async (lead) => {
-    const clean = clean10(lead.mobile) || lead.mobile || '';
+  const handleCopyNumber = async (lead, afterCopyToast) => {
+    const clean = clean10(lead.mobile) || String(lead.mobile || '').trim();
+    if (!clean) return false;
+
+    let copied = false;
     try {
-      await navigator.clipboard.writeText(clean);
-      setCopiedId(lead.id);
-      showToast(`Copied ${clean} — paste it into Add New Bank File Login`, 'success');
-      setTimeout(() => setCopiedId(null), 2500);
+      const textarea = document.createElement('textarea');
+      textarea.value = clean;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      copied = document.execCommand('copy');
+      document.body.removeChild(textarea);
     } catch {
-      showToast(`Mobile Number: ${clean}`, 'info');
+      // ignore fallback error
     }
+
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      try {
+        await navigator.clipboard.writeText(clean);
+        copied = true;
+      } catch {
+        // ignore if execCommand already succeeded
+      }
+    }
+
+    setCopiedId(lead.id);
+    showToast(
+      copied
+        ? (afterCopyToast || `Copied ${clean} — paste it into Add New Bank File Login`)
+        : `Mobile Number: ${clean}`,
+      copied ? 'success' : 'info'
+    );
+    setTimeout(() => setCopiedId(null), 2500);
+    return copied;
   };
 
   const handleOpenDocModal = (lead) => {
@@ -398,8 +425,11 @@ export const AssignLeadsPage = () => {
                             <>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  handleCopyNumber(item);
+                                onClick={async () => {
+                                  await handleCopyNumber(
+                                    item,
+                                    `Copied ${clean10(item.mobile) || item.mobile} — paste it in Add New Bank File Login`
+                                  );
                                   navigate('/bank-logins');
                                 }}
                                 className="inline-flex items-center gap-1 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 text-white px-2.5 py-1.5 text-[11px] font-bold shadow-2xs transition whitespace-nowrap"
