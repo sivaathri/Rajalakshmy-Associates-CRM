@@ -18,9 +18,11 @@ import {
   FileCheck,
   UserCog,
   LogOut,
+  Bell,
   X
 } from 'lucide-react';
 import { formatDateDDMMYYYY } from '../../utils/formatters';
+import { getSystemNotifications } from '../../utils/notifications';
 
 export const Sidebar = ({ isOpen, setIsOpen }) => {
   const { currentUser, canAccessRoute, logout, confirmAndLogout } = useAuth();
@@ -66,6 +68,26 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
   const loginUpdatesDueCount = bankLogins.filter(
     b => b.status === 'In Progress' && (!b.nextFollowUpDate || b.nextFollowUpDate <= todayIso)
   ).length;
+
+  // Unread System Notifications count
+  const unreadNotificationsCount = React.useMemo(() => {
+    try {
+      const all = getSystemNotifications({
+        currentUser,
+        customers,
+        bankLogins,
+        leaves,
+        advanceAmounts,
+        resignations,
+        performanceCases,
+        attendance
+      });
+      const read = JSON.parse(localStorage.getItem('rajalakshmy_read_notifications') || '[]');
+      return all.filter(n => !read.includes(n.id)).length;
+    } catch {
+      return 0;
+    }
+  }, [currentUser, customers, bankLogins, leaves, advanceAmounts, resignations, performanceCases, attendance]);
 
   const NavContent = ({ isExpanded = true, isMobile = false }) => {
     const dailyActivitiesMenu = canAccessRoute('daily-activities') && (
@@ -162,6 +184,31 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
           >
             <LayoutDashboard className="w-4 h-4 shrink-0 text-gold-400" />
             {isExpanded && <span>Dashboard</span>}
+          </NavLink>
+        )}
+
+        {/* Notifications Menu */}
+        {canAccessRoute('notifications') && (
+          <NavLink
+            to="/notifications"
+            onClick={() => isMobile && setIsOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition group ${
+                isActive
+                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            <div className="flex items-center gap-3 truncate">
+              <Bell className="w-4 h-4 shrink-0 text-amber-300" />
+              {isExpanded && <span>Notifications</span>}
+            </div>
+            {isExpanded && unreadNotificationsCount > 0 && (
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-extrabold text-white shadow-sm animate-pulse">
+                {unreadNotificationsCount}
+              </span>
+            )}
           </NavLink>
         )}
 

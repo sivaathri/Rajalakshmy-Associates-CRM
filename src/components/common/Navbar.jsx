@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { NotificationsMenu } from './NotificationsMenu';
 import {
   Bell,
   ChevronDown,
@@ -65,6 +66,9 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
 
       {/* Right Controls */}
       <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0">
+        {/* Notification Bell Menu */}
+        <NotificationsMenu />
+
         {/* Quick Role Switcher Pill */}
         <div className="relative" ref={roleSwitcherRef}>
           <button

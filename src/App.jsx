@@ -24,6 +24,7 @@ import { BankLoginPage } from './pages/BankLoginPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { UserManagementPage } from './pages/UserManagementPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 
 // Protected Route Guard with Role Verification
 const ProtectedLayout = ({ children, requiredRoute }) => {
@@ -43,6 +44,7 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
   // Derive dynamic page title based on pathname
   const getPageTitle = (path) => {
     if (path.startsWith('/dashboard')) return 'Executive Dashboard';
+    if (path.startsWith('/notifications')) return 'Notification Center & Alerts';
     if (path.startsWith('/telecalling')) return 'RM Telecalling';
     if (path === '/customers') return 'Customer Management Directory';
     if (path.startsWith('/customers/old/known') || path.startsWith('/database/old/known')) return 'Database • Old Known Numbers';
@@ -101,6 +103,15 @@ export function App() {
               element={
                 <ProtectedLayout requiredRoute="dashboard">
                   <DashboardPage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedLayout requiredRoute="notifications">
+                  <NotificationsPage />
                 </ProtectedLayout>
               }
             />
