@@ -165,7 +165,7 @@ export const StatementPage = () => {
         setIsParsing(false);
         return;
       }
-      saveParsedStatement(parsed, { fileName: file.name, customerLabel }, file);
+      saveParsedStatement(parsed, { fileName: file.name }, file);
       setPendingPdfFile(null);
       setPdfPassword('');
     } catch (err) {
@@ -209,7 +209,7 @@ export const StatementPage = () => {
     const analysis = analyzeStatementLines(rawLines);
     saveParsedStatement(
       { fileType: 'TEXT', pageCount: 1, ...analysis },
-      { fileName: `${(customerLabel || 'Pasted_Statement').trim()}.txt`, customerLabel }
+      { fileName: 'Pasted_Statement.txt' }
     );
     setPastedText('');
   };
