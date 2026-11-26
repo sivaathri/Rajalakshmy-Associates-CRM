@@ -68,7 +68,6 @@ export const BankLoginPage = () => {
   const [loanType, setLoanType] = useState('Personal Loan');
   const [loanAmount, setLoanAmount] = useState('');
   const [interestRate, setInterestRate] = useState('');
-  const [bankApprovedAmount, setBankApprovedAmount] = useState('');
   const [loginDate, setLoginDate] = useState(new Date().toISOString().split('T')[0]);
   const [initialNotes, setInitialNotes] = useState('');
   const [showNumberSuggestions, setShowNumberSuggestions] = useState(false);
@@ -136,10 +135,10 @@ export const BankLoginPage = () => {
       const isOtherUser = currentUser?.id && matchedLogin.assignedRMId && matchedLogin.assignedRMId !== currentUser.id;
       alerts.push({
         type: 'login',
-        severity: isOtherUser ? 'danger' : 'warning',
+        severity: 'danger',
         message: isOtherUser
-          ? `Alert: Another user (${matchedLogin.assignedRMName || 'RM'}) is already processing this customer's Bank Login (${matchedLogin.bankName} — Status: ${matchedLogin.status}).`
-          : `Note: This customer already has a Bank Login entry (${matchedLogin.bankName} — Status: ${matchedLogin.status}).`
+          ? `Alert: Another user (${matchedLogin.assignedRMName || 'RM'}) is already processing this customer's Bank Login (${matchedLogin.bankName} — Status: ${matchedLogin.status}). Duplicate bank login cannot be created.`
+          : `Alert: This customer already has an active Bank Login entry (${matchedLogin.bankName} — Status: ${matchedLogin.status}). Duplicate bank login cannot be created.`
       });
     }
 
@@ -323,7 +322,11 @@ export const BankLoginPage = () => {
     }
 
     if (hasConflict) {
-      alert('Cannot create bank login: This customer is currently being followed or processed by another user.');
+      if (lookupResult?.matchedLogin) {
+        alert(`Cannot create bank login: This customer already has a Bank Login entry (${lookupResult.matchedLogin.bankName} — Status: ${lookupResult.matchedLogin.status}). Duplicate bank logins are not permitted.`);
+      } else {
+        alert('Cannot create bank login: This customer is currently being followed or processed by another user.');
+      }
       return;
     }
 
@@ -350,7 +353,6 @@ export const BankLoginPage = () => {
       bankName: bankName.trim(),
       bankId: bankId.trim(),
       interestRate: interestRate.trim(),
-      bankApprovedAmount: bankApprovedAmount.trim(),
       loanType,
       loanAmount: loanAmount.trim(),
       loginDate,
@@ -371,7 +373,6 @@ export const BankLoginPage = () => {
     setLoanType('Personal Loan');
     setLoanAmount('');
     setInterestRate('');
-    setBankApprovedAmount('');
     setInitialNotes('');
     setShowNumberSuggestions(false);
   };
@@ -393,7 +394,7 @@ export const BankLoginPage = () => {
   const handleOpenDisburseModal = (login) => {
     setDisbursingLogin(login);
     setDisburseBankName(login.bankName || '');
-    setDisburseLoanAmount(login.bankApprovedAmount || login.loanAmount || '');
+    setDisburseLoanAmount(login.loanAmount || '');
     setDisburseLoanType(login.loanType || 'Personal Loan');
     setDisburseDate(new Date().toISOString().split('T')[0]);
     setDisburseRemarks('');
@@ -459,7 +460,6 @@ export const BankLoginPage = () => {
             setLoanType('Personal Loan');
             setLoanAmount('');
             setInterestRate('');
-            setBankApprovedAmount('');
             setInitialNotes('');
             setShowNumberSuggestions(false);
             setIsAddModalOpen(true);
@@ -819,13 +819,6 @@ export const BankLoginPage = () => {
                           {login.loanType}
                           {login.interestRate && <span className="text-amber-800 font-semibold ml-1.5">• ROI: {login.interestRate}</span>}
                         </div>
-                        {login.bankApprovedAmount && (
-                          <div className="text-[10px] text-slate-500 mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
-                            <span className="bg-emerald-50 px-1.5 py-0.5 rounded text-emerald-800 border border-emerald-200">
-                              Approved: <strong className="font-semibold">{login.bankApprovedAmount}</strong>
-                            </span>
-                          </div>
-                        )}
                       </td>
 
                       {/* 2-Day Reminder & Status Update (Req 4) */}
@@ -1039,7 +1032,9 @@ export const BankLoginPage = () => {
                           <span>{al.message}</span>
                           {al.severity === 'danger' && (
                             <p className="mt-0.5 text-[10px] font-normal text-rose-700">
-                              Customer details are hidden and Bank Login file creation is strictly disallowed because this contact is actively managed by another executive.
+                              {al.type === 'login'
+                                ? 'Customer details are hidden and creating a duplicate bank login is strictly disallowed because an active file already exists for this number.'
+                                : 'Customer details are hidden and Bank Login file creation is strictly disallowed because this contact is actively managed by another executive.'}
                             </p>
                           )}
                         </div>
@@ -1078,7 +1073,19 @@ export const BankLoginPage = () => {
                   Please enter a 10-digit mobile number above to verify database records.
                 </div>
               ) : hasConflict ? (
-                ''
+                <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-5 text-center my-2">
+                  <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-2.5">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <h4 className="text-sm font-bold text-rose-900 mb-1">
+                    {lookupResult?.matchedLogin ? 'Duplicate Bank Login Prohibited' : 'Bank Login Creation Restricted'}
+                  </h4>
+                  <p className="text-xs text-rose-700 max-w-sm mx-auto">
+                    {lookupResult?.matchedLogin
+                      ? `This customer already has an active Bank Login file (${lookupResult.matchedLogin.bankName} — Status: ${lookupResult.matchedLogin.status}). Creating duplicate bank logins for this customer is not allowed.`
+                      : 'This customer is currently assigned to or being followed by another executive. Bank Login file creation is restricted.'}
+                  </p>
+                </div>
               ) : (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1210,32 +1217,18 @@ export const BankLoginPage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Loan Amount <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. 25,00,000 or 25 Lakhs"
-                        value={loanAmount}
-                        onChange={(e) => setLoanAmount(e.target.value)}
-                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Bank Approved Loan Amount
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 25,00,000 or 25 Lakhs"
-                        value={bankApprovedAmount}
-                        onChange={(e) => setBankApprovedAmount(e.target.value)}
-                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Loan Amount <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 25,00,000 or 25 Lakhs"
+                      value={loanAmount}
+                      onChange={(e) => setLoanAmount(e.target.value)}
+                      className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                    />
                   </div>
 
                   <div>
@@ -1276,13 +1269,17 @@ export const BankLoginPage = () => {
                   }`}
                   title={
                     hasConflict
-                      ? 'Creation Restricted: Contact followed by another user'
+                      ? (lookupResult?.matchedLogin
+                          ? `Cannot create duplicate bank login: Customer already has a login entry (${lookupResult.matchedLogin.bankName})`
+                          : 'Creation Restricted: Contact followed by another user')
                       : entered10.length !== 10
                       ? 'Enter 10-digit mobile number first'
                       : 'Create Bank Login'
                   }
                 >
-                  {hasConflict ? 'Creation Restricted' : 'Create Bank Login'}
+                  {hasConflict
+                    ? (lookupResult?.matchedLogin ? 'Login Already Exists' : 'Creation Restricted')
+                    : 'Create Bank Login'}
                 </button>
               </div>
             </form>
@@ -1643,14 +1640,6 @@ export const BankLoginPage = () => {
                     <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Loan Amount Requested</span>
                     <span className="text-sm font-black text-burgundy-900 mt-0.5 block">
                       {renderLoanAmount(viewHistoryLogin.loanAmount)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Bank Approved Loan Amount</span>
-                    <span className="text-sm font-black text-emerald-800 mt-0.5 block">
-                      {viewHistoryLogin.bankApprovedAmount
-                        ? (viewHistoryLogin.bankApprovedAmount.startsWith('₹') ? viewHistoryLogin.bankApprovedAmount : `₹ ${viewHistoryLogin.bankApprovedAmount}`)
-                        : 'Pending approval'}
                     </span>
                   </div>
                   <div>
