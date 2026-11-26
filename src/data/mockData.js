@@ -2252,7 +2252,6 @@ export const INITIAL_BANK_LOGINS = [
     bankName: "State Bank of India",
     bankId: "SBI-KC-9812",
     interestRate: "9.25%",
-    clientAskedAmount: "30,00,000",
     bankApprovedAmount: "25,00,000",
     loanType: "Working Capital (CC/OD)",
     loanAmount: 2500000,

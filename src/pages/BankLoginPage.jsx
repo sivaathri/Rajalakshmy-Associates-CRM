@@ -64,10 +64,9 @@ export const BankLoginPage = () => {
   const [customerCity, setCustomerCity] = useState('');
   const [bankName, setBankName] = useState('');
   const [bankId, setBankId] = useState('');
-  const [loanType, setLoanType] = useState('Working Capital (CC/OD)');
+  const [loanType, setLoanType] = useState('Personal Loan');
   const [loanAmount, setLoanAmount] = useState('');
   const [interestRate, setInterestRate] = useState('');
-  const [clientAskedAmount, setClientAskedAmount] = useState('');
   const [bankApprovedAmount, setBankApprovedAmount] = useState('');
   const [loginDate, setLoginDate] = useState(new Date().toISOString().split('T')[0]);
   const [initialNotes, setInitialNotes] = useState('');
@@ -347,7 +346,6 @@ export const BankLoginPage = () => {
       bankName: bankName.trim(),
       bankId: bankId.trim(),
       interestRate: interestRate.trim(),
-      clientAskedAmount: clientAskedAmount.trim(),
       bankApprovedAmount: bankApprovedAmount.trim(),
       loanType,
       loanAmount: loanAmount.trim(),
@@ -365,10 +363,9 @@ export const BankLoginPage = () => {
     setCustomerCity('');
     setBankName('');
     setBankId('');
-    setLoanType('Working Capital (CC/OD)');
+    setLoanType('Personal Loan');
     setLoanAmount('');
     setInterestRate('');
-    setClientAskedAmount('');
     setBankApprovedAmount('');
     setInitialNotes('');
     setShowNumberSuggestions(false);
@@ -453,10 +450,9 @@ export const BankLoginPage = () => {
             setCustomerCity('');
             setBankName('');
             setBankId('');
-            setLoanType('Working Capital (CC/OD)');
+            setLoanType('Personal Loan');
             setLoanAmount('');
             setInterestRate('');
-            setClientAskedAmount('');
             setBankApprovedAmount('');
             setInitialNotes('');
             setShowNumberSuggestions(false);
@@ -812,18 +808,11 @@ export const BankLoginPage = () => {
                           {login.loanType}
                           {login.interestRate && <span className="text-amber-800 font-semibold ml-1.5">• ROI: {login.interestRate}</span>}
                         </div>
-                        {(login.clientAskedAmount || login.bankApprovedAmount) && (
+                        {login.bankApprovedAmount && (
                           <div className="text-[10px] text-slate-500 mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
-                            {login.clientAskedAmount && (
-                              <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">
-                                Asked: <strong className="font-semibold">{login.clientAskedAmount}</strong>
-                              </span>
-                            )}
-                            {login.bankApprovedAmount && (
-                              <span className="bg-emerald-50 px-1.5 py-0.5 rounded text-emerald-800 border border-emerald-200">
-                                Approved: <strong className="font-semibold">{login.bankApprovedAmount}</strong>
-                              </span>
-                            )}
+                            <span className="bg-emerald-50 px-1.5 py-0.5 rounded text-emerald-800 border border-emerald-200">
+                              Approved: <strong className="font-semibold">{login.bankApprovedAmount}</strong>
+                            </span>
                           </div>
                         )}
                       </td>
@@ -1176,13 +1165,11 @@ export const BankLoginPage = () => {
                         onChange={(e) => setLoanType(e.target.value)}
                         className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800"
                       >
-                        <option value="Working Capital (CC/OD)">Working Capital (CC/OD)</option>
-                        <option value="Term Loan for Machinery">Term Loan for Machinery</option>
+                        <option value="Personal Loan">Personal Loan</option>
                         <option value="Business Loan">Business Loan</option>
-                        <option value="Commercial Vehicle Finance">Commercial Vehicle Finance</option>
-                        <option value="LAP (Loan Against Property)">LAP (Loan Against Property)</option>
-                        <option value="Solar Project Finance">Solar Project Finance</option>
-                        <option value="Home Loan">Home Loan</option>
+                        <option value="Housing Loan">Housing Loan</option>
+                        <option value="Mortgage Loan (LAP)">Mortgage Loan (LAP)</option>
+                        <option value="Used Car Loans & Commercial Vehicle Refinance">Used Car Loans & Commercial Vehicle Refinance</option>
                       </select>
                     </div>
                     <div>
@@ -1199,30 +1186,17 @@ export const BankLoginPage = () => {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Loan Amount <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 25,00,000 or 25 Lakhs"
-                      value={loanAmount}
-                      onChange={(e) => setLoanAmount(e.target.value)}
-                      className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                    />
-                  </div>
-
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Client Asked Loan Amount
+                        Loan Amount <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. 30,00,000 or 30 Lakhs"
-                        value={clientAskedAmount}
-                        onChange={(e) => setClientAskedAmount(e.target.value)}
+                        required
+                        placeholder="e.g. 25,00,000 or 25 Lakhs"
+                        value={loanAmount}
+                        onChange={(e) => setLoanAmount(e.target.value)}
                         className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
                       />
                     </div>
@@ -1569,18 +1543,11 @@ export const BankLoginPage = () => {
                     </span>
                   )}
                 </div>
-                {(viewHistoryLogin.clientAskedAmount || viewHistoryLogin.bankApprovedAmount) && (
+                {viewHistoryLogin.bankApprovedAmount && (
                   <div className="pt-1.5 border-t border-slate-200/70 flex flex-wrap gap-3 text-[11px]">
-                    {viewHistoryLogin.clientAskedAmount && (
-                      <div className="text-slate-600">
-                        Client Asked: <strong className="font-semibold text-slate-800">{viewHistoryLogin.clientAskedAmount}</strong>
-                      </div>
-                    )}
-                    {viewHistoryLogin.bankApprovedAmount && (
-                      <div className="text-slate-600">
-                        Bank Approved: <strong className="font-semibold text-emerald-800">{viewHistoryLogin.bankApprovedAmount}</strong>
-                      </div>
-                    )}
+                    <div className="text-slate-600">
+                      Bank Approved: <strong className="font-semibold text-emerald-800">{viewHistoryLogin.bankApprovedAmount}</strong>
+                    </div>
                   </div>
                 )}
                 <div className="text-slate-400 text-[10px] pt-0.5">Logged on: {formatDate(viewHistoryLogin.loginDate)}</div>

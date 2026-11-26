@@ -1508,7 +1508,6 @@ export const CRMProvider = ({ children }) => {
       bankName: loginData.bankName || 'State Bank of India',
       bankId: loginData.bankId || '',
       interestRate: loginData.interestRate || '',
-      clientAskedAmount: loginData.clientAskedAmount || '',
       bankApprovedAmount: loginData.bankApprovedAmount || '',
       loanType: loginData.loanType || 'Business Loan',
       loanAmount: loginData.loanAmount || '',
