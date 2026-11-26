@@ -79,9 +79,9 @@ export const FollowUpReminderModal = () => {
     setNowMs(Date.now());
   }, [currentUser?.id, loginSessionNonce]);
 
-  const isMandatoryRole = Boolean(currentUser && MANDATORY_ROLES.includes(currentUser.role));
+  const isMandatoryFollowUpRole = Boolean(currentUser && MANDATORY_ROLES.includes(currentUser.role));
 
-  // Filter pending follow-up reminders scoped to current user
+  // Filter pending follow-up reminders scoped to current user (mandatory step on login for RM, Sales Manager, Ops)
   const myReminders = useMemo(() => {
     if (!currentUser) return [];
     return (customers || []).filter(c => {
@@ -109,7 +109,7 @@ export const FollowUpReminderModal = () => {
     });
   }, [customers, currentUser, respondedIds]);
 
-  // Determine 24-hour Punch-In status for current user
+  // Determine 24-hour Punch-In status for ANY logged-in user
   const punchStatus = useMemo(() => {
     if (!currentUser) return { isPunchDue: false, lastPunch: null };
     const userPunches = (attendance || [])
@@ -129,25 +129,25 @@ export const FollowUpReminderModal = () => {
     };
   }, [attendance, currentUser, nowMs]);
 
-  const isPunchDueForMandatoryRole = isMandatoryRole && punchStatus.isPunchDue;
-  const hasPendingFollowUps = myReminders.length > 0;
+  const isPunchDueForUser = Boolean(currentUser && punchStatus.isPunchDue);
+  const hasMandatoryFollowUps = isMandatoryFollowUpRole && myReminders.length > 0;
+  const hasVisibleFollowUps = myReminders.length > 0 && (isMandatoryFollowUpRole || showFollowUpModal);
 
-  // For RM / Sales Manager / Ops:
-  // 1) If follow-ups exist upon login -> must show and finish all follow-ups (no Close button)
-  // 2) Once all follow-ups are completed (or if none exist), if Punch-In is due (every 24 hrs) -> show Punch-In (no Close button until punched)
-  const shouldForceOpen = isMandatoryRole && (
-    isPunchDueForMandatoryRole ||
-    (showFollowUpModal && hasPendingFollowUps)
-  );
-  const shouldOpen = shouldForceOpen || (showFollowUpModal && hasPendingFollowUps);
+  // Mandatory modal behavior:
+  // 1) For RM / Sales Manager / Ops: if follow-ups exist -> complete all follow-ups first (no Close button)
+  // 2) For ALL roles: every 24 hrs, without Punch In -> cannot close popup or start work until Punch In is completed
+  const shouldForceOpen = Boolean(currentUser && (isPunchDueForUser || (showFollowUpModal && hasMandatoryFollowUps)));
+  const shouldOpen = shouldForceOpen || (showFollowUpModal && myReminders.length > 0);
 
   if (!currentUser || !shouldOpen) return null;
 
-  // Step mode: 'followups' first whenever any follow-ups remain; otherwise 'punchin'
-  const currentStep = hasPendingFollowUps ? 'followups' : 'punchin';
-  const canClosePopup = isMandatoryRole
-    ? (!hasPendingFollowUps && !isPunchDueForMandatoryRole)
-    : true;
+  // Step mode: for RM/Sales Manager/Ops follow-ups come first; for other roles show follow-ups only if manually opened, otherwise mandatory Punch In
+  const currentStep = hasMandatoryFollowUps || (showFollowUpModal && hasVisibleFollowUps && !isPunchDueForUser)
+    ? 'followups'
+    : 'punchin';
+  const canClosePopup = currentStep === 'punchin'
+    ? !isPunchDueForUser
+    : (!hasMandatoryFollowUps && !isPunchDueForUser);
 
   const handleSelectOutcome = (customerId, outcome) => {
     setSelectedOutcomes(prev => ({ ...prev, [customerId]: outcome }));
@@ -230,7 +230,7 @@ export const FollowUpReminderModal = () => {
 
     // If that was the last follow-up and Punch In is already satisfied (< 24h), auto-close smoothly
     const remainingCount = myReminders.filter(r => r.id !== customerId).length;
-    if (remainingCount === 0 && !isPunchDueForMandatoryRole) {
+    if (remainingCount === 0 && !isPunchDueForUser) {
       setShowFollowUpModal(false);
     }
   };
@@ -295,7 +295,7 @@ export const FollowUpReminderModal = () => {
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                   <span>
                     Respond to all <strong>{myReminders.length}</strong> pending follow-up(s) to continue
-                    {isPunchDueForMandatoryRole ? ' to Daily Punch In.' : '.'}
+                    {isPunchDueForUser ? ' to Daily Punch In.' : '.'}
                   </span>
                 </div>
                 <span className="text-xs font-semibold text-slate-500">Select Any 1 Response Below</span>
@@ -534,8 +534,8 @@ export const FollowUpReminderModal = () => {
             {/* Footer: Only show Proceed/Close if NOT mandatory role */}
             <div className="flex items-center justify-between bg-slate-50 px-6 py-3 border-t border-slate-200">
               <span className="text-xs font-medium text-amber-800">
-                {isMandatoryRole
-                  ? `${myReminders.length} follow-up(s) remaining before closing${isPunchDueForMandatoryRole ? ' / Punch In' : ''}.`
+                {!canClosePopup
+                  ? `${myReminders.length} follow-up(s) remaining before closing${isPunchDueForUser ? ' / Punch In' : ''}.`
                   : 'Open pending follow-ups anytime from the top navigation bar.'}
               </span>
               {canClosePopup && (
@@ -610,11 +610,7 @@ export const FollowUpReminderModal = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between bg-slate-50 px-6 py-3 border-t border-slate-200">
-              <span className="text-xs font-medium text-rose-700">
-                Punch In is mandatory to continue — popup cannot be closed without punching in.
-              </span>
-            </div>
+           
           </>
         )}
       </div>
