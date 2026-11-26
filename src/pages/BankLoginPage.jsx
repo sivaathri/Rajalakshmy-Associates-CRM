@@ -392,25 +392,25 @@ export const BankLoginPage = () => {
   // Open Disbursement Modal
   const handleOpenDisburseModal = (login) => {
     setDisbursingLogin(login);
-    setDisburseBankName(login.bankName || 'State Bank of India');
-    setDisburseLoanAmount(login.loanAmount || '');
-    setDisburseLoanType(login.loanType || 'Working Capital (CC/OD)');
+    setDisburseBankName(login.bankName || '');
+    setDisburseLoanAmount(login.bankApprovedAmount || login.loanAmount || '');
+    setDisburseLoanType(login.loanType || 'Personal Loan');
     setDisburseDate(new Date().toISOString().split('T')[0]);
-    setDisburseRemarks('Full loan sanctioned & disbursed into customer account');
+    setDisburseRemarks('');
   };
 
   // Confirm Disbursement (Req 5: bank name, loan amount, type of loan and click ok)
   const handleConfirmDisbursement = (e) => {
     e.preventDefault();
     if (!disbursingLogin) return;
-    if (!disburseBankName.trim() || !disburseLoanAmount || !disburseLoanType.trim()) {
-      alert('Please enter Bank Name, Loan Amount, and Type of Loan');
+    if (!disburseBankName.trim() || !String(disburseLoanAmount).trim() || !disburseLoanType.trim()) {
+      alert('Please enter Bank Name, Disbursed Loan Amount, and Type of Loan');
       return;
     }
 
     disburseLogin(disbursingLogin.id, {
       bankName: disburseBankName.trim(),
-      loanAmount: Number(disburseLoanAmount),
+      loanAmount: String(disburseLoanAmount).trim(),
       loanType: disburseLoanType.trim(),
       disbursementDate: disburseDate,
       remarks: disburseRemarks.trim()
@@ -852,7 +852,7 @@ export const BankLoginPage = () => {
                           </div>
                         ) : login.status === 'Disbursed' ? (
                           <div className="text-[11px] text-emerald-800 font-semibold">
-                            Disbursed: {formatCurrency(login.disbursementDetails?.loanAmount)} ({login.disbursementDetails?.bankName})
+                            Disbursed: {renderLoanAmount(login.disbursementDetails?.loanAmount)} ({login.disbursementDetails?.bankName})
                           </div>
                         ) : (
                           <div className="text-[11px] text-rose-800 italic line-clamp-1 max-w-xs" title={login.rejectionRemarks}>
@@ -1401,8 +1401,9 @@ export const BankLoginPage = () => {
                     Disbursed Loan Amount (₹) <span className="text-rose-500">*</span>
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     required
+                    placeholder="Enter disbursed amount manually (e.g. 25,00,000 or 25 Lakhs)..."
                     value={disburseLoanAmount}
                     onChange={(e) => setDisburseLoanAmount(e.target.value)}
                     className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-emerald-700 font-bold"
@@ -1415,11 +1416,19 @@ export const BankLoginPage = () => {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Working Capital, Term Loan"
+                    list="disburse-loan-types"
+                    placeholder="e.g. Personal Loan, Business Loan"
                     value={disburseLoanType}
                     onChange={(e) => setDisburseLoanType(e.target.value)}
                     className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-emerald-700"
                   />
+                  <datalist id="disburse-loan-types">
+                    <option value="Personal Loan" />
+                    <option value="Business Loan" />
+                    <option value="Housing Loan" />
+                    <option value="Mortgage Loan (LAP)" />
+                    <option value="Used Car Loans & Commercial Vehicle Refinance" />
+                  </datalist>
                 </div>
               </div>
 
@@ -1441,8 +1450,8 @@ export const BankLoginPage = () => {
                   Sanction & Disbursement Remarks
                 </label>
                 <textarea
-                  rows={2}
-                  placeholder="e.g. Rate of interest, tenure, loan account number, processing fee deducted..."
+                  rows={3}
+                  placeholder="Enter sanction & disbursement remarks manually (e.g. ROI 9%, tenure 5 yrs, loan account number, processing fee deducted...)"
                   value={disburseRemarks}
                   onChange={(e) => setDisburseRemarks(e.target.value)}
                   className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:outline-none focus:border-emerald-700"
@@ -1672,7 +1681,7 @@ export const BankLoginPage = () => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1 text-[11px]">
                     <div>
                       <span className="text-emerald-700 text-[10px] font-semibold uppercase block">Disbursed Amount</span>
-                      <span className="font-bold text-emerald-950 text-xs">{formatCurrency(viewHistoryLogin.disbursementDetails.loanAmount)}</span>
+                      <span className="font-bold text-emerald-950 text-xs">{renderLoanAmount(viewHistoryLogin.disbursementDetails.loanAmount)}</span>
                     </div>
                     <div>
                       <span className="text-emerald-700 text-[10px] font-semibold uppercase block">Disbursement Bank</span>

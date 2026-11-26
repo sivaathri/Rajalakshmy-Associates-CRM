@@ -1658,18 +1658,28 @@ export const CRMProvider = ({ children }) => {
 
     const disburseData = {
       bankName: bankName || login.bankName,
-      loanAmount: Number(loanAmount) || login.loanAmount,
+      loanAmount: loanAmount || login.loanAmount,
       loanType: loanType || login.loanType,
       disbursementDate: disbursementDate || todayStr,
-      remarks: remarks || 'Disbursement confirmed by bank'
+      remarks: remarks || ''
     };
+
+    const numClean = typeof disburseData.loanAmount === 'number'
+      ? disburseData.loanAmount
+      : Number(String(disburseData.loanAmount).replace(/[^\d.-]/g, '')) || 0;
+
+    const displayAmt = typeof disburseData.loanAmount === 'number'
+      ? `₹${disburseData.loanAmount.toLocaleString('en-IN')}`
+      : String(disburseData.loanAmount).startsWith('₹')
+      ? disburseData.loanAmount
+      : `₹ ${disburseData.loanAmount}`;
 
     setBankLogins(prev => prev.map(l => {
       if (l.id === loginId) {
         const disburseUpdate = {
           id: `UPD-${Date.now().toString().slice(-4)}`,
           date: todayStr,
-          note: `Loan Disbursed: ₹${Number(disburseData.loanAmount).toLocaleString('en-IN')} via ${disburseData.bankName} (${disburseData.loanType}). ${remarks}`,
+          note: `Loan Disbursed: ${displayAmt} via ${disburseData.bankName} (${disburseData.loanType})${remarks ? `. ${remarks}` : ''}`,
           updatedBy: currentUser?.name || 'RM'
         };
         return {
@@ -1687,12 +1697,12 @@ export const CRMProvider = ({ children }) => {
     submitPerformanceCase({
       customerName: login.customerName,
       mobile: login.mobile,
-      caseAmount: disburseData.loanAmount,
+      caseAmount: numClean,
       details: `${disburseData.bankName} - ${disburseData.loanType} Disbursement (from Login #${login.id})`,
       caseDate: disburseData.disbursementDate
     });
 
-    showToast(`Login #${loginId} converted to Disbursement (₹${Number(disburseData.loanAmount).toLocaleString('en-IN')})!`, 'success');
+    showToast(`Login #${loginId} converted to Disbursement (${displayAmt})!`, 'success');
   };
 
   // Reject Login (Req 5: if reject enter remarks)
