@@ -839,7 +839,7 @@ export const BankLoginPage = () => {
                 <th className="px-4 py-3">Bank & Loan Value</th>
                 <th className="px-4 py-3">2-Day Reminder & Updates</th>
                 <th className="px-4 py-3">File Status</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -953,19 +953,8 @@ export const BankLoginPage = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {/* Add Login Button (Users create multiple logins for same customer) */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenAddModalForCustomer(login)}
-                            className="px-2 py-1 rounded-lg border border-burgundy-200 bg-burgundy-50 hover:bg-burgundy-100 text-burgundy-900 text-[11px] font-bold transition flex items-center gap-1 shadow-2xs"
-                            title={`Add another bank login for ${login.customerName}`}
-                          >
-                            <Plus className="w-3 h-3" />
-                            <span>+ Login</span>
-                          </button>
-
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
                           {/* 2-Day Update Button (Req 4) */}
                           {login.status === 'In Progress' && (
                             <button
