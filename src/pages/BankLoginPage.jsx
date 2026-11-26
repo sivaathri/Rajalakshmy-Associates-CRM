@@ -1166,7 +1166,7 @@ export const BankLoginPage = () => {
       {/* ---------------------------------------------------- */}
       {isAddModalOpen && (
         <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+          <div className="relative w-full max-w-3xl md:max-w-4xl xl:max-w-5xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
               <div>
                 <span className="text-[10px] uppercase tracking-wider font-bold text-gold-300 block">Bank Syndication</span>
@@ -1180,7 +1180,7 @@ export const BankLoginPage = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateLogin} className="p-6 space-y-3.5 max-h-[75vh] overflow-y-auto">
+            <form onSubmit={handleCreateLogin} className="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
               {/* Step 1: Enter / Select Mobile Number */}
               <div className="relative">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -1346,9 +1346,9 @@ export const BankLoginPage = () => {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1 truncate">
                           Customer Name {!isExistingCustomer && <span className="text-rose-500">*</span>}
                         </label>
                         <input
@@ -1367,7 +1367,7 @@ export const BankLoginPage = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1 truncate">
                           Date of Birth
                         </label>
                         {isExistingCustomer ? (
@@ -1387,11 +1387,8 @@ export const BankLoginPage = () => {
                           />
                         )}
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1 truncate">
                           Business / Enterprise
                         </label>
                         <input
@@ -1409,7 +1406,7 @@ export const BankLoginPage = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1 truncate">
                           Location / City
                         </label>
                         <input
@@ -1429,93 +1426,100 @@ export const BankLoginPage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Bank / Lending Institution <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        list="bank-suggestions"
-                        placeholder="e.g. State Bank of India, HDFC..."
-                        value={bankName}
-                        onChange={(e) => setBankName(e.target.value)}
-                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                      />
-                      <datalist id="bank-suggestions">
-                        <option value="State Bank of India" />
-                        <option value="HDFC Bank" />
-                        <option value="ICICI Bank" />
-                        <option value="Axis Bank" />
-                        <option value="Indian Bank" />
-                        <option value="Canara Bank" />
-                        <option value="Kotak Mahindra Bank" />
-                        <option value="Bank of Baroda" />
-                        <option value="Punjab National Bank" />
-                        <option value="Federal Bank" />
-                        <option value="Bajaj Finserv" />
-                        <option value="Cholamandalam Finance" />
-                        <option value="Sundaram Finance" />
-                      </datalist>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Bank ID
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. SBI-CH-88219 / Ref No."
-                        value={bankId}
-                        onChange={(e) => setBankId(e.target.value)}
-                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                      />
-                    </div>
-                  </div>
+                  {/* Bank Syndication & Loan Specifications */}
+                  <div className="space-y-3 pt-2 border-t border-slate-100">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Bank Syndication & Loan Specifications</span>
+                    </span>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Loan Type <span className="text-rose-500">*</span>
-                      </label>
-                      <select
-                        value={loanType}
-                        onChange={(e) => setLoanType(e.target.value)}
-                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800"
-                      >
-                        <option value="Personal Loan">Personal Loan</option>
-                        <option value="Business Loan">Business Loan</option>
-                        <option value="Housing Loan">Housing Loan</option>
-                        <option value="Mortgage Loan (LAP)">Mortgage Loan (LAP)</option>
-                        <option value="Used Car Loans & Commercial Vehicle Refinance">Used Car Loans & Commercial Vehicle Refinance</option>
-                      </select>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Bank / Lending Institution <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          list="bank-suggestions"
+                          placeholder="e.g. State Bank of India, HDFC..."
+                          value={bankName}
+                          onChange={(e) => setBankName(e.target.value)}
+                          className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                        />
+                        <datalist id="bank-suggestions">
+                          <option value="State Bank of India" />
+                          <option value="HDFC Bank" />
+                          <option value="ICICI Bank" />
+                          <option value="Axis Bank" />
+                          <option value="Indian Bank" />
+                          <option value="Canara Bank" />
+                          <option value="Kotak Mahindra Bank" />
+                          <option value="Bank of Baroda" />
+                          <option value="Punjab National Bank" />
+                          <option value="Federal Bank" />
+                          <option value="Bajaj Finserv" />
+                          <option value="Cholamandalam Finance" />
+                          <option value="Sundaram Finance" />
+                        </datalist>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Bank ID
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. SBI-CH-88219 / Ref No."
+                          value={bankId}
+                          onChange={(e) => setBankId(e.target.value)}
+                          className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Rate of Interest
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 8.75% or 9.5% p.a."
-                        value={interestRate}
-                        onChange={(e) => setInterestRate(e.target.value)}
-                        className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                      />
-                    </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Loan Amount <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 25,00,000 or 25 Lakhs"
-                      value={loanAmount}
-                      onChange={(e) => setLoanAmount(e.target.value)}
-                      className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
-                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Loan Type <span className="text-rose-500">*</span>
+                        </label>
+                        <select
+                          value={loanType}
+                          onChange={(e) => setLoanType(e.target.value)}
+                          className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 bg-white focus:outline-none focus:border-burgundy-800"
+                        >
+                          <option value="Personal Loan">Personal Loan</option>
+                          <option value="Business Loan">Business Loan</option>
+                          <option value="Housing Loan">Housing Loan</option>
+                          <option value="Mortgage Loan (LAP)">Mortgage Loan (LAP)</option>
+                          <option value="Used Car Loans & Commercial Vehicle Refinance">Used Car Loans & Commercial Vehicle Refinance</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Rate of Interest
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 8.75% or 9.5% p.a."
+                          value={interestRate}
+                          onChange={(e) => setInterestRate(e.target.value)}
+                          className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Loan Amount <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. 25,00,000 or 25 Lakhs"
+                          value={loanAmount}
+                          onChange={(e) => setLoanAmount(e.target.value)}
+                          className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div>
