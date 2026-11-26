@@ -298,32 +298,22 @@ export const BankLoginPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner Header */}
-      <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          
-          <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
-             Login
-          </h2>
-         
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-gold-500 hover:bg-gold-600 px-4 py-2.5 text-xs font-bold text-amber-950 shadow-md transition"
-          >
-            <Plus className="w-4 h-4" />
-            <span> Add Bank Login</span>
-          </button>
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 px-3.5 py-2.5 text-xs font-semibold text-white transition backdrop-blur-sm"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
-          </button>
-        </div>
+      {/* Action Bar */}
+      <div className="flex flex-wrap items-center justify-end gap-2.5">
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="flex items-center gap-2 rounded-xl bg-gold-500 hover:bg-gold-600 px-4 py-2.5 text-xs font-bold text-amber-950 shadow-sm transition"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add Bank Login</span>
+        </button>
+        <button
+          onClick={handleExport}
+          className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-3.5 py-2.5 text-xs font-semibold text-slate-700 transition shadow-sm"
+        >
+          <Download className="w-3.5 h-3.5 text-slate-500" />
+          <span>Export CSV</span>
+        </button>
       </div>
 
       {/* KPI Cards */}
