@@ -51,17 +51,19 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
   }, []);
 
   const rolesList = ['Admin', 'Manager', 'Ops', 'RM', 'Sales Manager'];
+  const isAdmin = currentUser?.role === 'Admin' || String(currentUser?.role || '').toLowerCase() === 'admin';
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-burgundy-950/40 bg-gradient-to-r from-[#600516] via-[#79091D] to-[#45020F] text-white px-3 sm:px-4 md:px-6 shadow-md">
       {/* Left: Page Title */}
       <div className="flex items-center min-w-0">
-        <div className="min-w-0">
-          <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white font-corporate truncate max-w-[140px] xs:max-w-[200px] sm:max-w-xs md:max-w-none">
-            {pageTitle || 'Rajalakshmy Associates CRM'}
-          </h1>
-         
-        </div>
+        {!isAdmin && (
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-lg md:text-xl font-bold tracking-tight text-white font-corporate truncate max-w-[140px] xs:max-w-[200px] sm:max-w-xs md:max-w-none">
+              {pageTitle || 'Rajalakshmy Associates CRM'}
+            </h1>
+          </div>
+        )}
       </div>
 
       {/* Right Controls */}
