@@ -55,9 +55,7 @@ export const ResignationPage = () => {
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             Resignation Management
           </h2>
-          <p className="text-xs text-white/80 max-w-xl">
-            Track employee separation notices, notice period timelines, and formal approvals.
-          </p>
+         
         </div>
 
         <button
