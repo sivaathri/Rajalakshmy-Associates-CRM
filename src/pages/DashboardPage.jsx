@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -14,7 +15,8 @@ import {
   PlusCircle,
   Phone,
   Calendar,
-  Layers
+  Layers,
+  XCircle
 } from 'lucide-react';
 import {
   BarChart,
@@ -36,9 +38,11 @@ import { CaseSubmissionModal } from '../components/performance/CaseSubmissionMod
 import { CustomerDetailModal } from '../components/customers/CustomerDetailModal';
 
 export const DashboardPage = () => {
-  const { customers, calls, activities, performanceCases } = useCRM();
+  const { customers, calls, activities, performanceCases, bankLogins = [] } = useCRM();
   const { currentUser, setShowFollowUpModal, showToast } = useAuth();
+  const navigate = useNavigate();
 
+  const isRM = currentUser?.role === 'RM';
   const isSalesManager = currentUser?.role === 'Sales Manager';
 
   // Scoped datasets for Sales Manager (strictly created / submitted by them)
@@ -52,11 +56,79 @@ export const DashboardPage = () => {
 
   const scopedCustomers = isSalesManager
     ? customers.filter(c => c.submittedBy === currentUser?.id || c.referenceFrom?.includes(currentUser?.name) || c.assignedTo === currentUser?.id)
-    : customers;
+    : (isRM
+        ? customers.filter(c => c.assignedTo === currentUser?.id || c.actionedBy === currentUser?.id || c.submittedBy === currentUser?.id)
+        : customers);
 
   const scopedCalls = isSalesManager
     ? calls.filter(c => c.employeeId === currentUser?.id || scopedCustomers.some(cust => cust.id === c.customerId))
-    : calls;
+    : (isRM
+        ? calls.filter(c => (currentUser?.id && c.employeeId === currentUser.id) || (currentUser?.name && c.employeeName === currentUser.name))
+        : calls);
+
+  // Scoped Bank Logins for RM (strictly their assigned, created, or submitted bank files)
+  const scopedBankLogins = isRM
+    ? (bankLogins || []).filter(b => {
+        const matchId = (
+          (b.assignedRMId && b.assignedRMId === currentUser?.id) ||
+          (b.createdBy && b.createdBy === currentUser?.id) ||
+          (b.submittedBy && b.submittedBy === currentUser?.id)
+        );
+        const matchName = (
+          currentUser?.name && (
+            (b.assignedRMName && b.assignedRMName.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) ||
+            (b.createdByName && b.createdByName.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) ||
+            (b.submittedByName && b.submittedByName.trim().toLowerCase() === currentUser.name.trim().toLowerCase())
+          )
+        );
+        return matchId || matchName;
+      })
+    : (bankLogins || []);
+
+  const totalBankLogins = scopedBankLogins.length;
+  const disbursedBankLogins = scopedBankLogins.filter(b => b.status === 'Disbursed');
+  const totalDisbursedCount = disbursedBankLogins.length;
+  const totalDisbursedAmount = disbursedBankLogins.reduce(
+    (sum, b) => sum + (Number(b.disbursedAmount) || Number(b.loanAmount) || 0),
+    0
+  );
+  const rejectedBankLogins = scopedBankLogins.filter(b => b.status === 'Rejected');
+  const totalRejectedCount = rejectedBankLogins.length;
+  const inProgressBankLogins = scopedBankLogins.filter(b => b.status === 'In Progress');
+  const totalInProgressCount = inProgressBankLogins.length;
+
+  // RM Actioned Calls (Known vs Unknown breakdown)
+  const rmKnownCallsCount = scopedCalls.filter(c => {
+    const cust = customers.find(x => x.id === c.customerId || (x.mobile && c.mobile && x.mobile.replace(/\D/g, '').slice(-10) === c.mobile.replace(/\D/g, '').slice(-10)));
+    return cust ? cust.customerType === 'known' : (c.customerType !== 'unknown');
+  }).length;
+
+  const rmUnknownCallsCount = scopedCalls.filter(c => {
+    const cust = customers.find(x => x.id === c.customerId || (x.mobile && c.mobile && x.mobile.replace(/\D/g, '').slice(-10) === c.mobile.replace(/\D/g, '').slice(-10)));
+    return cust ? cust.customerType === 'unknown' : (c.customerType === 'unknown');
+  }).length;
+
+  const actionedCustomersKnown = customers.filter(c =>
+    (
+      (currentUser?.id && (c.actionedBy === currentUser.id || c.assignedTo === currentUser.id)) ||
+      (currentUser?.name && (c.actionedByName === currentUser.name || c.assignedName === currentUser.name))
+    ) &&
+    c.customerType !== 'unknown' &&
+    ['OK', 'Not Attend', 'No Need', 'Field Visit', 'Reminder'].includes(c.callingStatus)
+  ).length;
+
+  const actionedCustomersUnknown = customers.filter(c =>
+    (
+      (currentUser?.id && (c.actionedBy === currentUser.id || c.assignedTo === currentUser.id)) ||
+      (currentUser?.name && (c.actionedByName === currentUser.name || c.assignedName === currentUser.name))
+    ) &&
+    c.customerType === 'unknown' &&
+    ['OK', 'Not Attend', 'No Need', 'Field Visit', 'Reminder'].includes(c.callingStatus)
+  ).length;
+
+  const actionCallsKnown = Math.max(rmKnownCallsCount, actionedCustomersKnown);
+  const actionCallsUnknown = Math.max(rmUnknownCallsCount, actionedCustomersUnknown);
+  const totalActionCalls = Math.max(scopedCalls.length, actionCallsKnown + actionCallsUnknown);
 
   const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
   const [selectedCustDetail, setSelectedCustDetail] = useState(null);
@@ -72,7 +144,11 @@ export const DashboardPage = () => {
   const todayStr = new Date().toISOString().split('T')[0];
   const todayCalls = scopedCalls.filter(c => c.callDate === todayStr || c.callDate === '2026-11-16').length;
 
-  const pendingFollowUps = scopedCustomers.filter(c => c.callingStatus === 'Reminder');
+  const pendingFollowUps = (isRM ? customers : scopedCustomers).filter(c => {
+    if (c.callingStatus !== 'Reminder') return false;
+    if (isRM) return c.assignedTo === currentUser?.id || c.actionedBy === currentUser?.id;
+    return true;
+  });
   const totalCases = scopedCases.length;
   const approvedCases = scopedCases.filter(c => c.status === 'Approved').length;
   const approvedVolume = scopedCases
@@ -91,14 +167,23 @@ export const DashboardPage = () => {
   ];
 
   // Monthly Performance Chart Data
-  const monthlyPerformanceData = [
-    { month: 'Jun', submitted: 85, approved: 65, amountLakhs: 140 },
-    { month: 'Jul', submitted: 110, approved: 92, amountLakhs: 210 },
-    { month: 'Aug', submitted: 135, approved: 108, amountLakhs: 260 },
-    { month: 'Sep', submitted: 160, approved: 130, amountLakhs: 310 },
-    { month: 'Oct', submitted: 190, approved: 155, amountLakhs: 380 },
-    { month: 'Nov (Mtd)', submitted: totalCases * 15, approved: approvedCases * 14, amountLakhs: Math.round(approvedVolume / 100000) }
-  ];
+  const monthlyPerformanceData = isRM
+    ? [
+        { month: 'Jun', submitted: 4, approved: 3, amountLakhs: 25 },
+        { month: 'Jul', submitted: 6, approved: 5, amountLakhs: 40 },
+        { month: 'Aug', submitted: 8, approved: 6, amountLakhs: 55 },
+        { month: 'Sep', submitted: 10, approved: 7, amountLakhs: 70 },
+        { month: 'Oct', submitted: 12, approved: 9, amountLakhs: 85 },
+        { month: 'Nov (Mtd)', submitted: totalBankLogins || 2, approved: totalDisbursedCount || 1, amountLakhs: Math.round(totalDisbursedAmount / 100000) || 1 }
+      ]
+    : [
+        { month: 'Jun', submitted: 85, approved: 65, amountLakhs: 140 },
+        { month: 'Jul', submitted: 110, approved: 92, amountLakhs: 210 },
+        { month: 'Aug', submitted: 135, approved: 108, amountLakhs: 260 },
+        { month: 'Sep', submitted: 160, approved: 130, amountLakhs: 310 },
+        { month: 'Oct', submitted: 190, approved: 155, amountLakhs: 380 },
+        { month: 'Nov (Mtd)', submitted: totalCases * 15, approved: approvedCases * 14, amountLakhs: Math.round(approvedVolume / 100000) }
+      ];
 
   // Known vs Unknown Donut Chart Data
   const knownUnknownData = [
@@ -108,78 +193,162 @@ export const DashboardPage = () => {
     { name: 'New Unknown', value: newUnknown, color: '#F3CF7A' }
   ];
 
-  const statCards = [
-    {
-      title: 'Total Customers',
-      value: totalCustomers,
-      sub: 'All active CRM database records',
-      icon: <Users className="w-5 h-5 text-burgundy-900" />,
-      color: 'bg-white border-slate-200'
-    },
-    {
-      title: 'Old Known',
-      value: oldKnown,
-      sub: 'Established verified clients',
-      icon: <Database className="w-5 h-5 text-burgundy-800" />,
-      color: 'bg-burgundy-50/50 border-burgundy-200'
-    },
-    {
-      title: 'Old Unknown',
-      value: oldUnknown,
-      sub: 'Legacy prospects to verify',
-      icon: <Database className="w-5 h-5 text-amber-700" />,
-      color: 'bg-amber-50/50 border-amber-200'
-    },
-    {
-      title: 'New Known',
-      value: newKnown,
-      sub: 'Fresh field verified leads',
-      icon: <Database className="w-5 h-5 text-gold-700" />,
-      color: 'bg-gold-50/50 border-gold-200'
-    },
-    {
-      title: 'New Unknown',
-      value: newUnknown,
-      sub: 'New open source / bill leads',
-      icon: <Database className="w-5 h-5 text-slate-700" />,
-      color: 'bg-slate-50 border-slate-200'
-    },
-    {
-      title: 'Total Telecalls',
-      value: totalCalls,
-      sub: 'Lifetime calling entries logged',
-      icon: <PhoneCall className="w-5 h-5 text-blue-700" />,
-      color: 'bg-blue-50/50 border-blue-200'
-    },
-    {
-      title: "Today's Calls",
-      value: todayCalls,
-      sub: 'Active telecalling sessions today',
-      icon: <Clock className="w-5 h-5 text-indigo-700" />,
-      color: 'bg-indigo-50/50 border-indigo-200'
-    },
-    {
-      title: 'Pending Follow-ups',
-      value: pendingFollowUps.length,
-      sub: 'Scheduled reminders requiring action',
-      icon: <CalendarCheck className="w-5 h-5 text-amber-600" />,
-      color: 'bg-amber-50 border-amber-300 ring-1 ring-amber-400/30'
-    },
-    {
-      title: 'Total Cases Filed',
-      value: totalCases,
-      sub: 'Submitted case dispositions',
-      icon: <Award className="w-5 h-5 text-purple-700" />,
-      color: 'bg-purple-50/50 border-purple-200'
-    },
-    {
-      title: 'Approved Cases',
-      value: `${approvedCases} (${formatCurrency(approvedVolume)})`,
-      sub: 'Sanctioned advisory portfolio',
-      icon: <CheckCircle className="w-5 h-5 text-emerald-700" />,
-      color: 'bg-emerald-50/50 border-emerald-300'
-    }
-  ];
+  // Tailored KPI Stat Cards (Customized for RM Role per user request)
+  const statCards = isRM
+    ? [
+        {
+          title: 'Total Actioned Calls',
+          value: totalActionCalls,
+          sub: `${actionCallsKnown} Known • ${actionCallsUnknown} Unknown`,
+          icon: <PhoneCall className="w-5 h-5 text-burgundy-900" />,
+          color: 'bg-burgundy-50/70 border-burgundy-200',
+          link: '/telecalling'
+        },
+        {
+          title: 'Action Calls (Known)',
+          value: actionCallsKnown,
+          sub: 'Verified client conversations',
+          icon: <Users className="w-5 h-5 text-emerald-700" />,
+          color: 'bg-emerald-50/60 border-emerald-200',
+          link: '/telecalling'
+        },
+        {
+          title: 'Action Calls (Unknown)',
+          value: actionCallsUnknown,
+          sub: 'Fresh / raw lead outreach',
+          icon: <Phone className="w-5 h-5 text-amber-700" />,
+          color: 'bg-amber-50/60 border-amber-200',
+          link: '/telecalling'
+        },
+        {
+          title: "Today's Calls",
+          value: todayCalls,
+          sub: 'Active calling sessions today',
+          icon: <Clock className="w-5 h-5 text-indigo-700" />,
+          color: 'bg-indigo-50/50 border-indigo-200',
+          link: '/telecalling'
+        },
+        {
+          title: 'Pending Follow-ups',
+          value: pendingFollowUps.length,
+          sub: 'Scheduled reminders requiring action',
+          icon: <CalendarCheck className="w-5 h-5 text-rose-700" />,
+          color: 'bg-rose-50/60 border-rose-200',
+          onClick: () => setShowFollowUpModal(true)
+        },
+        {
+          title: 'Total Bank Logins',
+          value: totalBankLogins,
+          sub: 'Files logged across partner banks',
+          icon: <Layers className="w-5 h-5 text-blue-700" />,
+          color: 'bg-blue-50/60 border-blue-200',
+          link: '/bank-logins'
+        },
+        {
+          title: 'Total Disbursed ("Dispossement")',
+          value: `${totalDisbursedCount} (${formatCurrency(totalDisbursedAmount)})`,
+          sub: `${totalDisbursedCount} file(s) funded successfully`,
+          icon: <CheckCircle className="w-5 h-5 text-emerald-800" />,
+          color: 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400/30',
+          link: '/bank-logins'
+        },
+        {
+          title: 'Total Rejected',
+          value: totalRejectedCount,
+          sub: 'Declined bank file submissions',
+          icon: <XCircle className="w-5 h-5 text-rose-700" />,
+          color: 'bg-rose-50/50 border-rose-200',
+          link: '/bank-logins'
+        },
+        {
+          title: 'In Bank Processing',
+          value: totalInProgressCount,
+          sub: 'Active files with bank appraisers',
+          icon: <TrendingUp className="w-5 h-5 text-amber-700" />,
+          color: 'bg-amber-50/50 border-amber-200',
+          link: '/bank-logins'
+        },
+        {
+          title: 'Total Customers',
+          value: totalCustomers,
+          sub: 'All active CRM database records',
+          icon: <Users className="w-5 h-5 text-purple-700" />,
+          color: 'bg-purple-50/50 border-purple-200',
+          link: '/telecalling'
+        }
+      ]
+    : [
+        {
+          title: 'Total Customers',
+          value: totalCustomers,
+          sub: 'All active CRM database records',
+          icon: <Users className="w-5 h-5 text-burgundy-900" />,
+          color: 'bg-white border-slate-200'
+        },
+        {
+          title: 'Old Known',
+          value: oldKnown,
+          sub: 'Established verified clients',
+          icon: <Database className="w-5 h-5 text-burgundy-800" />,
+          color: 'bg-burgundy-50/50 border-burgundy-200'
+        },
+        {
+          title: 'Old Unknown',
+          value: oldUnknown,
+          sub: 'Legacy prospects to verify',
+          icon: <Database className="w-5 h-5 text-amber-700" />,
+          color: 'bg-amber-50/50 border-amber-200'
+        },
+        {
+          title: 'New Known',
+          value: newKnown,
+          sub: 'Fresh field verified leads',
+          icon: <Database className="w-5 h-5 text-gold-700" />,
+          color: 'bg-gold-50/50 border-gold-200'
+        },
+        {
+          title: 'New Unknown',
+          value: newUnknown,
+          sub: 'New open source / bill leads',
+          icon: <Database className="w-5 h-5 text-slate-700" />,
+          color: 'bg-slate-50 border-slate-200'
+        },
+        {
+          title: 'Total Telecalls',
+          value: totalCalls,
+          sub: 'Lifetime calling entries logged',
+          icon: <PhoneCall className="w-5 h-5 text-blue-700" />,
+          color: 'bg-blue-50/50 border-blue-200'
+        },
+        {
+          title: "Today's Calls",
+          value: todayCalls,
+          sub: 'Active telecalling sessions today',
+          icon: <Clock className="w-5 h-5 text-indigo-700" />,
+          color: 'bg-indigo-50/50 border-indigo-200'
+        },
+        {
+          title: 'Pending Follow-ups',
+          value: pendingFollowUps.length,
+          sub: 'Scheduled reminders requiring action',
+          icon: <CalendarCheck className="w-5 h-5 text-amber-600" />,
+          color: 'bg-amber-50 border-amber-300 ring-1 ring-amber-400/30'
+        },
+        {
+          title: 'Total Cases Filed',
+          value: totalCases,
+          sub: 'Submitted case dispositions',
+          icon: <Award className="w-5 h-5 text-purple-700" />,
+          color: 'bg-purple-50/50 border-purple-200'
+        },
+        {
+          title: 'Approved Cases',
+          value: `${approvedCases} (${formatCurrency(approvedVolume)})`,
+          sub: 'Sanctioned advisory portfolio',
+          icon: <CheckCircle className="w-5 h-5 text-emerald-700" />,
+          color: 'bg-emerald-50/50 border-emerald-300'
+        }
+      ];
 
   return (
     <div className="space-y-6">
@@ -226,13 +395,23 @@ export const DashboardPage = () => {
             <span>Open Follow-ups ({pendingFollowUps.length})</span>
           </button>
 
-          <button
-            onClick={() => setIsCaseModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-gold-500 hover:bg-gold-600 px-3.5 py-2 text-xs font-bold text-amber-950 transition shadow-sm"
-          >
-            <Award className="w-4 h-4" />
-            <span>Submit Case</span>
-          </button>
+          {isRM ? (
+            <button
+              onClick={() => navigate('/bank-logins')}
+              className="flex items-center gap-1.5 rounded-xl bg-gold-500 hover:bg-gold-600 px-3.5 py-2 text-xs font-bold text-amber-950 transition shadow-sm"
+            >
+              <Layers className="w-4 h-4" />
+              <span>+ Bank Login Console</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsCaseModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl bg-gold-500 hover:bg-gold-600 px-3.5 py-2 text-xs font-bold text-amber-950 transition shadow-sm"
+            >
+              <Award className="w-4 h-4" />
+              <span>Submit Case</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -240,7 +419,7 @@ export const DashboardPage = () => {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            Real-Time Key Operational Metrics
+            {isRM ? 'RM Operational Metrics: Calling & Bank Logins' : 'Real-Time Key Operational Metrics'}
           </h3>
           <span className="text-[11px] text-slate-400">Live synchronized with LocalStorage</span>
         </div>
@@ -249,7 +428,11 @@ export const DashboardPage = () => {
           {statCards.map((card, idx) => (
             <div
               key={idx}
-              className={`rounded-2xl p-4 border transition hover:shadow-md ${card.color}`}
+              onClick={() => {
+                if (card.onClick) card.onClick();
+                else if (card.link) navigate(card.link);
+              }}
+              className={`rounded-2xl p-4 border transition hover:shadow-md ${card.color} ${card.onClick || card.link ? 'cursor-pointer hover:scale-[1.02]' : ''}`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold text-slate-600 truncate">{card.title}</span>
@@ -456,54 +639,110 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Recent Field Activities & Submissions (6 cols) */}
+        {/* Recent Bank Logins for RM or Field Activities for Sales */}
         <div className="lg:col-span-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-            <h4 className="text-sm font-bold text-slate-900 font-corporate">
-              Recent Field Activities & Lead Submissions
-              {isSalesManager && <span className="text-burgundy-900 text-xs font-semibold ml-1.5">(Your Submissions)</span>}
+            <h4 className="text-sm font-bold text-slate-900 font-corporate flex items-center gap-2">
+              {isRM ? (
+                <>
+                  <Layers className="w-4 h-4 text-burgundy-900" />
+                  <span>Recent Bank Logins & File Statuses</span>
+                </>
+              ) : (
+                <>
+                  <span>Recent Field Activities & Lead Submissions</span>
+                  {isSalesManager && <span className="text-burgundy-900 text-xs font-semibold ml-1.5">(Your Submissions)</span>}
+                </>
+              )}
             </h4>
-            <span className="text-xs font-semibold text-slate-500">Latest 5</span>
+            {isRM ? (
+              <button
+                onClick={() => navigate('/bank-logins')}
+                className="text-xs font-bold text-burgundy-800 hover:underline"
+              >
+                View Console →
+              </button>
+            ) : (
+              <span className="text-xs font-semibold text-slate-500">Latest 5</span>
+            )}
           </div>
 
           <div className="space-y-2.5 max-h-72 overflow-y-auto">
-            {scopedActivities.length === 0 ? (
-              <div className="text-center py-6 text-xs text-slate-400 italic">
-                No recent field submissions logged.
-              </div>
-            ) : (
-              scopedActivities.slice(0, 5).map(act => (
-                <div
-                  key={act.id}
-                  className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-900">{act.customerName}</span>
-                      <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                        {act.source}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">
-                      {formatMobileNumber(act.mobile)} • By <span className="font-semibold text-slate-700">{act.submittedByName}</span>
-                    </div>
-                    <div
-                      className={`text-[10px] font-medium ${
-                        act.customerType === 'unknown' || act.classifiedTo?.toLowerCase().includes('unknown')
-                          ? 'text-amber-700'
-                          : 'text-emerald-800'
-                      }`}
-                    >
-                      Auto Classified: {act.classifiedTo}
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-400 block">{formatDate(act.submissionDate)}</span>
-                    <span className="text-[10px] text-slate-500">{act.submissionTime}</span>
-                  </div>
+            {isRM ? (
+              scopedBankLogins.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-400 italic">
+                  No bank login files recorded yet.
                 </div>
-              ))
+              ) : (
+                scopedBankLogins.slice(0, 5).map(item => (
+                  <div
+                    key={item.id}
+                    onClick={() => navigate('/bank-logins')}
+                    className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-[#FAF6EF]/50 hover:bg-[#FAF6EF] transition cursor-pointer"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900">{item.customerName}</span>
+                        <span className="text-[10px] font-semibold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                          {item.bankName}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Amount: <strong className="text-slate-800">{formatCurrency(item.loanAmount)}</strong> • {item.productType || 'Business Loan'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                        item.status === 'Disbursed' ? 'bg-emerald-100 text-emerald-800' :
+                        item.status === 'Rejected' ? 'bg-rose-100 text-rose-800' :
+                        'bg-amber-100 text-amber-800'
+                      }`}>
+                        {item.status === 'Disbursed' ? '✓ Disbursed' : item.status}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">{formatDate(item.loginDate)}</span>
+                    </div>
+                  </div>
+                ))
+              )
+            ) : (
+              scopedActivities.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-400 italic">
+                  No recent field submissions logged.
+                </div>
+              ) : (
+                scopedActivities.slice(0, 5).map(act => (
+                  <div
+                    key={act.id}
+                    className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900">{act.customerName}</span>
+                        <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                          {act.source}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        {formatMobileNumber(act.mobile)} • By <span className="font-semibold text-slate-700">{act.submittedByName}</span>
+                      </div>
+                      <div
+                        className={`text-[10px] font-medium ${
+                          act.customerType === 'unknown' || act.classifiedTo?.toLowerCase().includes('unknown')
+                            ? 'text-amber-700'
+                            : 'text-emerald-800'
+                        }`}
+                      >
+                        Auto Classified: {act.classifiedTo}
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block">{formatDate(act.submissionDate)}</span>
+                      <span className="text-[10px] text-slate-500">{act.submissionTime}</span>
+                    </div>
+                  </div>
+                ))
+              )
             )}
           </div>
         </div>
