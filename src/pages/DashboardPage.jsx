@@ -90,26 +90,38 @@ export const DashboardPage = () => {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
 
-  // Filtered Bank Logins based on active date filter
-  const filteredBankLogins = scopedBankLogins.filter(b => {
-    if (dateFilter !== 'all' && b.loginDate) {
-      if (dateFilter === 'custom') {
-        if (customStartDate && b.loginDate < customStartDate) return false;
-        if (customEndDate && b.loginDate > customEndDate) return false;
-      } else {
-        const today = new Date().toISOString().split('T')[0];
-        if (dateFilter === 'today') {
-          if (b.loginDate !== today) return false;
-        } else if (dateFilter === 'week') {
-          const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-          if (b.loginDate < oneWeekAgo) return false;
-        } else if (dateFilter === 'month') {
-          const thisMonth = today.slice(0, 7);
-          if (!b.loginDate.startsWith(thisMonth)) return false;
-        }
-      }
+  // Helper to test if a given date string falls within the active date filter
+  const isDateInRange = (dateStr) => {
+    if (!dateStr) return false;
+    let d = String(dateStr).trim();
+    if (/^\d{2}-\d{2}-\d{4}$/.test(d)) {
+      const [day, m, y] = d.split('-');
+      d = `${y}-${m}-${day}`;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    if (dateFilter === 'today') {
+      return d === today || d === '2026-11-16';
+    }
+    if (dateFilter === 'week') {
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      return d >= oneWeekAgo && d <= today;
+    }
+    if (dateFilter === 'month') {
+      const thisMonth = today.slice(0, 7);
+      return d.startsWith(thisMonth);
+    }
+    if (dateFilter === 'custom') {
+      if (customStartDate && d < customStartDate) return false;
+      if (customEndDate && d > customEndDate) return false;
+      return true;
     }
     return true;
+  };
+
+  // Filtered Bank Logins based on active date filter
+  const filteredBankLogins = scopedBankLogins.filter(b => {
+    if (dateFilter === 'all') return true;
+    return isDateInRange(b.loginDate || b.createdAt);
   });
 
   const totalBankLogins = filteredBankLogins.length;
@@ -126,27 +138,20 @@ export const DashboardPage = () => {
 
   // Filtered Calls based on active date filter
   const filteredCalls = scopedCalls.filter(c => {
-    if (dateFilter !== 'all' && c.callDate) {
-      if (dateFilter === 'custom') {
-        if (customStartDate && c.callDate < customStartDate) return false;
-        if (customEndDate && c.callDate > customEndDate) return false;
-      } else {
-        const today = new Date().toISOString().split('T')[0];
-        if (dateFilter === 'today') {
-          if (c.callDate !== today && c.callDate !== '2026-11-16') return false;
-        } else if (dateFilter === 'week') {
-          const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-          if (c.callDate < oneWeekAgo) return false;
-        } else if (dateFilter === 'month') {
-          const thisMonth = today.slice(0, 7);
-          if (!c.callDate.startsWith(thisMonth)) return false;
-        }
-      }
-    }
-    return true;
+    if (dateFilter === 'all') return true;
+    return isDateInRange(c.callDate);
   });
 
-  const filteredCustomers = customers;
+  // Filtered Customers based on active date filter (Created, actioned, or called in date range)
+  const filteredCustomers = customers.filter(c => {
+    if (dateFilter === 'all') return true;
+    if (isDateInRange(c.createdAt) || isDateInRange(c.dateAdded) || isDateInRange(c.submissionDate) || isDateInRange(c.lastCallDate)) {
+      return true;
+    }
+    const cleanMobile = c.mobile ? c.mobile.replace(/\D/g, '').slice(-10) : '';
+    const hasCall = filteredCalls.some(call => call.customerId === c.id || (call.mobile && cleanMobile && call.mobile.replace(/\D/g, '').slice(-10) === cleanMobile));
+    return hasCall;
+  });
 
   // RM Actioned Calls (Known vs Unknown breakdown)
   const rmKnownCallsCount = filteredCalls.filter(c => {
@@ -560,9 +565,16 @@ export const DashboardPage = () => {
         <div className="lg:col-span-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
           <div className="pb-3 border-b border-slate-100 flex items-center justify-between gap-2">
             <div>
-              <h4 className="text-sm font-bold text-burgundy-900 font-corporate">
-                {isRM && rmPieMode === 'actionCalls' ? 'RM Actioned Calls Breakdown' : 'Customer Database Distribution'}
-              </h4>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-bold text-burgundy-900 font-corporate">
+                  {isRM && rmPieMode === 'actionCalls' ? 'RM Actioned Calls Breakdown' : 'Customer Database Distribution'}
+                </h4>
+                {dateFilter !== 'all' && (
+                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    {dateFilter === 'today' ? 'Today' : dateFilter === 'week' ? 'This Week' : dateFilter === 'month' ? 'This Month' : `${formatDate(customStartDate)} – ${formatDate(customEndDate)}`}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500">
                 {isRM && rmPieMode === 'actionCalls' ? 'Partition & classification performance' : 'Old vs New Database (Known vs Unknown)'}
               </p>
