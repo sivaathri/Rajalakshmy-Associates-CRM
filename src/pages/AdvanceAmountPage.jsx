@@ -216,9 +216,6 @@ export const AdvanceAmountPage = () => {
         {/* Header Bar */}
         <div className="px-6 py-3.5 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800 flex flex-wrap items-center justify-between gap-2">
           <span>{canReview ? 'Employee Advance Requisitions' : 'Personal Advance Requests'} ({filteredAdvances.length})</span>
-          <span className="text-[11px] text-burgundy-900 font-semibold bg-burgundy-50 px-2.5 py-0.5 rounded-full border border-burgundy-200">
-            Logged In: {currentUser?.name} ({currentUser?.id} • {currentUser?.role})
-          </span>
         </div>
 
         {/* Filter Toolbar */}
