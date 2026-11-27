@@ -40,8 +40,8 @@ export const BankLoginPage = () => {
   const [executiveFilter, setExecutiveFilter] = useState('All');
   const [onlyDueReminders, setOnlyDueReminders] = useState(false);
   // 2-Day Routine Tab: 'due' | 'in_progress' | 'disbursed' | 'rejected' | 'all'
-  // Default is 'due': "if no action of disburse or reject, every 2 days only show or else don't show"
-  const [routineTab, setRoutineTab] = useState('due');
+  // Default is 'all' (All Records)
+  const [routineTab, setRoutineTab] = useState('all');
   const [dateRangeType, setDateRangeType] = useState('all'); // 'all' | 'today' | 'week' | 'month' | 'custom'
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
