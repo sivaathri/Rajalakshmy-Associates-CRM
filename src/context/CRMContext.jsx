@@ -218,12 +218,15 @@ export const CRMProvider = ({ children }) => {
       const saved = localStorage.getItem(STORAGE_KEYS.ADVANCES);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          // Filter out legacy mock advances
+          return parsed.filter(a => !a.id?.startsWith('ADV-60'));
+        }
       }
     } catch {
       // fallback
     }
-    return INITIAL_ADVANCE_AMOUNTS;
+    return [];
   });
 
   // Daily Employee Attendance Records (Punch In Only)

@@ -1850,63 +1850,7 @@ export const INITIAL_RESIGNATIONS = [
   }
 ];
 
-export const INITIAL_ADVANCE_AMOUNTS = [
-  {
-    id: "ADV-601",
-    employeeId: "EMP004",
-    employeeName: "Ananya Subramanian",
-    requestedAmount: 35000,
-    requestDate: "2026-11-10",
-    reason: "Annual house lease renewal advance requirement.",
-    status: "Approved",
-    reviewedBy: "Rajesh Kannan (Admin)",
-    reviewDate: "2026-11-11"
-  },
-  {
-    id: "ADV-602",
-    employeeId: "EMP001",
-    employeeName: "Rajesh Kannan",
-    requestedAmount: 50000,
-    requestDate: "2026-11-08",
-    reason: "Executive conference travel and registration advance.",
-    status: "Approved",
-    reviewedBy: "Board of Directors",
-    reviewDate: "2026-11-09"
-  },
-  {
-    id: "ADV-603",
-    employeeId: "EMP002",
-    employeeName: "Priya Swaminathan",
-    requestedAmount: 20000,
-    requestDate: "2026-11-14",
-    reason: "Medical emergency hospital expense for parent.",
-    status: "Approved",
-    reviewedBy: "Rajesh Kannan (Admin)",
-    reviewDate: "2026-11-15"
-  },
-  {
-    id: "ADV-604",
-    employeeId: "EMP008",
-    employeeName: "Vigneshwaran R",
-    requestedAmount: 15000,
-    requestDate: "2026-11-15",
-    reason: "Two-wheeler breakdown repairs and insurance premium.",
-    status: "Pending Approval",
-    reviewedBy: "",
-    reviewDate: ""
-  },
-  {
-    id: "ADV-605",
-    employeeId: "EMP005",
-    employeeName: "Murugan Velu",
-    requestedAmount: 25000,
-    requestDate: "2026-11-12",
-    reason: "Client visits travel allowance and regional transit conveyance in Coimbatore cluster.",
-    status: "Approved",
-    reviewedBy: "Rajesh Kannan (Admin)",
-    reviewDate: "2026-11-13"
-  }
-];
+export const INITIAL_ADVANCE_AMOUNTS = [];
 
 // --- EMPLOYEE DAILY ATTENDANCE RECORDS (PUNCH IN ONLY) ---
 // Date format strictly: DD-MM-YYYY
