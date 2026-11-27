@@ -484,7 +484,13 @@ export const DashboardPage = () => {
           icon: <PhoneCall className="w-5 h-5 text-burgundy-900" />,
           color: 'bg-burgundy-50/70 border-burgundy-200',
           link: '/telecalling',
-          state: { dateRangeType: dateFilter }
+          state: {
+            activeTab: 'history',
+            reportDateRange: dateFilter === 'today' ? 'today' : (dateFilter === 'custom' ? 'range' : 'this-month'),
+            customStartDate,
+            customEndDate,
+            selectedOutcomeFilter: 'All'
+          }
         },
         {
           title: 'Total Bank Logins',

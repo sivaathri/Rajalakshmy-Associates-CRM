@@ -69,6 +69,12 @@ export const TelecallingPage = () => {
   const [searchQueue, setSearchQueue] = useState('');
   const [selectedContactId, setSelectedContactId] = useState(null);
 
+  // Calling Reports Filter
+  const [reportDateRange, setReportDateRange] = useState('this-month'); // 'today' | 'range' | 'this-month'
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [selectedOutcomeFilter, setSelectedOutcomeFilter] = useState('All');
+
   // Automatically apply incoming filter state from Dashboard navigation
   useEffect(() => {
     if (location.state) {
@@ -115,12 +121,6 @@ export const TelecallingPage = () => {
       });
     return Object.entries(groups);
   }, [employees, currentUser?.id]);
-
-  // Calling Reports Filter
-  const [reportDateRange, setReportDateRange] = useState('this-month'); // 'today' | 'range' | 'this-month'
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
-  const [selectedOutcomeFilter, setSelectedOutcomeFilter] = useState('All');
 
   // 2-Step Telecalling Partition Filter:
   // Step 1: Select Old Database or New Database
