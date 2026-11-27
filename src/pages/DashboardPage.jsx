@@ -520,69 +520,83 @@ export const DashboardPage = () => {
          
         </div>
 
-        {/* Dashboard Filters (Replaces the 2 buttons) */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="hidden sm:flex items-center gap-1.5 text-gold-300 text-xs font-bold mr-1">
-            <Filter className="w-3.5 h-3.5" />
-            <span>Filters:</span>
+        {/* Dashboard Filters (Executive Segmented Pills) */}
+        <div className="flex flex-col md:items-end gap-2.5">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 text-gold-300 text-xs font-bold uppercase tracking-wider">
+              <Filter className="w-3.5 h-3.5 text-gold-400" />
+              <span>Time Period:</span>
+            </div>
+            {(dateFilter !== 'all' || customStartDate || customEndDate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDateFilter('all');
+                  setCustomStartDate('');
+                  setCustomEndDate('');
+                }}
+                className="flex items-center gap-1 text-[11px] font-bold text-rose-200 hover:text-white bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-lg border border-white/20 transition cursor-pointer"
+                title="Reset filters to All Time"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset</span>
+              </button>
+            )}
           </div>
 
-          {/* Time Period Filter */}
-          <div className="flex items-center gap-1.5 bg-burgundy-950/80 border border-gold-400/30 hover:border-gold-400/60 transition rounded-xl px-3 py-1.5 text-xs shadow-xs">
-            <Calendar className="w-3.5 h-3.5 text-gold-300 shrink-0" />
-            <select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="bg-transparent text-white text-xs font-semibold focus:outline-hidden cursor-pointer"
-            >
-              <option value="all" className="bg-slate-900 text-white">All Time</option>
-              <option value="today" className="bg-slate-900 text-white">Today</option>
-              <option value="week" className="bg-slate-900 text-white">This Week</option>
-              <option value="month" className="bg-slate-900 text-white">This Month</option>
-              <option value="custom" className="bg-slate-900 text-white">Custom Range (From - To)</option>
-            </select>
+          {/* Segmented Pill Group (Replaces native select) */}
+          <div className="inline-flex flex-wrap items-center bg-black/30 backdrop-blur-md p-1.5 rounded-2xl border border-gold-400/30 shadow-inner gap-1">
+            {[
+              { id: 'all', label: 'All Time' },
+              { id: 'today', label: 'Today' },
+              { id: 'week', label: 'This Week' },
+              { id: 'month', label: 'This Month' },
+              { id: 'custom', label: 'Custom Range', icon: <Calendar className="w-3 h-3" /> }
+            ].map(tab => {
+              const isActive = dateFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setDateFilter(tab.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                    isActive
+                      ? 'bg-gradient-to-r from-gold-400 to-amber-500 text-burgundy-950 shadow-md shadow-amber-500/30 scale-[1.02]'
+                      : 'text-rose-100/90 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Custom Date Range Pickers (From & To) */}
+          {/* Custom Date Range Picker Tray */}
           {dateFilter === 'custom' && (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <div className="flex items-center gap-1.5 bg-burgundy-950/90 border border-gold-400/40 rounded-xl px-2.5 py-1 text-xs">
-                <span className="text-[10px] uppercase font-bold text-gold-300">From:</span>
+            <div className="flex flex-wrap items-center gap-2 bg-black/40 backdrop-blur-md border border-gold-400/40 rounded-xl px-3 py-2 text-xs animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-gold-300">From:</span>
                 <input
                   type="date"
                   value={customStartDate}
                   onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="bg-transparent text-white text-xs font-semibold focus:outline-hidden cursor-pointer"
+                  className="bg-burgundy-950/90 border border-gold-400/40 text-white rounded-lg px-2.5 py-1 text-xs font-medium focus:ring-1 focus:ring-gold-400 focus:outline-hidden cursor-pointer"
                   style={{ colorScheme: 'dark' }}
                 />
               </div>
-              <div className="flex items-center gap-1.5 bg-burgundy-950/90 border border-gold-400/40 rounded-xl px-2.5 py-1 text-xs">
-                <span className="text-[10px] uppercase font-bold text-gold-300">To:</span>
+              <span className="text-gold-400/70 font-bold">→</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-gold-300">To:</span>
                 <input
                   type="date"
                   value={customEndDate}
                   onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="bg-transparent text-white text-xs font-semibold focus:outline-hidden cursor-pointer"
+                  className="bg-burgundy-950/90 border border-gold-400/40 text-white rounded-lg px-2.5 py-1 text-xs font-medium focus:ring-1 focus:ring-gold-400 focus:outline-hidden cursor-pointer"
                   style={{ colorScheme: 'dark' }}
                 />
               </div>
             </div>
-          )}
-
-          {/* Reset Filters Button */}
-          {(dateFilter !== 'all' || customStartDate || customEndDate) && (
-            <button
-              onClick={() => {
-                setDateFilter('all');
-                setCustomStartDate('');
-                setCustomEndDate('');
-              }}
-              className="flex items-center gap-1 text-[11px] font-bold text-gold-300 hover:text-white bg-gold-400/20 hover:bg-gold-400/30 px-2.5 py-1.5 rounded-xl border border-gold-400/40 transition cursor-pointer"
-              title="Reset date filter to All Time"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>Reset</span>
-            </button>
           )}
         </div>
       </div>
