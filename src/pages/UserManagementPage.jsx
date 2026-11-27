@@ -466,18 +466,11 @@ export const UserManagementPage = () => {
       {/* Top Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider mb-1">
-            <Users className="w-4 h-4 text-gold-400" />
-            <span>{isAdmin ? 'Admin Staff Inspection & Work Dossier' : 'Corporate User Management'}</span>
-          </div>
+          
           <h2 className="text-xl md:text-2xl font-extrabold text-white font-corporate">
             {isAdmin ? 'Employee Details & Daily Activity Tracker' : 'Staff Directory & Access Control'}
           </h2>
-          <p className="text-xs text-white/80 mt-1 max-w-2xl">
-            {isAdmin
-              ? 'Search any employee by User Name, Employee ID, Mobile, or Email to inspect everything they have done daily with exact date & time, filtered across any custom date range.'
-              : 'Manage corporate staff members, access permissions, department allocations, and authentication profiles.'}
-          </p>
+         
         </div>
 
         {/* Tab Switcher for Admin */}
