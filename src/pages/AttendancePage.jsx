@@ -293,7 +293,7 @@ export const AttendancePage = ({ initialTab }) => {
           >
             <CalendarCheck className="w-4 h-4 text-emerald-300" />
             <span>{isStrictAdmin ? 'Approve Employee Leaves' : 'Leave Management & Approvals'}</span>
-            {isAdmin && pendingLeavesAdminCount > 0 && (
+            {!isStrictAdmin && isAdmin && pendingLeavesAdminCount > 0 && (
               <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-amber-950 animate-pulse">
                 {pendingLeavesAdminCount}
               </span>
@@ -719,7 +719,7 @@ export const AttendancePage = ({ initialTab }) => {
                       )}
                     </h3>
                     <p className="text-xs text-slate-500">
-                      Review requisitions raised across all roles (RM, Sales Manager, Ops, Telecaller, Manager) and sanction or reject
+                      Review requisitions raised across all roles (RM, Sales Manager, Ops, Manager) and sanction or reject
                     </p>
                   </div>
                 </div>
@@ -748,7 +748,7 @@ export const AttendancePage = ({ initialTab }) => {
               {/* Role Filter Buttons */}
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 <span className="text-[11px] font-bold text-slate-500 mr-1">Filter by Role:</span>
-                {['All', 'RM', 'Sales Manager', 'Ops', 'Telecaller', 'Manager'].map(role => {
+                {['All', 'RM', 'Sales Manager', 'Ops',  'Manager'].map(role => {
                   const roleCount = role === 'All'
                     ? leaves.length
                     : leaves.filter(l => l.employeeRole === role).length;

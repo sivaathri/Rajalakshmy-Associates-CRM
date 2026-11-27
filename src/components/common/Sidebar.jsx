@@ -481,11 +481,6 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
               <CalendarCheck className="w-4 h-4 shrink-0 text-amber-400" />
               {isExpanded && <span>Approve leaves</span>}
             </div>
-            {isExpanded && pendingLeavesAdminCount > 0 && (
-              <span className="text-[10px] bg-amber-400 text-amber-950 font-bold px-1.5 py-0.5 rounded-full animate-pulse" title="Pending Leave Requests">
-                {pendingLeavesAdminCount}
-              </span>
-            )}
           </NavLink>
         )}
 
