@@ -39,7 +39,7 @@ export const AdvanceAmountPage = () => {
   const [dateFilter, setDateFilter] = useState('');
 
   const canReview = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
-  const isAdmin = currentUser?.role === 'Admin';
+  const isAdmin = currentUser?.role === 'Admin' || String(currentUser?.role || '').toLowerCase() === 'admin';
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -159,11 +159,7 @@ export const AdvanceAmountPage = () => {
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             {canReview ? 'Advance Amount Requests & Approvals' : 'Advance Amount Management'}
           </h2>
-          <p className="text-xs text-gold-200 mt-1">
-            {canReview
-              ? 'Review employee salary advance applications, verify reasonings, and approve or decline'
-              : 'Submit and track personal salary advance applications and status'}
-          </p>
+         
         </div>
 
         <div className="flex items-center gap-3">
@@ -436,7 +432,7 @@ export const AdvanceAmountPage = () => {
       </div>
 
       {/* Modal 1: Request Advance Form (Employees only) */}
-      {showModal && createPortal(
+      {!isAdmin && showModal && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-800 px-6 py-4 text-white flex items-center justify-between">

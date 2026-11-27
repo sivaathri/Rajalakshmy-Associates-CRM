@@ -1505,6 +1505,10 @@ export const CRMProvider = ({ children }) => {
   };
 
   const submitAdvance = (data) => {
+    if (currentUser?.role === 'Admin' || String(currentUser?.role || '').toLowerCase() === 'admin') {
+      showToast('Admin accounts do not submit salary advance requests.', 'info');
+      return;
+    }
     const newAdv = {
       id: `ADV-${Date.now().toString().slice(-4)}`,
       employeeId: currentUser?.id || 'EMP004',
