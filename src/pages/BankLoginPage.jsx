@@ -1184,6 +1184,7 @@ export const BankLoginPage = () => {
           <table className="w-full text-left text-xs text-slate-700 min-w-[950px]">
             <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
               <tr>
+                <th className="px-3 py-3 text-center w-12">Sl. No</th>
                 <th className="px-4 py-3">Customer ID</th>
                 <th className="px-4 py-3">Customer / Enterprise (CRM)</th>
                 <th className="px-4 py-3">Bank & Loan Value</th>
@@ -1196,7 +1197,7 @@ export const BankLoginPage = () => {
             {groupedCustomerLogins.length === 0 ? (
               <tbody className="divide-y divide-slate-100">
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
                     {routineTab === 'due' ? (
                       <div className="max-w-md mx-auto space-y-1">
                         <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-2 border border-emerald-200">
@@ -1214,10 +1215,11 @@ export const BankLoginPage = () => {
                 </tr>
               </tbody>
             ) : (
-              paginatedCustomerRecords.map(customerGroup => {
+              paginatedCustomerRecords.map((customerGroup, customerIndex) => {
                 const totalLogins = customerLoginsCountMap[clean10Digits(customerGroup.mobile)] || customerGroup.logins.length;
                 const loginsList = customerGroup.logins;
                 const rowCount = loginsList.length;
+                const slNo = (currentPage - 1) * itemsPerPage + customerIndex + 1;
 
                 return (
                   <tbody key={customerGroup.key} className="border-b border-slate-200 divide-y divide-slate-100 hover:bg-slate-50/40 transition">
@@ -1231,9 +1233,14 @@ export const BankLoginPage = () => {
                           key={login.id || `${customerGroup.key}_${login.bankName}_${idx}`}
                           className={`transition ${isDue ? 'bg-amber-50/30' : ''}`}
                         >
-                          {/* Customer ID & Customer Info (Render ONCE per customer spanning all bank logins) */}
+                          {/* Sl. No & Customer Info (Render ONCE per customer spanning all bank logins) */}
                           {isFirstRow && (
                             <>
+                              {/* Sl. No */}
+                              <td rowSpan={rowCount} className="px-3 py-3 align-top border-r border-slate-100/80 text-center font-bold text-slate-500 text-xs">
+                                {slNo}
+                              </td>
+
                               {/* Customer ID & Date */}
                               <td rowSpan={rowCount} className="px-4 py-3 align-top border-r border-slate-100/80">
                                 <span className="font-mono font-bold text-burgundy-900 block text-xs">
