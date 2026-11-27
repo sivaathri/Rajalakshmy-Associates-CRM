@@ -133,13 +133,9 @@ export const NotificationsPage = () => {
             <Bell className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] uppercase font-bold tracking-wider text-gold-300 block">System Alerts & Updates</span>
             <h2 className="text-xl md:text-2xl font-extrabold text-white font-corporate">
               Notification Center
             </h2>
-            <p className="text-xs text-white/70 mt-0.5">
-              Track routine reminders, 2-day bank follow-ups, punch-in alerts, and case updates.
-            </p>
           </div>
         </div>
 
