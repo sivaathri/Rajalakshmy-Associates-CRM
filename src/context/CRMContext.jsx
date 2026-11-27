@@ -336,18 +336,21 @@ export const CRMProvider = ({ children }) => {
     }
   });
 
-  // Employee Leaves State
+  // Employee Leaves State (Clean user-submitted requisitions, no mock data)
   const [leaves, setLeaves] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.LEAVES);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          // Strip legacy mock leaves
+          return parsed.filter(l => !l.id?.startsWith('LV-10'));
+        }
       }
     } catch {
       // fallback
     }
-    return INITIAL_LEAVES;
+    return [];
   });
 
   // End-to-End Number & Case Lifecycle Audit Trail

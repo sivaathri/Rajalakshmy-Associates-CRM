@@ -806,8 +806,16 @@ export const AttendancePage = ({ initialTab }) => {
                     <tbody className="divide-y divide-slate-100">
                       {filteredAdminLeaves.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-4 py-8 text-center text-xs text-slate-400 italic">
-                            No leave applications found matching current criteria.
+                          <td colSpan={7} className="px-4 py-12 text-center">
+                            <div className="max-w-sm mx-auto space-y-2">
+                              <CalendarCheck className="w-8 h-8 text-slate-300 mx-auto" />
+                              <p className="text-xs font-bold text-slate-700">No Leave Applications Found</p>
+                              <p className="text-[11px] text-slate-400">
+                                {leaves.length === 0
+                                  ? 'No employee leave applications have been submitted yet.'
+                                  : 'No applications match the current filter criteria.'}
+                              </p>
+                            </div>
                           </td>
                         </tr>
                       ) : (
