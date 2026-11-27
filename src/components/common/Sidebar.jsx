@@ -330,17 +330,6 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
               <FileCheck className="w-4 h-4 shrink-0 text-gold-400" />
               {isExpanded && <span>Login</span>}
             </div>
-            {isExpanded && loginUpdatesDueCount > 0 ? (
-              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-amber-950 shadow-sm animate-pulse" title="2-Day Follow-up Updates Due!">
-                {loginUpdatesDueCount}
-              </span>
-            ) : (
-              isExpanded && (
-                <span className="text-[10px] bg-white/10 text-white/70 px-1.5 py-0.5 rounded-full">
-                  {bankLogins.filter(b => b.status === 'In Progress').length}
-                </span>
-              )
-            )}
           </NavLink>
         )}
 
