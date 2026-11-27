@@ -143,7 +143,8 @@ export const AuthProvider = ({ children }) => {
         'bank-logins',
         'daily-activities',
         'attendance',
-        'resignation'
+        'resignation',
+        'advance'
       ];
       if (blockedForAdmin.includes(route)) return false;
       return true;

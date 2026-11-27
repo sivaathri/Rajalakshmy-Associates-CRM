@@ -386,7 +386,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         )}
 
         {/* 3. Advance Amount */}
-        {canAccessRoute('advance') && (
+        {canAccessRoute('advance') && currentUser?.role !== 'Admin' && (
           <NavLink
             to="/advance"
             onClick={() => isMobile && setIsOpen(false)}
