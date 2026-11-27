@@ -1,6 +1,7 @@
 import { app, BrowserWindow, shell, dialog } from 'electron';
 import electronUpdaterPkg from 'electron-updater';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 // Suppress Electron Dev CSP warning in dev mode (Electron notes it won't show in packaged app anyway)
@@ -14,7 +15,16 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 let mainWindow = null;
 
 function createWindow() {
-  const iconPath = path.join(__dirname, '../public/logo.png');
+  const possibleIcons = [
+    path.join(__dirname, '../build/icon.ico'),
+    path.join(__dirname, '../public/icon.ico'),
+    path.join(__dirname, '../dist/icon.ico'),
+    path.join(__dirname, '../public/icon.png'),
+    path.join(__dirname, '../dist/icon.png'),
+    path.join(__dirname, '../public/logo.png'),
+    path.join(__dirname, '../dist/logo.png')
+  ];
+  const iconPath = possibleIcons.find(p => fs.existsSync(p)) || path.join(__dirname, '../public/icon.png');
 
   mainWindow = new BrowserWindow({
     width: 1400,

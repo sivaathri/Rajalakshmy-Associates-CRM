@@ -2,6 +2,8 @@
   "name": "rajalakshmy-associates-crm",
   "private": true,
   "version": "1.0.0",
+  "description": "Rajalakshmy Associates Corporate CRM Desktop Application",
+  "author": "Rajalakshmy Associates",
   "type": "module",
   "main": "electron/main.js",
   "repository": {
@@ -64,7 +66,7 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "public/logo.png"
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
