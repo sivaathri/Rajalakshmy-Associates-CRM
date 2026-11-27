@@ -85,23 +85,28 @@ export const DashboardPage = () => {
       })
     : (bankLogins || []);
 
-  // Dashboard Filter State (Period, Partition, Classification)
-  const [dateFilter, setDateFilter] = useState('all'); // 'all' | 'today' | 'week' | 'month'
-  const [partitionFilter, setPartitionFilter] = useState('all'); // 'all' | 'old' | 'new'
-  const [classFilter, setClassFilter] = useState('all'); // 'all' | 'known' | 'unknown'
+  // Dashboard Date Filter State (All, Today, Week, Month, Custom Range)
+  const [dateFilter, setDateFilter] = useState('all'); // 'all' | 'today' | 'week' | 'month' | 'custom'
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
 
-  // Filtered Bank Logins based on active filters
+  // Filtered Bank Logins based on active date filter
   const filteredBankLogins = scopedBankLogins.filter(b => {
     if (dateFilter !== 'all' && b.loginDate) {
-      const today = new Date().toISOString().split('T')[0];
-      if (dateFilter === 'today') {
-        if (b.loginDate !== today) return false;
-      } else if (dateFilter === 'week') {
-        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        if (b.loginDate < oneWeekAgo) return false;
-      } else if (dateFilter === 'month') {
-        const thisMonth = today.slice(0, 7);
-        if (!b.loginDate.startsWith(thisMonth)) return false;
+      if (dateFilter === 'custom') {
+        if (customStartDate && b.loginDate < customStartDate) return false;
+        if (customEndDate && b.loginDate > customEndDate) return false;
+      } else {
+        const today = new Date().toISOString().split('T')[0];
+        if (dateFilter === 'today') {
+          if (b.loginDate !== today) return false;
+        } else if (dateFilter === 'week') {
+          const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          if (b.loginDate < oneWeekAgo) return false;
+        } else if (dateFilter === 'month') {
+          const thisMonth = today.slice(0, 7);
+          if (!b.loginDate.startsWith(thisMonth)) return false;
+        }
       }
     }
     return true;
@@ -119,48 +124,29 @@ export const DashboardPage = () => {
   const inProgressBankLogins = filteredBankLogins.filter(b => b.status === 'In Progress');
   const totalInProgressCount = inProgressBankLogins.length;
 
-  // Filtered Calls based on active filters
+  // Filtered Calls based on active date filter
   const filteredCalls = scopedCalls.filter(c => {
-    const cust = customers.find(x => x.id === c.customerId || (x.mobile && c.mobile && x.mobile.replace(/\D/g, '').slice(-10) === c.mobile.replace(/\D/g, '').slice(-10)));
-    if (partitionFilter === 'old') {
-      const isOld = cust ? cust.databaseType === 'old' : c.databaseType === 'old';
-      if (!isOld) return false;
-    }
-    if (partitionFilter === 'new') {
-      const isNew = cust ? cust.databaseType !== 'old' : c.databaseType !== 'old';
-      if (!isNew) return false;
-    }
-    if (classFilter === 'known') {
-      const isKnown = cust ? cust.customerType !== 'unknown' : c.customerType !== 'unknown';
-      if (!isKnown) return false;
-    }
-    if (classFilter === 'unknown') {
-      const isUnknown = cust ? cust.customerType === 'unknown' : c.customerType === 'unknown';
-      if (!isUnknown) return false;
-    }
     if (dateFilter !== 'all' && c.callDate) {
-      const today = new Date().toISOString().split('T')[0];
-      if (dateFilter === 'today') {
-        if (c.callDate !== today && c.callDate !== '2026-11-16') return false;
-      } else if (dateFilter === 'week') {
-        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        if (c.callDate < oneWeekAgo) return false;
-      } else if (dateFilter === 'month') {
-        const thisMonth = today.slice(0, 7);
-        if (!c.callDate.startsWith(thisMonth)) return false;
+      if (dateFilter === 'custom') {
+        if (customStartDate && c.callDate < customStartDate) return false;
+        if (customEndDate && c.callDate > customEndDate) return false;
+      } else {
+        const today = new Date().toISOString().split('T')[0];
+        if (dateFilter === 'today') {
+          if (c.callDate !== today && c.callDate !== '2026-11-16') return false;
+        } else if (dateFilter === 'week') {
+          const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          if (c.callDate < oneWeekAgo) return false;
+        } else if (dateFilter === 'month') {
+          const thisMonth = today.slice(0, 7);
+          if (!c.callDate.startsWith(thisMonth)) return false;
+        }
       }
     }
     return true;
   });
 
-  // Filtered Customers based on active partition/class filters
-  const filteredCustomers = customers.filter(c => {
-    if (partitionFilter === 'old' && c.databaseType !== 'old') return false;
-    if (partitionFilter === 'new' && c.databaseType === 'old') return false;
-    if (classFilter === 'known' && c.customerType === 'unknown') return false;
-    if (classFilter === 'unknown' && c.customerType !== 'unknown') return false;
-    return true;
-  });
+  const filteredCustomers = customers;
 
   // RM Actioned Calls (Known vs Unknown breakdown)
   const rmKnownCallsCount = filteredCalls.filter(c => {
@@ -424,7 +410,7 @@ export const DashboardPage = () => {
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider flex-wrap">
-            <span>Rajalakshmy Associates CRM</span>
+          
             {isSalesManager && (
               <span className="bg-gold-500/20 text-gold-300 border border-gold-400/40 text-[10px] px-2 py-0.5 rounded-full font-extrabold">
                 Personal Activity Dashboard
@@ -434,18 +420,7 @@ export const DashboardPage = () => {
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             {currentUser?.name}!
           </h2>
-          <p className="text-xs text-white/80 max-w-xl mt-1">
-            Role: <strong className="text-gold-300">{currentUser?.role}</strong> ({currentUser?.title}). You have{' '}
-            <strong
-              className={`text-white ${pendingFollowUps.length > 0 ? 'underline cursor-pointer' : ''}`}
-              onClick={() => {
-                if (pendingFollowUps.length > 0) setShowFollowUpModal(true);
-              }}
-            >
-              {pendingFollowUps.length} pending follow-up call(s)
-            </strong>{' '}
-            waiting in your queue today.
-          </p>
+         
         </div>
 
         {/* Dashboard Filters (Replaces the 2 buttons) */}
@@ -456,7 +431,7 @@ export const DashboardPage = () => {
           </div>
 
           {/* Time Period Filter */}
-          <div className="flex items-center gap-1.5 bg-burgundy-950/80 border border-gold-400/30 hover:border-gold-400/60 transition rounded-xl px-2.5 py-1.5 text-xs shadow-xs">
+          <div className="flex items-center gap-1.5 bg-burgundy-950/80 border border-gold-400/30 hover:border-gold-400/60 transition rounded-xl px-3 py-1.5 text-xs shadow-xs">
             <Calendar className="w-3.5 h-3.5 text-gold-300 shrink-0" />
             <select
               value={dateFilter}
@@ -467,47 +442,46 @@ export const DashboardPage = () => {
               <option value="today" className="bg-slate-900 text-white">Today</option>
               <option value="week" className="bg-slate-900 text-white">This Week</option>
               <option value="month" className="bg-slate-900 text-white">This Month</option>
+              <option value="custom" className="bg-slate-900 text-white">Custom Range (From - To)</option>
             </select>
           </div>
 
-          {/* Database Partition Filter */}
-          <div className="flex items-center gap-1.5 bg-burgundy-950/80 border border-gold-400/30 hover:border-gold-400/60 transition rounded-xl px-2.5 py-1.5 text-xs shadow-xs">
-            <Database className="w-3.5 h-3.5 text-gold-300 shrink-0" />
-            <select
-              value={partitionFilter}
-              onChange={(e) => setPartitionFilter(e.target.value)}
-              className="bg-transparent text-white text-xs font-semibold focus:outline-hidden cursor-pointer"
-            >
-              <option value="all" className="bg-slate-900 text-white">All Databases</option>
-              <option value="old" className="bg-slate-900 text-white">Old Database</option>
-              <option value="new" className="bg-slate-900 text-white">New Database</option>
-            </select>
-          </div>
-
-          {/* Classification Filter */}
-          <div className="flex items-center gap-1.5 bg-burgundy-950/80 border border-gold-400/30 hover:border-gold-400/60 transition rounded-xl px-2.5 py-1.5 text-xs shadow-xs">
-            <Users className="w-3.5 h-3.5 text-gold-300 shrink-0" />
-            <select
-              value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
-              className="bg-transparent text-white text-xs font-semibold focus:outline-hidden cursor-pointer"
-            >
-              <option value="all" className="bg-slate-900 text-white">All Contacts</option>
-              <option value="known" className="bg-slate-900 text-white">Known Contacts</option>
-              <option value="unknown" className="bg-slate-900 text-white">Unknown Leads</option>
-            </select>
-          </div>
+          {/* Custom Date Range Pickers (From & To) */}
+          {dateFilter === 'custom' && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <div className="flex items-center gap-1.5 bg-burgundy-950/90 border border-gold-400/40 rounded-xl px-2.5 py-1 text-xs">
+                <span className="text-[10px] uppercase font-bold text-gold-300">From:</span>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="bg-transparent text-white text-xs font-semibold focus:outline-hidden cursor-pointer"
+                  style={{ colorScheme: 'dark' }}
+                />
+              </div>
+              <div className="flex items-center gap-1.5 bg-burgundy-950/90 border border-gold-400/40 rounded-xl px-2.5 py-1 text-xs">
+                <span className="text-[10px] uppercase font-bold text-gold-300">To:</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="bg-transparent text-white text-xs font-semibold focus:outline-hidden cursor-pointer"
+                  style={{ colorScheme: 'dark' }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Reset Filters Button */}
-          {(dateFilter !== 'all' || partitionFilter !== 'all' || classFilter !== 'all') && (
+          {(dateFilter !== 'all' || customStartDate || customEndDate) && (
             <button
               onClick={() => {
                 setDateFilter('all');
-                setPartitionFilter('all');
-                setClassFilter('all');
+                setCustomStartDate('');
+                setCustomEndDate('');
               }}
-              className="flex items-center gap-1 text-[11px] font-bold text-gold-300 hover:text-white bg-gold-400/20 hover:bg-gold-400/30 px-2 py-1 rounded-lg border border-gold-400/40 transition cursor-pointer"
-              title="Reset all filters"
+              className="flex items-center gap-1 text-[11px] font-bold text-gold-300 hover:text-white bg-gold-400/20 hover:bg-gold-400/30 px-2.5 py-1.5 rounded-xl border border-gold-400/40 transition cursor-pointer"
+              title="Reset date filter to All Time"
             >
               <RotateCcw className="w-3 h-3" />
               <span>Reset</span>
@@ -519,10 +493,7 @@ export const DashboardPage = () => {
       {/* 10 Required Dashboard KPI Cards */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            {isRM ? 'RM Operational Metrics: Calling & Bank Logins' : 'Real-Time Key Operational Metrics'}
-          </h3>
-          <span className="text-[11px] text-slate-400">Live synchronized with LocalStorage</span>
+        
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
