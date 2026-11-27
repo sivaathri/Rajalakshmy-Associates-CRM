@@ -20,7 +20,8 @@ import {
   AlertTriangle,
   AlertCircle,
   Filter,
-  Users
+  Users,
+  RotateCcw
 } from 'lucide-react';
 import { formatDateDDMMYYYY, formatDate, exportToCSV } from '../utils/formatters';
 import { Pagination } from '../components/common/Pagination';
@@ -178,6 +179,8 @@ export const AttendancePage = ({ initialTab }) => {
   // Leave filters
   const [adminStatusFilter, setAdminStatusFilter] = useState('All');
   const [adminRoleFilter, setAdminRoleFilter] = useState('All');
+  const [adminLeaveTypeFilter, setAdminLeaveTypeFilter] = useState('All');
+  const [adminDateFilter, setAdminDateFilter] = useState('');
   const [leaveSearch, setLeaveSearch] = useState('');
 
   // Pending leaves count for admin badge
@@ -196,6 +199,8 @@ export const AttendancePage = ({ initialTab }) => {
     return leaves.filter(l => {
       if (adminStatusFilter !== 'All' && l.status !== adminStatusFilter) return false;
       if (adminRoleFilter !== 'All' && l.employeeRole !== adminRoleFilter) return false;
+      if (adminLeaveTypeFilter !== 'All' && l.leaveType !== adminLeaveTypeFilter) return false;
+      if (adminDateFilter && !(l.startDate?.startsWith(adminDateFilter) || l.requestedAt?.startsWith(adminDateFilter))) return false;
       if (leaveSearch.trim()) {
         const q = leaveSearch.toLowerCase();
         const matchesName = l.employeeName?.toLowerCase().includes(q);
@@ -207,7 +212,17 @@ export const AttendancePage = ({ initialTab }) => {
       }
       return true;
     });
-  }, [leaves, adminStatusFilter, adminRoleFilter, leaveSearch]);
+  }, [leaves, adminStatusFilter, adminRoleFilter, adminLeaveTypeFilter, adminDateFilter, leaveSearch]);
+
+  const hasActiveAdminLeaveFilters = adminStatusFilter !== 'All' || adminRoleFilter !== 'All' || adminLeaveTypeFilter !== 'All' || Boolean(adminDateFilter) || Boolean(leaveSearch.trim());
+
+  const resetAdminLeaveFilters = () => {
+    setAdminStatusFilter('All');
+    setAdminRoleFilter('All');
+    setAdminLeaveTypeFilter('All');
+    setAdminDateFilter('');
+    setLeaveSearch('');
+  };
 
   // Handle Export CSV (Exports ONLY logged-in user's punch records)
   const handleExportCSV = () => {
@@ -724,31 +739,46 @@ export const AttendancePage = ({ initialTab }) => {
                   </div>
                 </div>
 
-                {/* Status Filter Buttons */}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {['All', 'Pending Approval', 'Approved', 'Rejected'].map(status => (
+                {/* Status Filter Buttons & Reset */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {['All', 'Pending Approval', 'Approved', 'Rejected'].map(status => (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => setAdminStatusFilter(status)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                          adminStatusFilter === status
+                            ? status === 'Pending Approval'
+                              ? 'bg-amber-500 text-amber-950 font-black shadow-xs ring-2 ring-amber-400/40'
+                              : 'bg-burgundy-900 text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+
+                  {hasActiveAdminLeaveFilters && (
                     <button
-                      key={status}
                       type="button"
-                      onClick={() => setAdminStatusFilter(status)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
-                        adminStatusFilter === status
-                          ? status === 'Pending Approval'
-                            ? 'bg-amber-500 text-amber-950 font-black shadow-xs ring-2 ring-amber-400/40'
-                            : 'bg-burgundy-900 text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
+                      onClick={resetAdminLeaveFilters}
+                      className="flex items-center gap-1 text-xs text-rose-700 hover:text-rose-900 font-bold px-2.5 py-1 rounded-lg hover:bg-rose-50 transition border border-rose-200"
                     >
-                      {status}
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Reset Filters</span>
                     </button>
-                  ))}
+                  )}
                 </div>
               </div>
 
               {/* Role Filter Buttons */}
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[11px] font-bold text-slate-500 mr-1">Filter by Role:</span>
-                {['All', 'RM', 'Sales Manager', 'Ops',  'Manager'].map(role => {
+                <span className="text-[11px] font-bold text-slate-500 mr-1 flex items-center gap-1">
+                  <Filter className="w-3.5 h-3.5 text-slate-400" /> Filter by Role:
+                </span>
+                {['All', 'RM', 'Sales Manager', 'Ops', 'Manager'].map(role => {
                   const roleCount = role === 'All'
                     ? leaves.length
                     : leaves.filter(l => l.employeeRole === role).length;
@@ -776,16 +806,63 @@ export const AttendancePage = ({ initialTab }) => {
                 })}
               </div>
 
-              {/* Search Bar */}
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search by Employee Name, Role, ID, Leave Type, or Reason..."
-                  value={leaveSearch}
-                  onChange={(e) => setLeaveSearch(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-slate-300 py-2 pl-9 pr-3 focus:outline-none focus:border-burgundy-800"
-                />
+              {/* Search, Leave Type & Date Filter Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
+                {/* Search Bar (6 cols) */}
+                <div className="sm:col-span-6 relative">
+                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by Employee Name, Role, ID, Reason..."
+                    value={leaveSearch}
+                    onChange={(e) => setLeaveSearch(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 pl-9 pr-8 focus:outline-none focus:border-burgundy-800 bg-white"
+                  />
+                  {leaveSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setLeaveSearch('')}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Leave Type Select (3 cols) */}
+                <div className="sm:col-span-3">
+                  <select
+                    value={adminLeaveTypeFilter}
+                    onChange={(e) => setAdminLeaveTypeFilter(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800 bg-white font-medium text-slate-700"
+                  >
+                    <option value="All">All Leave Types</option>
+                    <option value="Casual Leave (CL)">Casual Leave (CL)</option>
+                    <option value="Sick Leave (SL)">Sick Leave (SL)</option>
+                    <option value="Earned Leave (EL)">Earned Leave (EL)</option>
+                    <option value="Privileged Leave (PL)">Privileged Leave (PL)</option>
+                  </select>
+                </div>
+
+                {/* Date Filter (3 cols) */}
+                <div className="sm:col-span-3 relative flex items-center">
+                  <input
+                    type="date"
+                    value={adminDateFilter}
+                    onChange={(e) => setAdminDateFilter(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800 bg-white"
+                    title="Filter by Start Date / Applied Date"
+                  />
+                  {adminDateFilter && (
+                    <button
+                      type="button"
+                      onClick={() => setAdminDateFilter('')}
+                      className="absolute right-2.5 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Admin Leaves Table Showing WHO Raised the Leave */}

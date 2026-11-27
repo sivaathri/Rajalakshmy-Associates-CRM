@@ -216,10 +216,14 @@ export const CRMProvider = ({ children }) => {
   const [advanceAmounts, setAdvanceAmounts] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.ADVANCES);
-      return saved ? JSON.parse(saved) : [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch {
-      return [];
+      // fallback
     }
+    return INITIAL_ADVANCE_AMOUNTS;
   });
 
   // Daily Employee Attendance Records (Punch In Only)
