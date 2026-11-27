@@ -396,14 +396,6 @@ export const DashboardPage = () => {
           link: '/telecalling'
         },
         {
-          title: "Today's Calls",
-          value: todayCalls,
-          sub: 'Active calling sessions today',
-          icon: <Clock className="w-5 h-5 text-indigo-700" />,
-          color: 'bg-indigo-50/50 border-indigo-200',
-          link: '/telecalling'
-        },
-        {
           title: 'Total Bank Logins',
           value: totalBankLogins,
           sub: 'Files logged across partner banks',
@@ -607,7 +599,7 @@ export const DashboardPage = () => {
         
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className={`grid grid-cols-2 ${isRM ? 'lg:grid-cols-4' : 'sm:grid-cols-3 lg:grid-cols-5'} gap-3`}>
           {statCards.map((card, idx) => (
             <div
               key={idx}
