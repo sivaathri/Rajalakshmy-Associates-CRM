@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCRM } from '../context/CRMContext';
 import { Pagination } from '../components/common/Pagination';
-import { formatMobileNumber, matchesMobileSearch } from '../utils/formatters';
+import { formatMobileNumber, matchesMobileSearch, formatDate, formatCurrency } from '../utils/formatters';
 import {
   Users,
   UserPlus,
@@ -19,12 +19,23 @@ import {
   Phone,
   MapPin,
   Building2,
-  Sparkles,
   Plus,
   X,
   AlertCircle,
   Check,
-  LogIn
+  LogIn,
+  Calendar,
+  Clock,
+  PhoneCall,
+  Briefcase,
+  Landmark,
+  ArrowLeft,
+  Download,
+  RotateCcw,
+  ChevronRight,
+  Activity,
+  FileText,
+  BadgeCheck
 } from 'lucide-react';
 
 export const UserManagementPage = () => {
@@ -33,22 +44,281 @@ export const UserManagementPage = () => {
     employees = [],
     customers = [],
     activities = [],
+    calls = [],
+    bankLogins = [],
+    attendance = [],
+    auditTrail = [],
     addEmployee,
     updateEmployee,
     deleteEmployee,
     toggleEmployeeStatus
   } = useCRM();
 
-  // Search & Filter state
+  const isAdmin = currentUser?.role === 'Admin';
+
+  // Sub-tabs for Admin: 'activities' (Employee Work Dossier) vs 'accounts' (Directory & User Management)
+  const [activeAdminTab, setActiveAdminTab] = useState(isAdmin ? 'activities' : 'accounts');
+
+  // ========================================================
+  // EMPLOYEE WORK & DAILY ACTIVITIES STATE
+  // ========================================================
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [dossierSearch, setDossierSearch] = useState('');
+  const [dossierRoleFilter, setDossierRoleFilter] = useState('ALL');
+
+  // Date Range Filters for Employee Work Inspection
+  const todayIso = new Date().toISOString().split('T')[0];
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  const [datePreset, setDatePreset] = useState('all'); // 'all' | 'today' | 'yesterday' | '7days' | 'month' | 'custom'
+  const [categoryFilter, setCategoryFilter] = useState('All'); // 'All' | 'Phone Call' | 'Field Activity' | 'Bank File Login' | 'Attendance Punch'
+  const [actionSearch, setActionSearch] = useState('');
+
+  // Handle Quick Date Presets
+  const applyDatePreset = (preset) => {
+    setDatePreset(preset);
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    if (preset === 'today') {
+      setStartDateFilter(todayStr);
+      setEndDateFilter(todayStr);
+    } else if (preset === 'yesterday') {
+      const y = new Date();
+      y.setDate(y.getDate() - 1);
+      const yStr = y.toISOString().split('T')[0];
+      setStartDateFilter(yStr);
+      setEndDateFilter(yStr);
+    } else if (preset === '7days') {
+      const past = new Date();
+      past.setDate(past.getDate() - 7);
+      setStartDateFilter(past.toISOString().split('T')[0]);
+      setEndDateFilter(todayStr);
+    } else if (preset === 'month') {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      setStartDateFilter(startOfMonth);
+      setEndDateFilter(todayStr);
+    } else if (preset === 'all') {
+      setStartDateFilter('');
+      setEndDateFilter('');
+    }
+  };
+
+  // Filtered employees in Search Dossier view
+  const matchingDossierEmployees = useMemo(() => {
+    return employees.filter(emp => {
+      const q = dossierSearch.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        emp.name?.toLowerCase().includes(q) ||
+        emp.id?.toLowerCase().includes(q) ||
+        emp.email?.toLowerCase().includes(q) ||
+        matchesMobileSearch(emp.mobile, dossierSearch);
+
+      const matchesRole = dossierRoleFilter === 'ALL' || emp.role === dossierRoleFilter;
+      return matchesSearch && matchesRole;
+    });
+  }, [employees, dossierSearch, dossierRoleFilter]);
+
+  // Combine and normalize all actions done by the selected employee
+  const employeeActions = useMemo(() => {
+    if (!selectedEmployee) return [];
+    const empId = selectedEmployee.id;
+    const empName = selectedEmployee.name?.toLowerCase().trim();
+
+    const items = [];
+
+    // 1. Phone Calls Logged
+    (calls || []).forEach(c => {
+      if (c.employeeId === empId || (empName && c.employeeName?.toLowerCase().includes(empName))) {
+        items.push({
+          id: c.id || `call-${c.callDate}-${c.callTime}`,
+          category: 'Phone Call',
+          date: c.callDate,
+          time: c.callTime || '10:00 AM',
+          title: `Call with ${c.customerName || 'Client'}`,
+          customerName: c.customerName,
+          mobile: c.mobile,
+          status: c.outcome || 'Completed',
+          duration: c.duration,
+          details: c.remarks || 'No discussion notes provided.',
+          reminderDate: c.reminderDate,
+          icon: 'phone',
+          badgeColor: c.outcome === 'OK' || c.outcome === 'Interested' ? 'emerald' : c.outcome === 'Reminder' ? 'amber' : 'slate'
+        });
+      }
+    });
+
+    // 2. Field Sales & Daily Activities Logged
+    (activities || []).forEach(a => {
+      if (
+        a.submittedBy === empId ||
+        a.employeeId === empId ||
+        (empName && (a.submittedByName?.toLowerCase().includes(empName) || a.employeeName?.toLowerCase().includes(empName)))
+      ) {
+        items.push({
+          id: a.id || `act-${a.submissionDate || a.date}-${a.submissionTime || a.time}`,
+          category: 'Field Activity',
+          date: a.submissionDate || a.date,
+          time: a.submissionTime || a.time || '11:00 AM',
+          title: `${a.activityType || 'Field Activity'}: ${a.customerName || 'Business Contact'}`,
+          customerName: a.customerName,
+          mobile: a.mobile,
+          location: a.location || a.city || a.state,
+          status: a.status || 'Saved',
+          details: a.remarks || `Classified into ${a.classifiedTo || 'CRM Database'}.`,
+          loanAmount: a.loanAmount,
+          icon: 'briefcase',
+          badgeColor: 'indigo'
+        });
+      }
+    });
+
+    // 3. Bank Logins Logged / Managed
+    (bankLogins || []).forEach(b => {
+      if (
+        b.submittedBy === empId ||
+        b.assignedRMId === empId ||
+        (empName && (b.submittedByName?.toLowerCase().includes(empName) || b.assignedRMName?.toLowerCase().includes(empName)))
+      ) {
+        items.push({
+          id: b.id || `login-${b.loginDate}`,
+          category: 'Bank File Login',
+          date: b.loginDate,
+          time: b.loginTime || '12:00 PM',
+          title: `Bank Login: ${b.bankName || 'Partner Bank'} - ${formatCurrency(b.loanAmount || 0)}`,
+          customerName: b.customerName,
+          mobile: b.mobile,
+          status: b.status || 'In Progress',
+          details: `Loan Type: ${b.loanType || 'Business Loan'} • Bank Application Ref: ${b.bankId || 'N/A'}${b.updates?.length ? ` • Latest Note: "${b.updates[b.updates.length - 1].note}"` : ''}`,
+          loanAmount: b.loanAmount,
+          icon: 'building',
+          badgeColor: b.status === 'Disbursed' ? 'emerald' : b.status === 'Rejected' ? 'rose' : 'blue'
+        });
+      }
+    });
+
+    // 4. Attendance In-Times
+    (attendance || []).forEach(att => {
+      if (att.employeeId === empId) {
+        let isoDate = att.date;
+        if (/^\d{2}-\d{2}-\d{4}$/.test(att.date)) {
+          const [d, m, y] = att.date.split('-');
+          isoDate = `${y}-${m}-${d}`;
+        }
+        items.push({
+          id: att.id || `att-${att.date}`,
+          category: 'Attendance Punch',
+          date: isoDate,
+          displayDate: att.date,
+          time: att.inTime || '09:00 AM',
+          title: `Daily Attendance In-Time Registered`,
+          customerName: null,
+          mobile: null,
+          status: att.status || 'Present',
+          details: `Punch mode: ${att.punchMode || 'Web In-Punch'} • Timestamp recorded at ${att.inTime}`,
+          icon: 'clock',
+          badgeColor: 'teal'
+        });
+      }
+    });
+
+    // 5. Audit Trail & Stage Transitions
+    (auditTrail || []).forEach(aud => {
+      if (aud.actorId === empId || (empName && aud.actorName?.toLowerCase().includes(empName))) {
+        items.push({
+          id: aud.id || `aud-${aud.date}-${aud.time}`,
+          category: 'CRM Action',
+          date: aud.date,
+          time: aud.time || '01:00 PM',
+          title: `${aud.action || 'CRM Event'}: ${aud.stage || 'Pipeline'}`,
+          customerName: aud.customerName,
+          mobile: aud.mobile,
+          status: aud.toStatus || aud.action || 'Updated',
+          details: aud.details || aud.reason || `Action recorded in stage ${aud.stage}`,
+          icon: 'shield',
+          badgeColor: 'purple'
+        });
+      }
+    });
+
+    // Sort descending by date and time
+    return items.sort((a, b) => {
+      const dtA = `${a.date || '1970-01-01'} ${a.time || '00:00'}`;
+      const dtB = `${b.date || '1970-01-01'} ${b.time || '00:00'}`;
+      return dtB.localeCompare(dtA);
+    });
+  }, [selectedEmployee, calls, activities, bankLogins, attendance, auditTrail]);
+
+  // Filter actions by Date Range, Category & Action Search
+  const filteredEmployeeActions = useMemo(() => {
+    return employeeActions.filter(item => {
+      if (categoryFilter !== 'All' && item.category !== categoryFilter) return false;
+      if (startDateFilter && item.date && item.date < startDateFilter) return false;
+      if (endDateFilter && item.date && item.date > endDateFilter) return false;
+      if (actionSearch.trim()) {
+        const q = actionSearch.toLowerCase();
+        const matchTitle = item.title?.toLowerCase().includes(q);
+        const matchCust = item.customerName?.toLowerCase().includes(q);
+        const matchMob = item.mobile?.includes(q);
+        const matchDetails = item.details?.toLowerCase().includes(q);
+        if (!matchTitle && !matchCust && !matchMob && !matchDetails) return false;
+      }
+      return true;
+    });
+  }, [employeeActions, categoryFilter, startDateFilter, endDateFilter, actionSearch]);
+
+  // Group actions by Day
+  const actionsGroupedByDay = useMemo(() => {
+    const map = {};
+    filteredEmployeeActions.forEach(act => {
+      const dayKey = act.date || 'Unspecified Date';
+      if (!map[dayKey]) map[dayKey] = [];
+      map[dayKey].push(act);
+    });
+    return Object.entries(map).sort(([dA], [dB]) => dB.localeCompare(dA));
+  }, [filteredEmployeeActions]);
+
+  // Export Work Audit to CSV
+  const handleExportEmployeeWork = () => {
+    if (!selectedEmployee || filteredEmployeeActions.length === 0) return;
+    const rows = filteredEmployeeActions.map(a => ({
+      'Employee ID': selectedEmployee.id,
+      'Employee Name': selectedEmployee.name,
+      'Role': selectedEmployee.role,
+      'Date (YYYY-MM-DD)': a.date,
+      'Time': a.time,
+      'Category': a.category,
+      'Activity Title': a.title,
+      'Customer / Client': a.customerName || '-',
+      'Mobile Contact': a.mobile || '-',
+      'Status / Outcome': a.status,
+      'Duration': a.duration || '-',
+      'Details / Remarks': a.details
+    }));
+    const filename = `${selectedEmployee.name.replace(/\s+/g, '_')}_Daily_Work_Report_${startDateFilter || 'All'}_to_${endDateFilter || 'All'}.csv`;
+    const csvContent = "data:text/csv;charset=utf-8," + [
+      Object.keys(rows[0]).join(","),
+      ...rows.map(r => Object.values(r).map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // ========================================================
+  // USER MANAGEMENT / ACCOUNTS STATE (Original Form State)
+  // ========================================================
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
-
-  // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUserId, setEditingUserId] = useState(null); // null means adding new user
+  const [editingUserId, setEditingUserId] = useState(null);
 
-  // Form State
   const initialForm = {
     id: '',
     name: '',
@@ -61,42 +331,30 @@ export const UserManagementPage = () => {
     password: 'password123',
     status: 'Active'
   };
+
   const [formData, setFormData] = useState(initialForm);
 
-  // Auto calculate next sequential EMP ID
-  const nextEmployeeId = useMemo(() => {
-    let max = 0;
-    employees.forEach(emp => {
-      const match = emp.id?.match(/\d+/);
-      if (match) {
-        const num = parseInt(match[0], 10);
-        if (num > max) max = num;
-      }
-    });
-    return `EMP${String(max + 1).padStart(3, '0')}`;
-  }, [employees]);
-
-  // Open modal for Adding
   const handleOpenAddModal = () => {
     setEditingUserId(null);
+    const nextNum = employees.length + 1;
+    const generatedId = `EMP${String(nextNum).padStart(3, '0')}`;
     setFormData({
       ...initialForm,
-      id: nextEmployeeId,
+      id: generatedId,
       title: 'Relationship Manager',
-      email: `${nextEmployeeId.toLowerCase()}@rajalakshmy.com`
+      email: `emp${String(nextNum).padStart(3, '0')}@rajalakshmy.com`
     });
     setIsModalOpen(true);
   };
 
-  // Open modal for Editing
   const handleOpenEditModal = (emp) => {
     setEditingUserId(emp.id);
     setFormData({
       id: emp.id,
-      name: emp.name || '',
+      name: emp.name,
       role: emp.role || 'RM',
       title: emp.title || '',
-      department: emp.department || 'Operations',
+      department: emp.department || '',
       location: emp.location || 'Chennai Head Office',
       email: emp.email || '',
       mobile: emp.mobile ? formatMobileNumber(emp.mobile) : '',
@@ -106,19 +364,15 @@ export const UserManagementPage = () => {
     setIsModalOpen(true);
   };
 
-  // Handle Form Submission
   const handleSubmit = (e) => {
     e.preventDefault();
-
     if (!formData.name?.trim()) {
       showToast('Please enter employee full name', 'error');
       return;
     }
-
     const formattedMobile = formData.mobile.trim() ? formatMobileNumber(formData.mobile.trim()) : '';
 
     if (editingUserId) {
-      // Update existing
       updateEmployee(editingUserId, {
         name: formData.name.trim(),
         role: formData.role,
@@ -132,7 +386,6 @@ export const UserManagementPage = () => {
       });
       setIsModalOpen(false);
     } else {
-      // Add new
       const res = addEmployee({
         id: formData.id.trim().toUpperCase(),
         name: formData.name.trim(),
@@ -145,14 +398,12 @@ export const UserManagementPage = () => {
         password: formData.password || 'password123',
         status: formData.status
       });
-
       if (res?.success) {
         setIsModalOpen(false);
       }
     }
   };
 
-  // Handle Delete Confirmation
   const handleDelete = (emp) => {
     if (emp.id === 'EMP001') {
       showToast('Managing Director (Principal Admin) cannot be deleted', 'error');
@@ -182,7 +433,7 @@ export const UserManagementPage = () => {
     }
   };
 
-  // Filtered employees
+  // Filtered employees for Accounts table
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
       const q = searchQuery.toLowerCase().trim();
@@ -195,443 +446,833 @@ export const UserManagementPage = () => {
         emp.department?.toLowerCase().includes(q) ||
         emp.role?.toLowerCase().includes(q);
 
-      const matchesRole =
-        selectedRoleFilter === 'ALL' || emp.role === selectedRoleFilter;
-
-      const matchesStatus =
-        selectedStatusFilter === 'ALL' || emp.status === selectedStatusFilter;
+      const matchesRole = selectedRoleFilter === 'ALL' || emp.role === selectedRoleFilter;
+      const matchesStatus = selectedStatusFilter === 'ALL' || emp.status === selectedStatusFilter;
 
       return matchesSearch && matchesRole && matchesStatus;
     });
   }, [employees, searchQuery, selectedRoleFilter, selectedStatusFilter]);
 
-  // Pagination (minimum 15 items per page)
+  // Pagination for Accounts table
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedRoleFilter, selectedStatusFilter]);
-
   const paginatedEmployees = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredEmployees.slice(start, start + itemsPerPage);
   }, [filteredEmployees, currentPage, itemsPerPage]);
 
-  // Metric counts
-  const totalCount = employees.length;
-  const activeCount = employees.filter(e => e.status === 'Active').length;
-  const rmCount = employees.filter(e => e.role === 'RM').length;
-  const salesCount = employees.filter(e => e.role === 'Sales Manager' || e.role === 'Sales Executive').length;
-  const adminManagerCount = employees.filter(e => e.role === 'Admin' || e.role === 'Manager').length;
-
   return (
     <div className="space-y-6">
-      {/* 1. Header Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-burgundy-900 via-burgundy-800 to-burgundy-950 p-6 md:p-8 text-white shadow-xl border border-gold-300/30">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold-400 text-burgundy-950 shadow-md">
-                <UserCog className="w-5 h-5" />
-              </span>
-              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-gold-300 backdrop-blur-sm border border-gold-400/20">
-                Staff & Access Directory
-              </span>
-            </div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-white mt-2 font-corporate">
-              User Management Console
-            </h1>
-            <p className="text-xs md:text-sm text-gold-100/90 mt-1 max-w-xl">
-              Create corporate accounts, assign roles, configure permissions, and monitor active CRM personnel across branches.
-            </p>
+      {/* Top Banner */}
+      <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider mb-1">
+            <Users className="w-4 h-4 text-gold-400" />
+            <span>{isAdmin ? 'Admin Staff Inspection & Work Dossier' : 'Corporate User Management'}</span>
           </div>
+          <h2 className="text-xl md:text-2xl font-extrabold text-white font-corporate">
+            {isAdmin ? 'Employee Details & Daily Activity Tracker' : 'Staff Directory & Access Control'}
+          </h2>
+          <p className="text-xs text-white/80 mt-1 max-w-2xl">
+            {isAdmin
+              ? 'Search any employee by User Name, Employee ID, Mobile, or Email to inspect everything they have done daily with exact date & time, filtered across any custom date range.'
+              : 'Manage corporate staff members, access permissions, department allocations, and authentication profiles.'}
+          </p>
+        </div>
 
-          <div className="flex items-center gap-3">
+        {/* Tab Switcher for Admin */}
+        {isAdmin && (
+          <div className="flex items-center gap-2 bg-black/30 p-1.5 rounded-2xl border border-white/10 self-start md:self-auto">
             <button
-              onClick={handleOpenAddModal}
-              className="flex items-center gap-2 rounded-xl bg-gold-400 hover:bg-gold-500 text-burgundy-950 px-5 py-3 text-xs md:text-sm font-bold shadow-lg transition transform active:scale-95"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>Add New User</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Decorative background logo shimmer */}
-        <div className="absolute right-0 top-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-gold-400/10 blur-3xl pointer-events-none" />
-      </div>
-
-      {/* 2. Key Personnel Statistics */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Total Authorized Staff</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-burgundy-50 text-burgundy-900">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-2xl font-extrabold text-slate-900 font-corporate">{totalCount}</div>
-          <div className="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" />
-            <span>{activeCount} Active Accounts</span>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Relationship Managers (RM)</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-              <Phone className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-2xl font-extrabold text-emerald-800 font-corporate">{rmCount}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Telecalling & Lead Handlers</div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Field Sales Executives</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
-              <Building2 className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-2xl font-extrabold text-amber-800 font-corporate">{salesCount}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Field visits & Open Source</div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Executive & Management</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-700">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2 text-2xl font-extrabold text-purple-900 font-corporate">{adminManagerCount}</div>
-          <div className="text-[11px] text-slate-500 mt-1">Principal Partners & Admins</div>
-        </div>
-      </div>
-
-      {/* 3. Filter & Search Controls */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          {/* Universal Search Bar */}
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by name, ID (e.g. EMP004), email, role..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-[#FAF6EF]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-burgundy-800 transition"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Status Filter */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <select
-              value={selectedStatusFilter}
-              onChange={(e) => setSelectedStatusFilter(e.target.value)}
-              className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-burgundy-800 font-semibold"
-            >
-              <option value="ALL">All Status</option>
-              <option value="Active">Active Accounts</option>
-              <option value="Inactive">Inactive Accounts</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Role Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 text-xs">
-          {['ALL', 'Admin', 'Manager', 'Ops', 'RM', 'Sales Manager', 'Sales Executive'].map((role) => (
-            <button
-              key={role}
-              onClick={() => setSelectedRoleFilter(role)}
-              className={`px-3 py-1.5 rounded-lg font-bold transition shrink-0 ${
-                selectedRoleFilter === role
-                  ? 'bg-burgundy-900 text-gold-300 shadow-sm'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              type="button"
+              onClick={() => {
+                setActiveAdminTab('activities');
+              }}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                activeAdminTab === 'activities'
+                  ? 'bg-gold-500 text-amber-950 shadow-md'
+                  : 'text-white/80 hover:bg-white/10'
               }`}
             >
-              {role === 'ALL' ? 'All Roles' : role}
+              <Activity className="w-4 h-4" />
+              <span>Employee Work Dossier</span>
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 4. Personnel Table */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-burgundy-900" />
-            <h3 className="text-sm font-bold text-slate-900 font-corporate">
-              Authorized Personnel Directory ({filteredEmployees.length})
-            </h3>
-          </div>
-          <span className="text-xs text-slate-400">
-            Current Session: <strong className="text-burgundy-900">{currentUser?.name}</strong> ({currentUser?.role})
-          </span>
-        </div>
-
-        {filteredEmployees.length === 0 ? (
-          <div className="text-center py-12">
-            <Users className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-            <h4 className="text-sm font-bold text-slate-700">No personnel match your search</h4>
-            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-              Try adjusting your role filter or search term, or click "Add New User" to register a new employee.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#FAF6EF] text-slate-600 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-4 text-center w-14">Sl.No</th>
-                  <th className="py-3 px-4">Staff Member</th>
-                  <th className="py-3 px-4">Employee ID</th>
-                  <th className="py-3 px-4">Role & Permissions</th>
-                  <th className="py-3 px-4">Department & Title</th>
-                  <th className="py-3 px-4">Contact Info</th>
-                  <th className="py-3 px-4 text-center">Contacts Added</th>
-                  <th className="py-3 px-4">Account Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {paginatedEmployees.map((emp, index) => {
-                  const slNo = (currentPage - 1) * itemsPerPage + index + 1;
-                  const isCurrent = currentUser?.id === emp.id;
-                  const initials = (emp.name || 'U')
-                    .split(' ')
-                    .map(n => n[0])
-                    .join('')
-                    .toUpperCase()
-                    .slice(0, 2);
-
-                  return (
-                    <tr
-                      key={emp.id}
-                      className={`hover:bg-[#FAF6EF]/50 transition ${
-                        isCurrent ? 'bg-gold-50/40' : ''
-                      }`}
-                    >
-                      {/* Sl.No */}
-                      <td className="py-3 px-4 text-center font-bold text-slate-700">
-                        {slNo}
-                      </td>
-
-                      {/* Name & Avatar */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-burgundy-900 text-gold-300 font-bold text-xs shadow-sm">
-                            {initials}
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                              <span>{emp.name}</span>
-                              {isCurrent && (
-                                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full border border-emerald-200">
-                                  You
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-slate-400" />
-                              {emp.location || 'Head Office'}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Employee ID */}
-                      <td className="py-3 px-4 font-mono font-bold text-slate-700">
-                        <span className="bg-slate-100 text-slate-800 px-2 py-1 rounded-md border border-slate-200 text-[11px]">
-                          {emp.id}
-                        </span>
-                      </td>
-
-                      {/* Role Badge */}
-                      <td className="py-3 px-4">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${getRoleBadge(emp.role)}`}>
-                          {emp.role}
-                        </span>
-                      </td>
-
-                      {/* Department & Title */}
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-slate-800">{emp.title || 'Staff'}</div>
-                        <div className="text-[11px] text-slate-500">{emp.department || 'Operations'}</div>
-                      </td>
-
-                      {/* Contact Info */}
-                      <td className="py-3 px-4 space-y-0.5">
-                        <div className="flex items-center gap-1.5 text-slate-600">
-                          <Mail className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span className="truncate max-w-[150px]">{emp.email || 'N/A'}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-slate-600">
-                          <Phone className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span>{formatMobileNumber(emp.mobile) || 'N/A'}</span>
-                        </div>
-                      </td>
-
-                      {/* Contacts Added Count */}
-                      <td className="py-3 px-4 text-center">
-                        {(() => {
-                          const empCusts = customers.filter(c => c.submittedBy === emp.id || c.submittedByName === emp.name);
-                          const empActs = activities.filter(a => a.submittedBy === emp.id || a.submittedByName === emp.name);
-                          const seen = new Set();
-                          let count = 0;
-                          [...empActs, ...empCusts].forEach(item => {
-                            const m = (item.mobile || '').replace(/\D/g, '').slice(-10);
-                            if (!m || !seen.has(m)) {
-                              if (m) seen.add(m);
-                              count++;
-                            }
-                          });
-
-                          return (
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                              count > 0
-                                ? 'bg-amber-50 text-amber-900 border border-amber-300 font-extrabold'
-                                : 'bg-slate-100 text-slate-500 border border-slate-200'
-                            }`}>
-                              <Phone className="w-3 h-3 text-amber-700" />
-                              <span>{count} Added</span>
-                            </span>
-                          );
-                        })()}
-                      </td>
-
-                      {/* Status */}
-                      <td className="py-3 px-4">
-                        <button
-                          onClick={() => toggleEmployeeStatus(emp.id)}
-                          title="Click to toggle status"
-                          disabled={emp.id === 'EMP001'}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition ${
-                            emp.status === 'Active'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                              : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
-                          } ${emp.id === 'EMP001' ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
-                        >
-                          <span className={`h-1.5 w-1.5 rounded-full ${emp.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                          <span>{emp.status || 'Active'}</span>
-                        </button>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Test Login as this User */}
-                          <button
-                            onClick={() => switchUser(emp)}
-                            title={`Instant Login as ${emp.name} (${emp.role})`}
-                            className="flex items-center gap-1 rounded-lg border border-gold-300 bg-gold-50 text-amber-900 px-2 py-1 text-[11px] font-bold hover:bg-gold-100 transition shadow-xs"
-                          >
-                            <LogIn className="w-3 h-3 text-amber-700" />
-                            <span className="hidden sm:inline">Switch</span>
-                          </button>
-
-                          {/* Edit User */}
-                          <button
-                            onClick={() => handleOpenEditModal(emp)}
-                            title="Edit user details"
-                            className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Delete User */}
-                          {emp.id !== 'EMP001' && (
-                            <button
-                              onClick={() => handleDelete(emp)}
-                              title="Delete user"
-                              className="p-1.5 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveAdminTab('accounts');
+              }}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                activeAdminTab === 'accounts'
+                  ? 'bg-gold-500 text-amber-950 shadow-md'
+                  : 'text-white/80 hover:bg-white/10'
+              }`}
+            >
+              <UserCog className="w-4 h-4" />
+              <span>User Accounts Directory</span>
+            </button>
           </div>
         )}
-
-        {/* Reusable Pagination */}
-        <Pagination
-          currentPage={currentPage}
-          totalItems={filteredEmployees.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
-          summaryLabel="staff members"
-        />
       </div>
 
-      {/* 5. Add / Edit User Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-gold-200 overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between bg-gradient-to-r from-burgundy-900 via-burgundy-800 to-burgundy-950 px-6 py-4 text-white">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold-400 text-burgundy-950 shadow-md">
-                  <UserPlus className="w-5 h-5" />
+      {/* ======================================================== */}
+      {/* VIEW 1: ADMIN EMPLOYEE WORK DOSSIER (DEFAULT FOR ADMIN)  */}
+      {/* ======================================================== */}
+      {isAdmin && activeAdminTab === 'activities' && (
+        <div className="space-y-6">
+          {!selectedEmployee ? (
+            /* SUB-VIEW 1A: SEARCH & SELECT EMPLOYEE */
+            <div className="space-y-6">
+              {/* Search & Filter Toolbar */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 font-corporate flex items-center gap-2">
+                      <Search className="w-4 h-4 text-burgundy-900" />
+                      <span>Search Employee</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Search by user name, employee ID, mobile number, or email to inspect daily work details
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold text-burgundy-900 bg-burgundy-50 px-3 py-1 rounded-full border border-burgundy-200 self-start">
+                    {matchingDossierEmployees.length} Employee{matchingDossierEmployees.length !== 1 ? 's' : ''} Found
+                  </span>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold font-corporate">
-                    {editingUserId ? `Edit Staff Member (${formData.id})` : 'Add New Corporate User'}
-                  </h3>
-                  <p className="text-xs text-gold-200">
-                    {editingUserId ? 'Update employee profile & permissions' : 'Create new employee credentials for CRM access'}
-                  </p>
+
+                {/* Big Search Input */}
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-3 w-5 h-5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by User Name, Employee ID (e.g. EMP004), Mobile (+91...), or Email..."
+                    value={dossierSearch}
+                    onChange={(e) => setDossierSearch(e.target.value)}
+                    className="w-full rounded-xl border-2 border-slate-200 py-2.5 pl-11 pr-10 text-sm focus:border-burgundy-900 focus:outline-none transition shadow-inner font-medium"
+                    autoFocus
+                  />
+                  {dossierSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setDossierSearch('')}
+                      className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Role Filter Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-xs font-bold text-slate-500 mr-1 flex items-center gap-1">
+                    <Filter className="w-3.5 h-3.5 text-slate-400" /> Role:
+                  </span>
+                  {['ALL', 'RM', 'Sales Manager', 'Ops', 'Manager'].map(role => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => setDossierRoleFilter(role)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                        dossierRoleFilter === role
+                          ? 'bg-burgundy-900 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {role === 'ALL' ? 'All Roles' : role}
+                    </button>
+                  ))}
                 </div>
               </div>
+
+              {/* Employee Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {matchingDossierEmployees.length === 0 ? (
+                  <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
+                    <Users className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm font-bold text-slate-800">No matching employees found</p>
+                    <p className="text-xs text-slate-400 mt-1">Try refining your search keyword or selecting a different role filter.</p>
+                  </div>
+                ) : (
+                  matchingDossierEmployees.map(emp => {
+                    const empCallsCount = calls.filter(c => c.employeeId === emp.id).length;
+                    const empActCount = activities.filter(a => a.submittedBy === emp.id || a.employeeId === emp.id).length;
+                    const empLoginsCount = bankLogins.filter(b => b.submittedBy === emp.id || b.assignedRMId === emp.id).length;
+
+                    return (
+                      <div
+                        key={emp.id}
+                        onClick={() => {
+                          setSelectedEmployee(emp);
+                          applyDatePreset('all');
+                        }}
+                        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md hover:border-gold-300 transition cursor-pointer flex flex-col justify-between group transform active:scale-98"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-burgundy-900 to-burgundy-950 text-gold-300 font-black text-base shadow-md group-hover:scale-105 transition-transform">
+                                {emp.name?.slice(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <h4 className="text-sm font-extrabold text-slate-900 group-hover:text-burgundy-900 transition flex items-center gap-1.5">
+                                  <span>{emp.name}</span>
+                                </h4>
+                                <span className="font-mono text-xs font-bold text-burgundy-800 block">
+                                  {emp.id}
+                                </span>
+                              </div>
+                            </div>
+                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getRoleBadge(emp.role)}`}>
+                              {emp.role}
+                            </span>
+                          </div>
+
+                          <div className="mt-4 space-y-1.5 text-xs text-slate-600">
+                            <div className="flex items-center gap-2">
+                              <Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate">{emp.title || 'Staff Specialist'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="font-mono font-semibold text-slate-800">{formatMobileNumber(emp.mobile)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate text-slate-500">{emp.email}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <span className="truncate text-slate-500">{emp.location || 'Chennai'}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quick Activity Preview Badges */}
+                        <div className="mt-5 pt-3 border-t border-slate-100">
+                          <div className="flex items-center justify-between text-[11px] text-slate-600 mb-2">
+                            <span>Logged Actions:</span>
+                            <span className="font-bold text-slate-800">
+                              {empCallsCount} calls • {empActCount} activities • {empLoginsCount} logins
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="w-full py-2 px-3 rounded-xl bg-slate-50 group-hover:bg-burgundy-900 group-hover:text-white text-burgundy-900 font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
+                          >
+                            <span>Inspect Daily Work & Activities</span>
+                            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          ) : (
+            /* SUB-VIEW 1B: DETAILED WORK & ACTIVITY TIMELINE FOR SELECTED EMPLOYEE */
+            <div className="space-y-6">
+              {/* Back Bar & Employee Profile Card */}
+              <div className="rounded-2xl border-2 border-gold-300 bg-gradient-to-br from-white via-gold-50/20 to-[#FAF6EF] p-6 shadow-sm space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-gold-200">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEmployee(null)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800 transition shadow-xs"
+                  >
+                    <ArrowLeft className="w-4 h-4 text-burgundy-900" />
+                    <span>Back to Employee Search</span>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleExportEmployeeWork}
+                      disabled={filteredEmployeeActions.length === 0}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition shadow-xs disabled:opacity-50"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Export Work Report (CSV)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Profile Header Details */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-burgundy-900 to-burgundy-950 text-gold-300 font-black text-xl shadow-lg">
+                      {selectedEmployee.name?.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xl font-extrabold text-slate-900 font-corporate">
+                          {selectedEmployee.name}
+                        </h3>
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border ${getRoleBadge(selectedEmployee.role)}`}>
+                          {selectedEmployee.role}
+                        </span>
+                      </div>
+                      <p className="text-xs font-bold text-burgundy-900 font-mono mt-0.5">
+                        Employee ID: {selectedEmployee.id} • {selectedEmployee.title}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {selectedEmployee.department} • {selectedEmployee.location}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 text-xs font-medium bg-white p-3 rounded-xl border border-gold-200 shadow-inner">
+                    <div className="flex items-center gap-1.5 text-slate-700">
+                      <Phone className="w-4 h-4 text-burgundy-900" />
+                      <span className="font-mono font-bold">{formatMobileNumber(selectedEmployee.mobile)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-700">
+                      <Mail className="w-4 h-4 text-burgundy-900" />
+                      <span>{selectedEmployee.email}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <BadgeCheck className="w-4 h-4 text-emerald-600" />
+                      <span className="font-bold text-emerald-700">{selectedEmployee.status || 'Active'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* DATE RANGE SELECTOR & WORK FILTERS */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-burgundy-900" />
+                      <span>Date Range & Activity Filter</span>
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Select date range to inspect everything {selectedEmployee.name} has performed on every day
+                    </p>
+                  </div>
+
+                  {/* Preset Pills */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {[
+                      { id: 'all', label: 'All Time' },
+                      { id: 'today', label: 'Today' },
+                      { id: 'yesterday', label: 'Yesterday' },
+                      { id: '7days', label: 'Last 7 Days' },
+                      { id: 'month', label: 'This Month' }
+                    ].map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => applyDatePreset(p.id)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                          datePreset === p.id
+                            ? 'bg-burgundy-900 text-white shadow-xs'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Date Inputs & Search Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1 border-t border-slate-100">
+                  {/* From Date */}
+                  <div className="sm:col-span-3">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">From Date</label>
+                    <input
+                      type="date"
+                      value={startDateFilter}
+                      onChange={(e) => {
+                        setStartDateFilter(e.target.value);
+                        setDatePreset('custom');
+                      }}
+                      className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                    />
+                  </div>
+
+                  {/* To Date */}
+                  <div className="sm:col-span-3">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">To Date</label>
+                    <input
+                      type="date"
+                      value={endDateFilter}
+                      onChange={(e) => {
+                        setEndDateFilter(e.target.value);
+                        setDatePreset('custom');
+                      }}
+                      className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                    />
+                  </div>
+
+                  {/* Category Filter */}
+                  <div className="sm:col-span-3">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Activity Type</label>
+                    <select
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                      className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800 font-medium text-slate-800"
+                    >
+                      <option value="All">All Activity Types</option>
+                      <option value="Phone Call">Phone Calls (Telecalling)</option>
+                      <option value="Field Activity">Field Activities & Visits</option>
+                      <option value="Bank File Login">Bank File Logins</option>
+                      <option value="Attendance Punch">Attendance Punch-Ins</option>
+                      <option value="CRM Action">CRM Stage Changes</option>
+                    </select>
+                  </div>
+
+                  {/* Search within actions */}
+                  <div className="sm:col-span-3">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Keyword Search</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Customer, mobile, notes..."
+                        value={actionSearch}
+                        onChange={(e) => setActionSearch(e.target.value)}
+                        className="w-full text-xs rounded-xl border border-slate-300 py-2 pl-8 pr-3 focus:outline-none focus:border-burgundy-800"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* KPI Summary for this Employee in Date Range */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm text-center">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Work Actions</span>
+                  <span className="text-xl font-black text-slate-900">{filteredEmployeeActions.length}</span>
+                  <span className="text-[10px] text-slate-500 block">In selected period</span>
+                </div>
+
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 shadow-sm text-center">
+                  <span className="text-[10px] uppercase font-bold text-emerald-800 block">Calls Completed</span>
+                  <span className="text-xl font-black text-emerald-900">
+                    {filteredEmployeeActions.filter(a => a.category === 'Phone Call').length}
+                  </span>
+                  <span className="text-[10px] text-emerald-700 block font-semibold">Telecalling volume</span>
+                </div>
+
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 p-3.5 shadow-sm text-center">
+                  <span className="text-[10px] uppercase font-bold text-indigo-800 block">Field Activities</span>
+                  <span className="text-xl font-black text-indigo-900">
+                    {filteredEmployeeActions.filter(a => a.category === 'Field Activity').length}
+                  </span>
+                  <span className="text-[10px] text-indigo-700 block font-semibold">Visits & meetings</span>
+                </div>
+
+                <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 shadow-sm text-center">
+                  <span className="text-[10px] uppercase font-bold text-blue-800 block">Bank Logins</span>
+                  <span className="text-xl font-black text-blue-900">
+                    {filteredEmployeeActions.filter(a => a.category === 'Bank File Login').length}
+                  </span>
+                  <span className="text-[10px] text-blue-700 block font-semibold">Logged file submissions</span>
+                </div>
+
+                <div className="rounded-xl border border-teal-200 bg-teal-50/70 p-3.5 shadow-sm text-center col-span-2 sm:col-span-1">
+                  <span className="text-[10px] uppercase font-bold text-teal-800 block">Attendance Punches</span>
+                  <span className="text-xl font-black text-teal-900">
+                    {filteredEmployeeActions.filter(a => a.category === 'Attendance Punch').length}
+                  </span>
+                  <span className="text-[10px] text-teal-700 block font-semibold">Recorded in-times</span>
+                </div>
+              </div>
+
+              {/* DAY-BY-DAY ACTIVITY TIMELINE ("wt he done on every day with date and time") */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-base font-extrabold text-slate-900 font-corporate flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-burgundy-900" />
+                    <span>Daily Work Timeline ({filteredEmployeeActions.length} Actions Logged)</span>
+                  </h4>
+                  <span className="text-xs text-slate-500">
+                    {startDateFilter && endDateFilter
+                      ? `Range: ${formatDate(startDateFilter)} to ${formatDate(endDateFilter)}`
+                      : 'Showing All Recorded Days'}
+                  </span>
+                </div>
+
+                {actionsGroupedByDay.length === 0 ? (
+                  <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
+                    <Activity className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm font-bold text-slate-800">No activities recorded for this date range</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      No calls, visits, file logins, or attendance records found matching current criteria.
+                    </p>
+                  </div>
+                ) : (
+                  actionsGroupedByDay.map(([dayDate, dayActions]) => (
+                    <div key={dayDate} className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                      {/* Day Header */}
+                      <div className="px-5 py-3 bg-[#FAF6EF] border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-burgundy-900" />
+                          <span className="text-xs font-extrabold text-slate-900 font-corporate">
+                            {formatDate(dayDate)} ({dayDate})
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-bold text-burgundy-900 bg-white px-2.5 py-0.5 rounded-full border border-gold-300">
+                          {dayActions.length} Action{dayActions.length !== 1 ? 's' : ''} on this day
+                        </span>
+                      </div>
+
+                      {/* Day's Chronological Work Items */}
+                      <div className="divide-y divide-slate-100 p-2">
+                        {dayActions.map(action => (
+                          <div
+                            key={action.id}
+                            className="p-3.5 hover:bg-slate-50/80 transition rounded-xl flex flex-col sm:flex-row sm:items-start justify-between gap-3"
+                          >
+                            <div className="flex items-start gap-3">
+                              {/* Icon Badge */}
+                              <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-xs ${
+                                action.category === 'Phone Call'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : action.category === 'Field Activity'
+                                  ? 'bg-indigo-100 text-indigo-800'
+                                  : action.category === 'Bank File Login'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : action.category === 'Attendance Punch'
+                                  ? 'bg-teal-100 text-teal-800'
+                                  : 'bg-purple-100 text-purple-800'
+                              }`}>
+                                {action.category === 'Phone Call' && <PhoneCall className="w-4 h-4" />}
+                                {action.category === 'Field Activity' && <Briefcase className="w-4 h-4" />}
+                                {action.category === 'Bank File Login' && <Landmark className="w-4 h-4" />}
+                                {action.category === 'Attendance Punch' && <Clock className="w-4 h-4" />}
+                                {action.category === 'CRM Action' && <ShieldCheck className="w-4 h-4" />}
+                              </div>
+
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-xs font-bold text-slate-900">
+                                    {action.title}
+                                  </span>
+                                  <span className={`inline-block px-2 py-0.2 rounded-md text-[10px] font-extrabold uppercase border ${
+                                    action.category === 'Phone Call'
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                      : action.category === 'Field Activity'
+                                      ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                                      : action.category === 'Bank File Login'
+                                      ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                      : action.category === 'Attendance Punch'
+                                      ? 'bg-teal-50 text-teal-800 border-teal-200'
+                                      : 'bg-purple-50 text-purple-800 border-purple-200'
+                                  }`}>
+                                    {action.category}
+                                  </span>
+                                </div>
+
+                                {/* Customer & Contact Details */}
+                                {(action.customerName || action.mobile) && (
+                                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                                    {action.customerName && (
+                                      <span>Customer: <strong className="text-slate-800">{action.customerName}</strong></span>
+                                    )}
+                                    {action.mobile && (
+                                      <span className="font-mono text-slate-700">Mobile: <strong>{formatMobileNumber(action.mobile)}</strong></span>
+                                    )}
+                                    {action.duration && (
+                                      <span className="text-slate-500 font-mono">Duration: {action.duration}</span>
+                                    )}
+                                    {action.location && (
+                                      <span className="text-slate-500">Location: {action.location}</span>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Specific Work Details / Notes / Remarks */}
+                                <p className="text-xs text-slate-700 mt-1.5 leading-relaxed bg-slate-50/80 p-2 rounded-lg border border-slate-100 max-w-2xl">
+                                  {action.details}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Date, Time & Status Pill */}
+                            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-1 shrink-0 pt-1 sm:pt-0">
+                              <span className="font-mono text-xs font-extrabold text-burgundy-900 bg-gold-50 px-2 py-0.5 rounded border border-gold-200">
+                                {action.time}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {formatDate(action.date)}
+                              </span>
+                              <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                action.status === 'OK' || action.status === 'Interested' || action.status === 'Disbursed' || action.status === 'Present'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : action.status === 'Reminder' || action.status === 'In Progress'
+                                  ? 'bg-amber-100 text-amber-900'
+                                  : 'bg-slate-100 text-slate-700'
+                              }`}>
+                                {action.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* VIEW 2: DIRECTORY & USER ACCOUNTS (ORIGINAL CONSOLE)     */}
+      {/* ======================================================== */}
+      {(!isAdmin || activeAdminTab === 'accounts') && (
+        <div className="space-y-6">
+          {/* Controls Bar */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-1 flex-col sm:flex-row sm:items-center gap-3">
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search staff by Name, ID, Mobile, Email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-burgundy-800 bg-slate-50 focus:bg-white transition"
+                />
+              </div>
+
+              {/* Role Filter */}
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+                <select
+                  value={selectedRoleFilter}
+                  onChange={(e) => setSelectedRoleFilter(e.target.value)}
+                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-burgundy-800 font-medium"
+                >
+                  <option value="ALL">All Roles</option>
+                  <option value="Admin">Admin</option>
+                  <option value="Manager">Manager</option>
+                  <option value="RM">RM (Relationship Manager)</option>
+                  <option value="Sales Manager">Sales Manager</option>
+                  <option value="Sales Executive">Sales Executive</option>
+                  <option value="Ops">Ops</option>
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <select
+                value={selectedStatusFilter}
+                onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-burgundy-800 font-medium"
+              >
+                <option value="ALL">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
               <button
+                type="button"
+                onClick={handleOpenAddModal}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 text-white text-xs font-bold shadow-md transition"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Add Employee</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Table Container */}
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-700 min-w-[900px]">
+                <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3">Employee</th>
+                    <th className="px-4 py-3">Role & Designation</th>
+                    <th className="px-4 py-3">Department</th>
+                    <th className="px-4 py-3">Contact</th>
+                    <th className="px-4 py-3">Location</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedEmployees.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-12 text-center text-slate-400">
+                        <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        <span className="text-xs">No employees found matching criteria</span>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedEmployees.map(emp => {
+                      const isCurrent = currentUser?.id === emp.id;
+                      return (
+                        <tr key={emp.id} className="hover:bg-[#FAF6EF]/60 transition">
+                          {/* Employee Identity */}
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-burgundy-900 text-gold-300 font-bold text-xs shadow-xs">
+                                {emp.name?.slice(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <span className="font-bold text-slate-900 block flex items-center gap-1.5">
+                                  {emp.name}
+                                  {isCurrent && (
+                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">You</span>
+                                  )}
+                                </span>
+                                <span className="text-[10px] font-mono text-slate-400">{emp.id}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Role & Title */}
+                          <td className="px-4 py-3">
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border mb-0.5 ${getRoleBadge(emp.role)}`}>
+                              {emp.role}
+                            </span>
+                            <span className="text-[11px] text-slate-600 block truncate max-w-[180px]">{emp.title || '-'}</span>
+                          </td>
+
+                          {/* Department */}
+                          <td className="px-4 py-3 text-slate-700 font-medium">
+                            {emp.department || 'General'}
+                          </td>
+
+                          {/* Contact Info */}
+                          <td className="px-4 py-3">
+                            <div className="space-y-0.5 font-mono text-[11px]">
+                              <div className="text-slate-800 font-semibold">{formatMobileNumber(emp.mobile)}</div>
+                              <div className="text-slate-400 text-[10px] truncate max-w-[170px]">{emp.email}</div>
+                            </div>
+                          </td>
+
+                          {/* Location */}
+                          <td className="px-4 py-3 text-slate-600">
+                            {emp.location || 'Chennai'}
+                          </td>
+
+                          {/* Status */}
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => toggleEmployeeStatus(emp.id)}
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition ${
+                                emp.status === 'Active'
+                                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
+                                  : 'bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100'
+                              }`}
+                            >
+                              {emp.status === 'Active' ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <XCircle className="w-3 h-3 text-rose-600" />}
+                              <span>{emp.status || 'Active'}</span>
+                            </button>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Inspect Work Button */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedEmployee(emp);
+                                  setActiveAdminTab('activities');
+                                  applyDatePreset('all');
+                                }}
+                                className="p-1.5 rounded-lg border border-gold-300 bg-gold-50 hover:bg-gold-100 text-burgundy-900 transition"
+                                title="Inspect Employee Daily Work Timeline"
+                              >
+                                <Activity className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Edit Modal */}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditModal(emp)}
+                                className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 transition"
+                                title="Edit Staff Profile"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Delete */}
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(emp)}
+                                className="p-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 transition"
+                                title="Delete Staff Account"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Component */}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredEmployees.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              summaryLabel="employees"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Add / Edit Employee */}
+      {isModalOpen && (
+        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 p-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserCog className="w-5 h-5 text-gold-300" />
+                <h3 className="text-base font-bold text-white font-corporate">
+                  {editingUserId ? `Edit Employee Account (${editingUserId})` : 'Register New Employee Account'}
+                </h3>
+              </div>
+              <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="rounded-lg p-1 text-white/70 hover:bg-white/10 hover:text-white transition"
+                className="p-1 rounded-lg text-white/80 hover:bg-white/10 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Form */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Employee ID */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Employee ID *</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Employee ID *
+                  </label>
                   <input
                     type="text"
                     required
+                    disabled={Boolean(editingUserId)}
                     value={formData.id}
-                    disabled={!!editingUserId}
-                    onChange={(e) => setFormData({ ...formData, id: e.target.value.toUpperCase() })}
-                    placeholder="e.g. EMP006"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-[#FAF6EF]/60 font-mono font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-burgundy-800 disabled:opacity-70 disabled:cursor-not-allowed"
+                    onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono font-bold text-xs bg-slate-50 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-burgundy-800"
+                    placeholder="EMP021"
                   />
-                  {!editingUserId && (
-                    <span className="text-[10px] text-slate-400 mt-0.5 block">
-                      Auto-suggested next ID: {nextEmployeeId}
-                    </span>
-                  )}
                 </div>
 
                 {/* Role */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">System Role *</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    System Role *
+                  </label>
                   <select
                     value={formData.role}
                     onChange={(e) => {
@@ -666,7 +1307,7 @@ export const UserManagementPage = () => {
                         department: suggestedDept
                       });
                     }}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-burgundy-800"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-burgundy-800"
                   >
                     <option value="RM">RM (Relationship Manager - Telecalling)</option>
                     <option value="Sales Manager">Sales Manager (Field & Approvals)</option>
@@ -680,127 +1321,119 @@ export const UserManagementPage = () => {
 
               {/* Full Name */}
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Full Legal Name *</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Employee Full Name *
+                </label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Suresh Kumar"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-[#FAF6EF]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-burgundy-800 text-slate-900 font-semibold"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-burgundy-800 font-semibold text-slate-900"
+                  placeholder="e.g. S. Jayachandran"
                 />
               </div>
 
+              {/* Designation & Department */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Designation / Title */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Designation / Title</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Designation / Title
+                  </label>
                   <input
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="e.g. Senior RM"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-[#FAF6EF]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-burgundy-800"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-burgundy-800"
+                    placeholder="Senior RM / Specialist"
                   />
                 </div>
-
-                {/* Department */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Department</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Department
+                  </label>
                   <input
                     type="text"
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    placeholder="e.g. Telecalling"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-[#FAF6EF]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-burgundy-800"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-burgundy-800"
+                    placeholder="Telecalling & Client Relations"
                   />
                 </div>
               </div>
 
+              {/* Mobile Contact & Email */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Official Email */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Official Email Address</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="e.g. suresh.k@rajalakshmy.com"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-[#FAF6EF]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-burgundy-800"
-                  />
-                </div>
-
-                {/* Mobile Number */}
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Mobile Contact</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Mobile Phone (10-Digits)
+                  </label>
                   <input
                     type="text"
                     value={formData.mobile}
                     onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                    placeholder="+91 9840555005"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-[#FAF6EF]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-burgundy-800"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-burgundy-800"
+                    placeholder="98401 23456"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Corporate Email
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-burgundy-800"
+                    placeholder="name@rajalakshmy.com"
                   />
                 </div>
               </div>
 
+              {/* Office Location & Status */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Branch Location */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Branch / Location</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Office Location
+                  </label>
                   <input
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-burgundy-800"
                     placeholder="Chennai Head Office"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-[#FAF6EF]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-burgundy-800"
                   />
                 </div>
-
-                {/* Account Status */}
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Account Status</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Account Status
+                  </label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-burgundy-800"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white font-bold text-xs focus:outline-none focus:ring-2 focus:ring-burgundy-800"
                   >
-                    <option value="Active">Active (Can Login & Access CRM)</option>
-                    <option value="Inactive">Inactive (Suspended / On Leave)</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
                   </select>
                 </div>
               </div>
 
-              {/* Password */}
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Login Password</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="password123"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-[#FAF6EF]/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-burgundy-800 font-mono text-slate-700"
-                  />
-                </div>
-                <span className="text-[10px] text-slate-400 mt-1 block">
-                  Default prototype password is <code className="bg-slate-100 px-1 py-0.5 rounded text-burgundy-900 font-bold">password123</code>
-                </span>
-              </div>
-
               {/* Modal Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-bold text-slate-700 hover:bg-slate-50 transition"
+                  className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-gradient-to-r from-burgundy-900 to-burgundy-800 hover:from-burgundy-850 hover:to-burgundy-750 px-6 py-2.5 font-bold text-white shadow-md transition"
+                  className="px-5 py-2 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5"
                 >
-                  {editingUserId ? 'Save Profile Changes' : 'Create Staff Account'}
+                  <Check className="w-4 h-4" />
+                  <span>{editingUserId ? 'Save Profile Changes' : 'Create Staff Account'}</span>
                 </button>
               </div>
             </form>
