@@ -175,6 +175,7 @@ export const AttendancePage = ({ initialTab }) => {
 
   // Leave filters
   const [adminStatusFilter, setAdminStatusFilter] = useState('All');
+  const [adminRoleFilter, setAdminRoleFilter] = useState('All');
   const [leaveSearch, setLeaveSearch] = useState('');
 
   // Pending leaves count for admin badge
@@ -188,21 +189,23 @@ export const AttendancePage = ({ initialTab }) => {
     return leaves.filter(l => l.employeeId === currentUser.id);
   }, [leaves, currentUser]);
 
-  // Admin view: all employee leaves
+  // Admin view: all employee leaves across all roles
   const filteredAdminLeaves = useMemo(() => {
     return leaves.filter(l => {
       if (adminStatusFilter !== 'All' && l.status !== adminStatusFilter) return false;
+      if (adminRoleFilter !== 'All' && l.employeeRole !== adminRoleFilter) return false;
       if (leaveSearch.trim()) {
         const q = leaveSearch.toLowerCase();
         const matchesName = l.employeeName?.toLowerCase().includes(q);
         const matchesEmpId = l.employeeId?.toLowerCase().includes(q);
+        const matchesRole = l.employeeRole?.toLowerCase().includes(q);
         const matchesType = l.leaveType?.toLowerCase().includes(q);
         const matchesReason = l.reason?.toLowerCase().includes(q);
-        if (!matchesName && !matchesEmpId && !matchesType && !matchesReason) return false;
+        if (!matchesName && !matchesEmpId && !matchesRole && !matchesType && !matchesReason) return false;
       }
       return true;
     });
-  }, [leaves, adminStatusFilter, leaveSearch]);
+  }, [leaves, adminStatusFilter, adminRoleFilter, leaveSearch]);
 
   // Handle Export CSV (Exports ONLY logged-in user's punch records)
   const handleExportCSV = () => {
@@ -618,49 +621,83 @@ export const AttendancePage = ({ initialTab }) => {
       {activeTab === 'leaves' && (
         <div className="space-y-6">
           {/* Quick Metrics for Leaves */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">My Submitted Applications</span>
-              <span className="text-2xl font-black text-slate-900">{myLeaves.length}</span>
-              <span className="text-[10px] text-slate-500 block mt-1">Total requests recorded</span>
-            </div>
-
-            <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
-              <span className="text-[10px] uppercase font-bold text-amber-800 block">My Pending Requests</span>
-              <span className="text-2xl font-black text-amber-900">
-                {myLeaves.filter(l => l.status === 'Pending Approval').length}
-              </span>
-              <span className="text-[10px] text-amber-700 block mt-1 font-semibold">Waiting for Admin approval</span>
-            </div>
-
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm">
-              <span className="text-[10px] uppercase font-bold text-emerald-800 block">My Approved Days</span>
-              <span className="text-2xl font-black text-emerald-900">
-                {myLeaves.filter(l => l.status === 'Approved').reduce((acc, c) => acc + (c.daysCount || 1), 0)}
-              </span>
-              <span className="text-[10px] text-emerald-700 block mt-1 font-semibold">Days sanctioned</span>
-            </div>
-
-            {isAdmin ? (
-              <div className="rounded-2xl border-2 border-gold-300 bg-gradient-to-br from-white via-gold-50/30 to-[#FAF6EF] p-4 shadow-sm">
-                <span className="text-[10px] uppercase font-bold text-burgundy-900 block flex items-center gap-1">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Admin Pending Action
-                </span>
-                <span className="text-2xl font-black text-burgundy-900">{pendingLeavesAdminCount}</span>
-                <span className="text-[10px] text-burgundy-800 font-semibold block mt-1">
-                  Requisitions across company
-                </span>
+          {isStrictAdmin ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Requisitions</span>
+                <span className="text-2xl font-black text-slate-900">{leaves.length}</span>
+                <span className="text-[10px] text-slate-500 block mt-1 font-semibold">Across all employee roles</span>
               </div>
-            ) : (
+
+              <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-white via-amber-50/50 to-amber-100/30 p-4 shadow-sm">
+                <span className="text-[10px] uppercase font-bold text-amber-900 block flex items-center gap-1">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Pending Admin Approvals
+                </span>
+                <span className="text-2xl font-black text-amber-900">{pendingLeavesAdminCount}</span>
+                <span className="text-[10px] text-amber-800 font-semibold block mt-1">Action required by Admin</span>
+              </div>
+
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm">
+                <span className="text-[10px] uppercase font-bold text-emerald-800 block">Approved Leaves</span>
+                <span className="text-2xl font-black text-emerald-900">
+                  {leaves.filter(l => l.status === 'Approved').length}
+                </span>
+                <span className="text-[10px] text-emerald-700 block mt-1 font-semibold">Sanctioned employee requests</span>
+              </div>
+
               <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-4 shadow-sm">
-                <span className="text-[10px] uppercase font-bold text-rose-800 block">My Rejected Requests</span>
+                <span className="text-[10px] uppercase font-bold text-rose-800 block">Rejected Leaves</span>
                 <span className="text-2xl font-black text-rose-900">
-                  {myLeaves.filter(l => l.status === 'Rejected').length}
+                  {leaves.filter(l => l.status === 'Rejected').length}
                 </span>
-                <span className="text-[10px] text-rose-700 block mt-1">Declined with remarks</span>
+                <span className="text-[10px] text-rose-700 block mt-1 font-semibold">Declined applications</span>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">My Submitted Applications</span>
+                <span className="text-2xl font-black text-slate-900">{myLeaves.length}</span>
+                <span className="text-[10px] text-slate-500 block mt-1">Total requests recorded</span>
+              </div>
+
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm">
+                <span className="text-[10px] uppercase font-bold text-amber-800 block">My Pending Requests</span>
+                <span className="text-2xl font-black text-amber-900">
+                  {myLeaves.filter(l => l.status === 'Pending Approval').length}
+                </span>
+                <span className="text-[10px] text-amber-700 block mt-1 font-semibold">Waiting for Admin approval</span>
+              </div>
+
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm">
+                <span className="text-[10px] uppercase font-bold text-emerald-800 block">My Approved Days</span>
+                <span className="text-2xl font-black text-emerald-900">
+                  {myLeaves.filter(l => l.status === 'Approved').reduce((acc, c) => acc + (c.daysCount || 1), 0)}
+                </span>
+                <span className="text-[10px] text-emerald-700 block mt-1 font-semibold">Days sanctioned</span>
+              </div>
+
+              {isAdmin ? (
+                <div className="rounded-2xl border-2 border-gold-300 bg-gradient-to-br from-white via-gold-50/30 to-[#FAF6EF] p-4 shadow-sm">
+                  <span className="text-[10px] uppercase font-bold text-burgundy-900 block flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Admin Pending Action
+                  </span>
+                  <span className="text-2xl font-black text-burgundy-900">{pendingLeavesAdminCount}</span>
+                  <span className="text-[10px] text-burgundy-800 font-semibold block mt-1">
+                    Requisitions across company
+                  </span>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-4 shadow-sm">
+                  <span className="text-[10px] uppercase font-bold text-rose-800 block">My Rejected Requests</span>
+                  <span className="text-2xl font-black text-rose-900">
+                    {myLeaves.filter(l => l.status === 'Rejected').length}
+                  </span>
+                  <span className="text-[10px] text-rose-700 block mt-1">Declined with remarks</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ADMIN APPROVAL CONSOLE (Req: "admin action show the users of who raise the leave") */}
           {isAdmin && (
@@ -680,7 +717,7 @@ export const AttendancePage = ({ initialTab }) => {
                       )}
                     </h3>
                     <p className="text-xs text-slate-500">
-                      Review requisitions raised by employees, verify reasoning, and approve or reject with comments
+                      Review requisitions raised across all roles (RM, Sales Manager, Ops, Telecaller, Manager) and sanction or reject
                     </p>
                   </div>
                 </div>
@@ -706,12 +743,43 @@ export const AttendancePage = ({ initialTab }) => {
                 </div>
               </div>
 
+              {/* Role Filter Buttons */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] font-bold text-slate-500 mr-1">Filter by Role:</span>
+                {['All', 'RM', 'Sales Manager', 'Ops', 'Telecaller', 'Manager'].map(role => {
+                  const roleCount = role === 'All'
+                    ? leaves.length
+                    : leaves.filter(l => l.employeeRole === role).length;
+                  return (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => setAdminRoleFilter(role)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+                        adminRoleFilter === role
+                          ? 'bg-burgundy-900 text-white shadow-xs font-bold'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span>{role === 'All' ? 'All Roles' : role}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                        adminRoleFilter === role
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {roleCount}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* Search Bar */}
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search by Employee Name, ID, Leave Type, or Reason..."
+                  placeholder="Search by Employee Name, Role, ID, Leave Type, or Reason..."
                   value={leaveSearch}
                   onChange={(e) => setLeaveSearch(e.target.value)}
                   className="w-full text-xs rounded-xl border border-slate-300 py-2 pl-9 pr-3 focus:outline-none focus:border-burgundy-800"
@@ -759,8 +827,24 @@ export const AttendancePage = ({ initialTab }) => {
                                   <Users className="w-3.5 h-3.5 text-burgundy-800" />
                                   <span>{leave.employeeName}</span>
                                 </div>
-                                <div className="text-[11px] font-mono text-slate-500 mt-0.5">
-                                  ID: {leave.employeeId} • <span className="font-semibold text-slate-700">{leave.employeeRole}</span>
+                                <div className="text-[11px] font-mono text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
+                                  <span>ID: {leave.employeeId}</span>
+                                  <span>•</span>
+                                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                                    leave.employeeRole === 'RM'
+                                      ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                      : leave.employeeRole === 'Sales Manager'
+                                      ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                      : leave.employeeRole === 'Ops'
+                                      ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                                      : leave.employeeRole === 'Telecaller'
+                                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                      : leave.employeeRole === 'Manager'
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                                  }`}>
+                                    {leave.employeeRole}
+                                  </span>
                                 </div>
                               </td>
 

@@ -340,10 +340,14 @@ export const CRMProvider = ({ children }) => {
   const [leaves, setLeaves] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.LEAVES);
-      return saved ? JSON.parse(saved) : [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch {
-      return [];
+      // fallback
     }
+    return INITIAL_LEAVES;
   });
 
   // End-to-End Number & Case Lifecycle Audit Trail
