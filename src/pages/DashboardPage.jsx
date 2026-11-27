@@ -231,6 +231,7 @@ export const DashboardPage = () => {
   const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
   const [selectedCustDetail, setSelectedCustDetail] = useState(null);
   const [rmPieMode, setRmPieMode] = useState('database'); // 'database' | 'actionCalls'
+  const [smPieMode, setSmPieMode] = useState('classification'); // 'classification' | 'source'
 
   // Compute Required Dashboard Metrics (From filtered database)
   const totalCustomers = filteredCustomers.length;
@@ -392,7 +393,32 @@ export const DashboardPage = () => {
     { name: 'Actioned Unknown', value: actionCallsUnknown, color: '#8B5CF6' }
   ];
 
-  const activePieData = (isRM && rmPieMode === 'actionCalls') ? rmActionCallsData : knownUnknownData;
+  // Sales Manager Activities Added Contacts Donut Chart Data
+  const smActivitiesKnown = filteredActivities.filter(a => a.customerType === 'known' || a.customerType !== 'unknown').length;
+  const smActivitiesUnknown = filteredActivities.filter(a => a.customerType === 'unknown').length;
+  const smActivitiesBills = filteredActivities.filter(a => a.source === 'Bills').length;
+  const smActivitiesRef = filteredActivities.filter(a => a.source === 'Reference').length;
+  const smActivitiesOpen = filteredActivities.filter(a => a.source === 'Open Source').length;
+  const smActivitiesOther = Math.max(0, filteredActivities.length - (smActivitiesBills + smActivitiesRef + smActivitiesOpen));
+
+  const smClassificationPieData = [
+    { name: 'Known Contacts', value: smActivitiesKnown, color: '#10B981' },
+    { name: 'Unknown Contacts', value: smActivitiesUnknown, color: '#8B5CF6' }
+  ];
+
+  const smSourcePieData = [
+    { name: 'Reference', value: smActivitiesRef, color: '#79091D' },
+    { name: 'Bills', value: smActivitiesBills, color: '#D9A52E' },
+    { name: 'Open Source', value: smActivitiesOpen, color: '#3B82F6' },
+    ...(smActivitiesOther > 0 ? [{ name: 'Other', value: smActivitiesOther, color: '#64748B' }] : [])
+  ];
+
+  const activePieData = isSalesManager
+    ? (smPieMode === 'source' ? smSourcePieData : smClassificationPieData)
+    : (isRM && rmPieMode === 'actionCalls')
+    ? rmActionCallsData
+    : knownUnknownData;
+
   const totalActivePieValue = activePieData.reduce((sum, d) => sum + (d.value || 0), 0);
 
   // Tailored KPI Stat Cards (Customized for RM and Sales Manager roles per user request)
@@ -726,7 +752,11 @@ export const DashboardPage = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-bold text-burgundy-900 font-corporate">
-                  {isRM && rmPieMode === 'actionCalls' ? 'RM Actioned Calls Breakdown' : 'Customer Database Distribution'}
+                  {isSalesManager
+                    ? 'Daily Activities Added Contacts'
+                    : isRM && rmPieMode === 'actionCalls'
+                    ? 'RM Actioned Calls Breakdown'
+                    : 'Customer Database Distribution'}
                 </h4>
                 {dateFilter !== 'all' && (
                   <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
@@ -735,7 +765,11 @@ export const DashboardPage = () => {
                 )}
               </div>
               <p className="text-xs text-slate-500">
-                {isRM && rmPieMode === 'actionCalls' ? 'Partition & classification performance' : 'Old vs New Database (Known vs Unknown)'}
+                {isSalesManager
+                  ? (smPieMode === 'source' ? 'Contacts added by lead source in daily activities' : 'Contacts added in daily activities (Known vs Unknown)')
+                  : isRM && rmPieMode === 'actionCalls'
+                  ? 'Partition & classification performance'
+                  : 'Old vs New Database (Known vs Unknown)'}
               </p>
             </div>
             {isRM && (
@@ -756,6 +790,24 @@ export const DashboardPage = () => {
                 </button>
               </div>
             )}
+            {isSalesManager && (
+              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-[10px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setSmPieMode('classification')}
+                  className={`px-2 py-0.5 rounded transition ${smPieMode === 'classification' ? 'bg-burgundy-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  Type
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSmPieMode('source')}
+                  className={`px-2 py-0.5 rounded transition ${smPieMode === 'source' ? 'bg-burgundy-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  Source
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="h-56 w-full flex items-center justify-center">
@@ -766,7 +818,9 @@ export const DashboardPage = () => {
                 </div>
                 <span className="text-xs font-bold text-slate-600">No Records Loaded Yet</span>
                 <span className="text-[11px] text-slate-400 max-w-xs mt-0.5">
-                  {rmPieMode === 'database'
+                  {isSalesManager
+                    ? 'Log contacts in Daily Activities to view your distribution pie chart'
+                    : rmPieMode === 'database'
                     ? 'Upload Old Database contacts or add new numbers to view distribution'
                     : 'Action telecalling calls to view your performance breakdown'}
                 </span>
@@ -788,7 +842,7 @@ export const DashboardPage = () => {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(val, name) => [`${val} ${rmPieMode === 'actionCalls' ? 'Calls' : 'Contacts'}`, name]}
+                    formatter={(val, name) => [`${val} ${isSalesManager ? 'Contacts Added' : (rmPieMode === 'actionCalls' ? 'Calls' : 'Contacts')}`, name]}
                     contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '12px' }}
                   />
                   <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
@@ -797,7 +851,26 @@ export const DashboardPage = () => {
             )}
           </div>
 
-          {isRM && rmPieMode === 'actionCalls' ? (
+          {isSalesManager ? (
+            <div className="grid grid-cols-2 gap-2 text-center text-xs pt-2 border-t border-slate-100">
+              <div className="p-2 rounded-xl bg-emerald-50">
+                <span className="text-[10px] text-emerald-800 font-bold block uppercase">
+                  {smPieMode === 'source' ? 'Reference + Bills' : 'Known Contacts'}
+                </span>
+                <span className="font-extrabold text-sm text-emerald-950">
+                  {smPieMode === 'source' ? `${smActivitiesRef + smActivitiesBills} Leads` : `${smActivitiesKnown} Contacts`}
+                </span>
+              </div>
+              <div className="p-2 rounded-xl bg-purple-50">
+                <span className="text-[10px] text-purple-800 font-bold block uppercase">
+                  {smPieMode === 'source' ? 'Open Source / Other' : 'Unknown Contacts'}
+                </span>
+                <span className="font-extrabold text-sm text-purple-950">
+                  {smPieMode === 'source' ? `${smActivitiesOpen + smActivitiesOther} Leads` : `${smActivitiesUnknown} Contacts`}
+                </span>
+              </div>
+            </div>
+          ) : isRM && rmPieMode === 'actionCalls' ? (
             <div className="grid grid-cols-2 gap-2 text-center text-xs pt-2 border-t border-slate-100">
               <div className="p-2 rounded-xl bg-burgundy-50">
                 <span className="text-[10px] text-burgundy-800 font-bold block uppercase">Old DB Calls</span>
