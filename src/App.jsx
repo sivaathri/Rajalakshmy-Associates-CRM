@@ -46,7 +46,7 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
   // Derive dynamic page title based on pathname
   const getPageTitle = (path) => {
     if (path.startsWith('/dashboard')) return 'Dashboard';
-    if (path.startsWith('/notifications')) return 'Notification Center & Alerts';
+    if (path.startsWith('/notifications')) return 'Notification ';
     if (path.startsWith('/telecalling')) return 'Telecalling';
     if (path.startsWith('/assigned-leads')) return 'Assign Lead • Tasks & Case Transfers';
     if (path.startsWith('/statement')) return 'Customer Bank Statement Analyzer';
