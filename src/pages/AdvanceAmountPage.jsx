@@ -31,8 +31,10 @@ export const AdvanceAmountPage = () => {
     setShowModal(false);
   };
 
-  // Strictly show only the logged-in user's personal advance requests
-  const displayedAdvances = advanceAmounts.filter(a => a.employeeId === currentUser?.id);
+  // For Admin or Reviewer, show all employee advance requests; for employees, show only their personal requests
+  const displayedAdvances = canReview
+    ? advanceAmounts
+    : advanceAmounts.filter(a => a.employeeId === currentUser?.id);
 
   // Pagination (minimum 15 items per page)
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,7 +56,7 @@ export const AdvanceAmountPage = () => {
         <div>
           
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
-            Advance Amount Management
+            {canReview ? 'Advance Amount Requests & Approvals' : 'Advance Amount Management'}
           </h2>
          
         </div>
@@ -78,7 +80,7 @@ export const AdvanceAmountPage = () => {
       {/* Advance Requests Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="px-6 py-3.5 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800 flex flex-wrap items-center justify-between gap-2">
-          <span>Personal Advance Requests ({displayedAdvances.length})</span>
+          <span>{canReview ? 'Employee Advance Requisitions' : 'Personal Advance Requests'} ({displayedAdvances.length})</span>
           <span className="text-[11px] text-burgundy-900 font-semibold bg-burgundy-50 px-2.5 py-0.5 rounded-full border border-burgundy-200">
             Logged In: {currentUser?.name} ({currentUser?.id} • {currentUser?.role})
           </span>
@@ -130,9 +132,28 @@ export const AdvanceAmountPage = () => {
                     </td>
                     <td className="px-4 py-3 text-right">
                       {a.status === 'Pending Approval' ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                          <Clock className="w-3 h-3 text-amber-600" /> Pending HR Review
-                        </span>
+                        canReview ? (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => updateAdvanceStatus(a.id, 'Approved')}
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs rounded-lg shadow-sm transition"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateAdvanceStatus(a.id, 'Rejected')}
+                              className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold text-xs rounded-lg shadow-sm transition"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                            <Clock className="w-3 h-3 text-amber-600" /> Pending HR Review
+                          </span>
+                        )
                       ) : a.status === 'Approved' ? (
                         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                           <CheckCircle className="w-3 h-3 text-emerald-600" /> Disbursed / Approved

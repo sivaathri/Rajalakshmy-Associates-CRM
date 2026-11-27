@@ -60,7 +60,9 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
     if (path.startsWith('/performance')) return 'Performance & Case Disposition';
     if (path.startsWith('/attendance')) return 'Daily Attendance & In-Punch';
     if (path.startsWith('/resignation')) return 'Resignation Management';
+    if (path.startsWith('/advance-requests')) return 'Employee Advance Amount Requests & Approvals';
     if (path.startsWith('/advance')) return 'Employee Advance Amount';
+    if (path.startsWith('/approve-leaves')) return 'Employee Leave Approvals & Requisitions';
     if (path.startsWith('/reports')) return 'Intelligence Reports & Leaderboards';
     if (path.startsWith('/users') || path.startsWith('/user-management')) return 'User Management & Personnel Directory';
     if (path.startsWith('/settings')) return 'Operations Settings & Lead Distribution';
@@ -228,6 +230,24 @@ export function App() {
               element={
                 <ProtectedLayout requiredRoute="resignation">
                   <ResignationPage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/advance-requests"
+              element={
+                <ProtectedLayout requiredRoute="advance-requests">
+                  <AdvanceAmountPage />
+                </ProtectedLayout>
+              }
+            />
+
+            <Route
+              path="/approve-leaves"
+              element={
+                <ProtectedLayout requiredRoute="approve-leaves">
+                  <AttendancePage initialTab="leaves" />
                 </ProtectedLayout>
               }
             />

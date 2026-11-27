@@ -31,6 +31,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
   const { customers, performanceCases, advanceAmounts, resignations, attendance = [], bankLogins = [], leads = [], leaves = [], employees = [] } = useCRM();
 
   const isSalesManager = currentUser?.role === 'Sales Manager';
+  const isAdmin = currentUser?.role === 'Admin';
 
   // Compute pending counts (strictly scoped to logged-in user)
   const pendingCasesCount = performanceCases.filter(c => {
@@ -38,6 +39,9 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
   }).length;
 
   const pendingAdvanceCount = advanceAmounts.filter(a => {
+    if (currentUser?.role === 'Admin' || currentUser?.role === 'Manager') {
+      return a.status === 'Pending Approval';
+    }
     return a.employeeId === currentUser?.id && a.status === 'Pending Approval';
   }).length;
 
@@ -435,7 +439,57 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
           </NavLink>
         )}
 
-        {/* 8. User Management */}
+        {/* Admin Menu: Advan amt req */}
+        {isAdmin && (
+          <NavLink
+            to="/advance-requests"
+            onClick={() => isMobile && setIsOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition ${
+                isActive
+                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            <div className="flex items-center gap-3 truncate">
+              <CreditCard className="w-4 h-4 shrink-0 text-emerald-300" />
+              {isExpanded && <span>Advan amt req</span>}
+            </div>
+            {isExpanded && pendingAdvanceCount > 0 && (
+              <span className="text-[10px] bg-amber-400 text-amber-950 font-bold px-1.5 py-0.5 rounded-full">
+                {pendingAdvanceCount}
+              </span>
+            )}
+          </NavLink>
+        )}
+
+        {/* Admin Menu: Approve leaves */}
+        {isAdmin && (
+          <NavLink
+            to="/approve-leaves"
+            onClick={() => isMobile && setIsOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition ${
+                isActive
+                  ? 'bg-white/15 text-gold-300 shadow-inner font-bold border-l-4 border-gold-400'
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            <div className="flex items-center gap-3 truncate">
+              <CalendarCheck className="w-4 h-4 shrink-0 text-amber-400" />
+              {isExpanded && <span>Approve leaves</span>}
+            </div>
+            {isExpanded && pendingLeavesAdminCount > 0 && (
+              <span className="text-[10px] bg-amber-400 text-amber-950 font-bold px-1.5 py-0.5 rounded-full animate-pulse" title="Pending Leave Requests">
+                {pendingLeavesAdminCount}
+              </span>
+            )}
+          </NavLink>
+        )}
+
+        {/* 8. User Management / users details */}
         {canAccessRoute('users') && (
           <NavLink
             to="/users"
@@ -450,7 +504,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
           >
             <div className="flex items-center gap-3 truncate">
               <UserCog className="w-4 h-4 shrink-0 text-gold-400" />
-              {isExpanded && <span>User Management</span>}
+              {isExpanded && <span>{isAdmin ? 'users details' : 'User Management'}</span>}
             </div>
           </NavLink>
         )}

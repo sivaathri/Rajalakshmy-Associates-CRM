@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -24,12 +25,23 @@ import {
 import { formatDateDDMMYYYY, formatDate, exportToCSV } from '../utils/formatters';
 import { Pagination } from '../components/common/Pagination';
 
-export const AttendancePage = () => {
+export const AttendancePage = ({ initialTab }) => {
+  const location = useLocation();
   const { attendance, punchIn, leaves = [], requestLeave, approveLeave, rejectLeave } = useCRM();
   const { currentUser, showToast } = useAuth();
 
+  const isLeaveRoute = initialTab === 'leaves' || location?.pathname === '/approve-leaves';
+
   // Top Tab Switcher: 'attendance' vs 'leaves'
-  const [activeTab, setActiveTab] = useState('attendance');
+  const [activeTab, setActiveTab] = useState(isLeaveRoute ? 'leaves' : 'attendance');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    } else if (location?.pathname === '/approve-leaves') {
+      setActiveTab('leaves');
+    }
+  }, [initialTab, location?.pathname]);
 
   // Live Clock State
   const [currentTime, setCurrentTime] = useState(new Date());
