@@ -16,7 +16,9 @@ import {
   Phone,
   Calendar,
   Layers,
-  XCircle
+  XCircle,
+  Filter,
+  RotateCcw
 } from 'lucide-react';
 import {
   BarChart,
@@ -56,9 +58,7 @@ export const DashboardPage = () => {
 
   const scopedCustomers = isSalesManager
     ? customers.filter(c => c.submittedBy === currentUser?.id || c.referenceFrom?.includes(currentUser?.name) || c.assignedTo === currentUser?.id)
-    : (isRM
-        ? customers.filter(c => c.assignedTo === currentUser?.id || c.actionedBy === currentUser?.id || c.submittedBy === currentUser?.id)
-        : customers);
+    : customers;
 
   const scopedCalls = isSalesManager
     ? calls.filter(c => c.employeeId === currentUser?.id || scopedCustomers.some(cust => cust.id === c.customerId))
@@ -85,30 +85,106 @@ export const DashboardPage = () => {
       })
     : (bankLogins || []);
 
-  const totalBankLogins = scopedBankLogins.length;
-  const disbursedBankLogins = scopedBankLogins.filter(b => b.status === 'Disbursed');
+  // Dashboard Filter State (Period, Partition, Classification)
+  const [dateFilter, setDateFilter] = useState('all'); // 'all' | 'today' | 'week' | 'month'
+  const [partitionFilter, setPartitionFilter] = useState('all'); // 'all' | 'old' | 'new'
+  const [classFilter, setClassFilter] = useState('all'); // 'all' | 'known' | 'unknown'
+
+  // Filtered Bank Logins based on active filters
+  const filteredBankLogins = scopedBankLogins.filter(b => {
+    if (dateFilter !== 'all' && b.loginDate) {
+      const today = new Date().toISOString().split('T')[0];
+      if (dateFilter === 'today') {
+        if (b.loginDate !== today) return false;
+      } else if (dateFilter === 'week') {
+        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        if (b.loginDate < oneWeekAgo) return false;
+      } else if (dateFilter === 'month') {
+        const thisMonth = today.slice(0, 7);
+        if (!b.loginDate.startsWith(thisMonth)) return false;
+      }
+    }
+    return true;
+  });
+
+  const totalBankLogins = filteredBankLogins.length;
+  const disbursedBankLogins = filteredBankLogins.filter(b => b.status === 'Disbursed');
   const totalDisbursedCount = disbursedBankLogins.length;
   const totalDisbursedAmount = disbursedBankLogins.reduce(
     (sum, b) => sum + (Number(b.disbursedAmount) || Number(b.loanAmount) || 0),
     0
   );
-  const rejectedBankLogins = scopedBankLogins.filter(b => b.status === 'Rejected');
+  const rejectedBankLogins = filteredBankLogins.filter(b => b.status === 'Rejected');
   const totalRejectedCount = rejectedBankLogins.length;
-  const inProgressBankLogins = scopedBankLogins.filter(b => b.status === 'In Progress');
+  const inProgressBankLogins = filteredBankLogins.filter(b => b.status === 'In Progress');
   const totalInProgressCount = inProgressBankLogins.length;
 
+  // Filtered Calls based on active filters
+  const filteredCalls = scopedCalls.filter(c => {
+    const cust = customers.find(x => x.id === c.customerId || (x.mobile && c.mobile && x.mobile.replace(/\D/g, '').slice(-10) === c.mobile.replace(/\D/g, '').slice(-10)));
+    if (partitionFilter === 'old') {
+      const isOld = cust ? cust.databaseType === 'old' : c.databaseType === 'old';
+      if (!isOld) return false;
+    }
+    if (partitionFilter === 'new') {
+      const isNew = cust ? cust.databaseType !== 'old' : c.databaseType !== 'old';
+      if (!isNew) return false;
+    }
+    if (classFilter === 'known') {
+      const isKnown = cust ? cust.customerType !== 'unknown' : c.customerType !== 'unknown';
+      if (!isKnown) return false;
+    }
+    if (classFilter === 'unknown') {
+      const isUnknown = cust ? cust.customerType === 'unknown' : c.customerType === 'unknown';
+      if (!isUnknown) return false;
+    }
+    if (dateFilter !== 'all' && c.callDate) {
+      const today = new Date().toISOString().split('T')[0];
+      if (dateFilter === 'today') {
+        if (c.callDate !== today && c.callDate !== '2026-11-16') return false;
+      } else if (dateFilter === 'week') {
+        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        if (c.callDate < oneWeekAgo) return false;
+      } else if (dateFilter === 'month') {
+        const thisMonth = today.slice(0, 7);
+        if (!c.callDate.startsWith(thisMonth)) return false;
+      }
+    }
+    return true;
+  });
+
+  // Filtered Customers based on active partition/class filters
+  const filteredCustomers = customers.filter(c => {
+    if (partitionFilter === 'old' && c.databaseType !== 'old') return false;
+    if (partitionFilter === 'new' && c.databaseType === 'old') return false;
+    if (classFilter === 'known' && c.customerType === 'unknown') return false;
+    if (classFilter === 'unknown' && c.customerType !== 'unknown') return false;
+    return true;
+  });
+
   // RM Actioned Calls (Known vs Unknown breakdown)
-  const rmKnownCallsCount = scopedCalls.filter(c => {
+  const rmKnownCallsCount = filteredCalls.filter(c => {
     const cust = customers.find(x => x.id === c.customerId || (x.mobile && c.mobile && x.mobile.replace(/\D/g, '').slice(-10) === c.mobile.replace(/\D/g, '').slice(-10)));
     return cust ? cust.customerType === 'known' : (c.customerType !== 'unknown');
   }).length;
 
-  const rmUnknownCallsCount = scopedCalls.filter(c => {
+  const rmUnknownCallsCount = filteredCalls.filter(c => {
     const cust = customers.find(x => x.id === c.customerId || (x.mobile && c.mobile && x.mobile.replace(/\D/g, '').slice(-10) === c.mobile.replace(/\D/g, '').slice(-10)));
     return cust ? cust.customerType === 'unknown' : (c.customerType === 'unknown');
   }).length;
 
-  const actionedCustomersKnown = customers.filter(c =>
+  // RM Actioned Calls (Old DB vs New DB breakdown)
+  const rmOldCallsCount = filteredCalls.filter(c => {
+    const cust = customers.find(x => x.id === c.customerId || (x.mobile && c.mobile && x.mobile.replace(/\D/g, '').slice(-10) === c.mobile.replace(/\D/g, '').slice(-10)));
+    return cust ? cust.databaseType === 'old' : (c.databaseType === 'old');
+  }).length;
+
+  const rmNewCallsCount = filteredCalls.filter(c => {
+    const cust = customers.find(x => x.id === c.customerId || (x.mobile && c.mobile && x.mobile.replace(/\D/g, '').slice(-10) === c.mobile.replace(/\D/g, '').slice(-10)));
+    return cust ? cust.databaseType !== 'old' : (c.databaseType !== 'old');
+  }).length;
+
+  const actionedCustomersKnown = filteredCustomers.filter(c =>
     (
       (currentUser?.id && (c.actionedBy === currentUser.id || c.assignedTo === currentUser.id)) ||
       (currentUser?.name && (c.actionedByName === currentUser.name || c.assignedName === currentUser.name))
@@ -117,7 +193,7 @@ export const DashboardPage = () => {
     ['OK', 'Not Attend', 'No Need', 'Field Visit', 'Reminder'].includes(c.callingStatus)
   ).length;
 
-  const actionedCustomersUnknown = customers.filter(c =>
+  const actionedCustomersUnknown = filteredCustomers.filter(c =>
     (
       (currentUser?.id && (c.actionedBy === currentUser.id || c.assignedTo === currentUser.id)) ||
       (currentUser?.name && (c.actionedByName === currentUser.name || c.assignedName === currentUser.name))
@@ -126,23 +202,44 @@ export const DashboardPage = () => {
     ['OK', 'Not Attend', 'No Need', 'Field Visit', 'Reminder'].includes(c.callingStatus)
   ).length;
 
+  const actionedCustomersOld = filteredCustomers.filter(c =>
+    (
+      (currentUser?.id && (c.actionedBy === currentUser.id || c.assignedTo === currentUser.id)) ||
+      (currentUser?.name && (c.actionedByName === currentUser.name || c.assignedName === currentUser.name))
+    ) &&
+    c.databaseType === 'old' &&
+    ['OK', 'Not Attend', 'No Need', 'Field Visit', 'Reminder'].includes(c.callingStatus)
+  ).length;
+
+  const actionedCustomersNew = filteredCustomers.filter(c =>
+    (
+      (currentUser?.id && (c.actionedBy === currentUser.id || c.assignedTo === currentUser.id)) ||
+      (currentUser?.name && (c.actionedByName === currentUser.name || c.assignedName === currentUser.name))
+    ) &&
+    c.databaseType !== 'old' &&
+    ['OK', 'Not Attend', 'No Need', 'Field Visit', 'Reminder'].includes(c.callingStatus)
+  ).length;
+
   const actionCallsKnown = Math.max(rmKnownCallsCount, actionedCustomersKnown);
   const actionCallsUnknown = Math.max(rmUnknownCallsCount, actionedCustomersUnknown);
-  const totalActionCalls = Math.max(scopedCalls.length, actionCallsKnown + actionCallsUnknown);
+  const actionCallsOld = Math.max(rmOldCallsCount, actionedCustomersOld);
+  const actionCallsNew = Math.max(rmNewCallsCount, actionedCustomersNew);
+  const totalActionCalls = Math.max(filteredCalls.length, actionCallsOld + actionCallsNew, actionCallsKnown + actionCallsUnknown);
 
   const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
   const [selectedCustDetail, setSelectedCustDetail] = useState(null);
+  const [rmPieMode, setRmPieMode] = useState('database'); // 'database' | 'actionCalls'
 
-  // Compute Required Dashboard Metrics
-  const totalCustomers = scopedCustomers.length;
-  const oldKnown = scopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'known').length;
-  const oldUnknown = scopedCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;
-  const newKnown = scopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'known').length;
-  const newUnknown = scopedCustomers.filter(c => c.databaseType === 'new' && c.customerType === 'unknown').length;
+  // Compute Required Dashboard Metrics (From filtered database)
+  const totalCustomers = filteredCustomers.length;
+  const oldKnown = filteredCustomers.filter(c => c.databaseType === 'old' && (c.customerType === 'known' || c.customerType !== 'unknown')).length;
+  const oldUnknown = filteredCustomers.filter(c => c.databaseType === 'old' && c.customerType === 'unknown').length;
+  const newKnown = filteredCustomers.filter(c => c.databaseType !== 'old' && (c.customerType === 'known' || c.customerType !== 'unknown')).length;
+  const newUnknown = filteredCustomers.filter(c => c.databaseType !== 'old' && c.customerType === 'unknown').length;
 
-  const totalCalls = scopedCalls.length;
+  const totalCalls = filteredCalls.length;
   const todayStr = new Date().toISOString().split('T')[0];
-  const todayCalls = scopedCalls.filter(c => c.callDate === todayStr || c.callDate === '2026-11-16').length;
+  const todayCalls = filteredCalls.filter(c => c.callDate === todayStr || c.callDate === '2026-11-16').length;
 
   const pendingFollowUps = (isRM ? customers : scopedCustomers).filter(c => {
     if (c.callingStatus !== 'Reminder') return false;
@@ -193,6 +290,17 @@ export const DashboardPage = () => {
     { name: 'New Unknown', value: newUnknown, color: '#F3CF7A' }
   ];
 
+  // RM Action Calls Donut Chart Data
+  const rmActionCallsData = [
+    { name: 'Old DB Calls', value: actionCallsOld, color: '#79091D' },
+    { name: 'New DB Calls', value: actionCallsNew, color: '#D9A52E' },
+    { name: 'Actioned Known', value: actionCallsKnown, color: '#10B981' },
+    { name: 'Actioned Unknown', value: actionCallsUnknown, color: '#8B5CF6' }
+  ];
+
+  const activePieData = (isRM && rmPieMode === 'actionCalls') ? rmActionCallsData : knownUnknownData;
+  const totalActivePieValue = activePieData.reduce((sum, d) => sum + (d.value || 0), 0);
+
   // Tailored KPI Stat Cards (Customized for RM Role per user request)
   const statCards = isRM
     ? [
@@ -205,36 +313,12 @@ export const DashboardPage = () => {
           link: '/telecalling'
         },
         {
-          title: 'Action Calls (Known)',
-          value: actionCallsKnown,
-          sub: 'Verified client conversations',
-          icon: <Users className="w-5 h-5 text-emerald-700" />,
-          color: 'bg-emerald-50/60 border-emerald-200',
-          link: '/telecalling'
-        },
-        {
-          title: 'Action Calls (Unknown)',
-          value: actionCallsUnknown,
-          sub: 'Fresh / raw lead outreach',
-          icon: <Phone className="w-5 h-5 text-amber-700" />,
-          color: 'bg-amber-50/60 border-amber-200',
-          link: '/telecalling'
-        },
-        {
           title: "Today's Calls",
           value: todayCalls,
           sub: 'Active calling sessions today',
           icon: <Clock className="w-5 h-5 text-indigo-700" />,
           color: 'bg-indigo-50/50 border-indigo-200',
           link: '/telecalling'
-        },
-        {
-          title: 'Pending Follow-ups',
-          value: pendingFollowUps.length,
-          sub: 'Scheduled reminders requiring action',
-          icon: <CalendarCheck className="w-5 h-5 text-rose-700" />,
-          color: 'bg-rose-50/60 border-rose-200',
-          onClick: () => setShowFollowUpModal(true)
         },
         {
           title: 'Total Bank Logins',
@@ -246,7 +330,7 @@ export const DashboardPage = () => {
         },
         {
           title: 'Total Disbursed ("Dispossement")',
-          value: `${totalDisbursedCount} (${formatCurrency(totalDisbursedAmount)})`,
+          value: totalDisbursedCount,
           sub: `${totalDisbursedCount} file(s) funded successfully`,
           icon: <CheckCircle className="w-5 h-5 text-emerald-800" />,
           color: 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400/30',
@@ -259,22 +343,6 @@ export const DashboardPage = () => {
           icon: <XCircle className="w-5 h-5 text-rose-700" />,
           color: 'bg-rose-50/50 border-rose-200',
           link: '/bank-logins'
-        },
-        {
-          title: 'In Bank Processing',
-          value: totalInProgressCount,
-          sub: 'Active files with bank appraisers',
-          icon: <TrendingUp className="w-5 h-5 text-amber-700" />,
-          color: 'bg-amber-50/50 border-amber-200',
-          link: '/bank-logins'
-        },
-        {
-          title: 'Total Customers',
-          value: totalCustomers,
-          sub: 'All active CRM database records',
-          icon: <Users className="w-5 h-5 text-purple-700" />,
-          color: 'bg-purple-50/50 border-purple-200',
-          link: '/telecalling'
         }
       ]
     : [
@@ -380,36 +448,69 @@ export const DashboardPage = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={() => {
-              if (pendingFollowUps.length > 0) {
-                setShowFollowUpModal(true);
-              } else {
-                showToast('No pending follow-ups in your queue at this moment.', 'info');
-              }
-            }}
-            className="flex items-center gap-1.5 rounded-xl border border-gold-400 bg-gold-400/20 px-3.5 py-2 text-xs font-bold text-gold-200 hover:bg-gold-400/30 transition shadow-sm"
-          >
-            <CalendarCheck className="w-4 h-4 text-gold-300" />
-            <span>Open Follow-ups ({pendingFollowUps.length})</span>
-          </button>
+        {/* Dashboard Filters (Replaces the 2 buttons) */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="hidden sm:flex items-center gap-1.5 text-gold-300 text-xs font-bold mr-1">
+            <Filter className="w-3.5 h-3.5" />
+            <span>Filters:</span>
+          </div>
 
-          {isRM ? (
-            <button
-              onClick={() => navigate('/bank-logins')}
-              className="flex items-center gap-1.5 rounded-xl bg-gold-500 hover:bg-gold-600 px-3.5 py-2 text-xs font-bold text-amber-950 transition shadow-sm"
+          {/* Time Period Filter */}
+          <div className="flex items-center gap-1.5 bg-burgundy-950/80 border border-gold-400/30 hover:border-gold-400/60 transition rounded-xl px-2.5 py-1.5 text-xs shadow-xs">
+            <Calendar className="w-3.5 h-3.5 text-gold-300 shrink-0" />
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="bg-transparent text-white text-xs font-semibold focus:outline-hidden cursor-pointer"
             >
-              <Layers className="w-4 h-4" />
-              <span>+ Bank Login Console</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => setIsCaseModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl bg-gold-500 hover:bg-gold-600 px-3.5 py-2 text-xs font-bold text-amber-950 transition shadow-sm"
+              <option value="all" className="bg-slate-900 text-white">All Time</option>
+              <option value="today" className="bg-slate-900 text-white">Today</option>
+              <option value="week" className="bg-slate-900 text-white">This Week</option>
+              <option value="month" className="bg-slate-900 text-white">This Month</option>
+            </select>
+          </div>
+
+          {/* Database Partition Filter */}
+          <div className="flex items-center gap-1.5 bg-burgundy-950/80 border border-gold-400/30 hover:border-gold-400/60 transition rounded-xl px-2.5 py-1.5 text-xs shadow-xs">
+            <Database className="w-3.5 h-3.5 text-gold-300 shrink-0" />
+            <select
+              value={partitionFilter}
+              onChange={(e) => setPartitionFilter(e.target.value)}
+              className="bg-transparent text-white text-xs font-semibold focus:outline-hidden cursor-pointer"
             >
-              <Award className="w-4 h-4" />
-              <span>Submit Case</span>
+              <option value="all" className="bg-slate-900 text-white">All Databases</option>
+              <option value="old" className="bg-slate-900 text-white">Old Database</option>
+              <option value="new" className="bg-slate-900 text-white">New Database</option>
+            </select>
+          </div>
+
+          {/* Classification Filter */}
+          <div className="flex items-center gap-1.5 bg-burgundy-950/80 border border-gold-400/30 hover:border-gold-400/60 transition rounded-xl px-2.5 py-1.5 text-xs shadow-xs">
+            <Users className="w-3.5 h-3.5 text-gold-300 shrink-0" />
+            <select
+              value={classFilter}
+              onChange={(e) => setClassFilter(e.target.value)}
+              className="bg-transparent text-white text-xs font-semibold focus:outline-hidden cursor-pointer"
+            >
+              <option value="all" className="bg-slate-900 text-white">All Contacts</option>
+              <option value="known" className="bg-slate-900 text-white">Known Contacts</option>
+              <option value="unknown" className="bg-slate-900 text-white">Unknown Leads</option>
+            </select>
+          </div>
+
+          {/* Reset Filters Button */}
+          {(dateFilter !== 'all' || partitionFilter !== 'all' || classFilter !== 'all') && (
+            <button
+              onClick={() => {
+                setDateFilter('all');
+                setPartitionFilter('all');
+                setClassFilter('all');
+              }}
+              className="flex items-center gap-1 text-[11px] font-bold text-gold-300 hover:text-white bg-gold-400/20 hover:bg-gold-400/30 px-2 py-1 rounded-lg border border-gold-400/40 transition cursor-pointer"
+              title="Reset all filters"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset</span>
             </button>
           )}
         </div>
@@ -486,48 +587,97 @@ export const DashboardPage = () => {
 
         {/* Known vs Unknown Customer Donut Chart (5 cols) */}
         <div className="lg:col-span-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
-          <div className="pb-3 border-b border-slate-100">
-            <h4 className="text-sm font-bold text-burgundy-900 font-corporate">
-              Customer Database Distribution
-            </h4>
-            <p className="text-xs text-slate-500">Old vs New Database (Known vs Unknown)</p>
+          <div className="pb-3 border-b border-slate-100 flex items-center justify-between gap-2">
+            <div>
+              <h4 className="text-sm font-bold text-burgundy-900 font-corporate">
+                {isRM && rmPieMode === 'actionCalls' ? 'RM Actioned Calls Breakdown' : 'Customer Database Distribution'}
+              </h4>
+              <p className="text-xs text-slate-500">
+                {isRM && rmPieMode === 'actionCalls' ? 'Partition & classification performance' : 'Old vs New Database (Known vs Unknown)'}
+              </p>
+            </div>
+            {isRM && (
+              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg text-[10px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setRmPieMode('database')}
+                  className={`px-2 py-0.5 rounded transition ${rmPieMode === 'database' ? 'bg-burgundy-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  Database
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRmPieMode('actionCalls')}
+                  className={`px-2 py-0.5 rounded transition ${rmPieMode === 'actionCalls' ? 'bg-burgundy-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                >
+                  My Calls
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="h-56 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={knownUnknownData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {knownUnknownData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(val, name) => [`${val} Contacts`, name]}
-                  contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '12px' }}
-                />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-              </PieChart>
-            </ResponsiveContainer>
+            {totalActivePieValue === 0 ? (
+              <div className="h-full w-full flex flex-col items-center justify-center text-center p-4">
+                <div className="w-14 h-14 rounded-full bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center mb-2">
+                  <Database className="w-6 h-6 text-slate-400" />
+                </div>
+                <span className="text-xs font-bold text-slate-600">No Records Loaded Yet</span>
+                <span className="text-[11px] text-slate-400 max-w-xs mt-0.5">
+                  {rmPieMode === 'database'
+                    ? 'Upload Old Database contacts or add new numbers to view distribution'
+                    : 'Action telecalling calls to view your performance breakdown'}
+                </span>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={activePieData.filter(d => d.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={activePieData.filter(d => d.value > 0).length > 1 ? 4 : 0}
+                    dataKey="value"
+                  >
+                    {activePieData.filter(d => d.value > 0).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(val, name) => [`${val} ${rmPieMode === 'actionCalls' ? 'Calls' : 'Contacts'}`, name]}
+                    contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '12px' }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-center text-xs pt-2 border-t border-slate-100">
-            <div className="p-2 rounded-xl bg-burgundy-50">
-              <span className="text-[10px] text-burgundy-800 font-bold block uppercase">Total Old Database</span>
-              <span className="font-extrabold text-sm text-burgundy-950">{oldKnown + oldUnknown} Contacts</span>
+          {isRM && rmPieMode === 'actionCalls' ? (
+            <div className="grid grid-cols-2 gap-2 text-center text-xs pt-2 border-t border-slate-100">
+              <div className="p-2 rounded-xl bg-burgundy-50">
+                <span className="text-[10px] text-burgundy-800 font-bold block uppercase">Old DB Calls</span>
+                <span className="font-extrabold text-sm text-burgundy-950">{actionCallsOld} Calls</span>
+              </div>
+              <div className="p-2 rounded-xl bg-gold-50">
+                <span className="text-[10px] text-amber-800 font-bold block uppercase">New DB Calls</span>
+                <span className="font-extrabold text-sm text-amber-950">{actionCallsNew} Calls</span>
+              </div>
             </div>
-            <div className="p-2 rounded-xl bg-gold-50">
-              <span className="text-[10px] text-amber-800 font-bold block uppercase">Total New Database</span>
-              <span className="font-extrabold text-sm text-amber-950">{newKnown + newUnknown} Contacts</span>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 text-center text-xs pt-2 border-t border-slate-100">
+              <div className="p-2 rounded-xl bg-burgundy-50">
+                <span className="text-[10px] text-burgundy-800 font-bold block uppercase">Total Old Database</span>
+                <span className="font-extrabold text-sm text-burgundy-950">{oldKnown + oldUnknown} Contacts</span>
+              </div>
+              <div className="p-2 rounded-xl bg-gold-50">
+                <span className="text-[10px] text-amber-800 font-bold block uppercase">Total New Database</span>
+                <span className="font-extrabold text-sm text-amber-950">{newKnown + newUnknown} Contacts</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Monthly Performance & Case Volume Chart (Full width) */}
@@ -576,136 +726,82 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Tables Section: Recent Activities & Pending Follow-ups */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Pending Follow-ups Action List (6 cols) */}
-        <div className="lg:col-span-6 rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-            <div className="flex items-center gap-2">
-              <CalendarCheck className="w-4 h-4 text-amber-700" />
-              <h4 className="text-sm font-bold text-slate-900 font-corporate">
-                Pending Follow-up Queue ({pendingFollowUps.length})
-              </h4>
-            </div>
-            {pendingFollowUps.length > 0 && (
-              <button
-                onClick={() => setShowFollowUpModal(true)}
-                className="text-xs font-bold text-burgundy-800 hover:underline"
-              >
-                Open Full Modal →
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-2.5 max-h-72 overflow-y-auto">
-            {pendingFollowUps.length === 0 ? (
-              <div className="text-center py-6 text-xs text-slate-400 italic">
-                No pending follow-ups currently scheduled.
+      {/* Tables Section: Recent Activities & Pending Follow-ups (Hidden for RM) */}
+      {!isRM && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Pending Follow-ups Action List (6 cols) */}
+          <div className="lg:col-span-6 rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+              <div className="flex items-center gap-2">
+                <CalendarCheck className="w-4 h-4 text-amber-700" />
+                <h4 className="text-sm font-bold text-slate-900 font-corporate">
+                  Pending Follow-up Queue ({pendingFollowUps.length})
+                </h4>
               </div>
-            ) : (
-              pendingFollowUps.slice(0, 5).map(c => (
-                <div
-                  key={c.id}
-                  className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-[#FAF6EF]/60 hover:bg-[#FAF6EF] transition"
+              {pendingFollowUps.length > 0 && (
+                <button
+                  onClick={() => setShowFollowUpModal(true)}
+                  className="text-xs font-bold text-burgundy-800 hover:underline"
                 >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-900">{c.name}</span>
-                      <span className="text-[10px] text-burgundy-900 bg-burgundy-50 px-1.5 py-0.5 rounded font-semibold border border-burgundy-100">
-                        {formatMobileNumber(c.mobile)}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-500 mt-0.5 truncate max-w-xs">
-                      {c.business || c.city} • <span className="text-amber-800 font-medium">Due: {formatDate(c.reminderDate)}</span>
-                    </div>
-                    {c.reminderRemark && (
-                      <div className="text-[10px] text-slate-600 italic mt-0.5 truncate max-w-xs">
-                        "{c.reminderRemark}"
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setSelectedCustDetail(c)}
-                      className="text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg"
-                    >
-                      View
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Recent Bank Logins for RM or Field Activities for Sales */}
-        <div className="lg:col-span-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-            <h4 className="text-sm font-bold text-slate-900 font-corporate flex items-center gap-2">
-              {isRM ? (
-                <>
-                  <Layers className="w-4 h-4 text-burgundy-900" />
-                  <span>Recent Bank Logins & File Statuses</span>
-                </>
-              ) : (
-                <>
-                  <span>Recent Field Activities & Lead Submissions</span>
-                  {isSalesManager && <span className="text-burgundy-900 text-xs font-semibold ml-1.5">(Your Submissions)</span>}
-                </>
+                  Open Full Modal →
+                </button>
               )}
-            </h4>
-            {isRM ? (
-              <button
-                onClick={() => navigate('/bank-logins')}
-                className="text-xs font-bold text-burgundy-800 hover:underline"
-              >
-                View Console →
-              </button>
-            ) : (
-              <span className="text-xs font-semibold text-slate-500">Latest 5</span>
-            )}
-          </div>
+            </div>
 
-          <div className="space-y-2.5 max-h-72 overflow-y-auto">
-            {isRM ? (
-              scopedBankLogins.length === 0 ? (
+            <div className="space-y-2.5 max-h-72 overflow-y-auto">
+              {pendingFollowUps.length === 0 ? (
                 <div className="text-center py-6 text-xs text-slate-400 italic">
-                  No bank login files recorded yet.
+                  No pending follow-ups currently scheduled.
                 </div>
               ) : (
-                scopedBankLogins.slice(0, 5).map(item => (
+                pendingFollowUps.slice(0, 5).map(c => (
                   <div
-                    key={item.id}
-                    onClick={() => navigate('/bank-logins')}
-                    className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-[#FAF6EF]/50 hover:bg-[#FAF6EF] transition cursor-pointer"
+                    key={c.id}
+                    className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-[#FAF6EF]/60 hover:bg-[#FAF6EF] transition"
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-900">{item.customerName}</span>
-                        <span className="text-[10px] font-semibold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-slate-200">
-                          {item.bankName}
+                        <span className="text-xs font-bold text-slate-900">{c.name}</span>
+                        <span className="text-[10px] text-burgundy-900 bg-burgundy-50 px-1.5 py-0.5 rounded font-semibold border border-burgundy-100">
+                          {formatMobileNumber(c.mobile)}
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">
-                        Amount: <strong className="text-slate-800">{formatCurrency(item.loanAmount)}</strong> • {item.productType || 'Business Loan'}
+                      <div className="text-[11px] text-slate-500 mt-0.5 truncate max-w-xs">
+                        {c.business || c.city} • <span className="text-amber-800 font-medium">Due: {formatDate(c.reminderDate)}</span>
                       </div>
+                      {c.reminderRemark && (
+                        <div className="text-[10px] text-slate-600 italic mt-0.5 truncate max-w-xs">
+                          "{c.reminderRemark}"
+                        </div>
+                      )}
                     </div>
-                    <div className="text-right">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                        item.status === 'Disbursed' ? 'bg-emerald-100 text-emerald-800' :
-                        item.status === 'Rejected' ? 'bg-rose-100 text-rose-800' :
-                        'bg-amber-100 text-amber-800'
-                      }`}>
-                        {item.status === 'Disbursed' ? '✓ Disbursed' : item.status}
-                      </span>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">{formatDate(item.loginDate)}</span>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedCustDetail(c)}
+                        className="text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg"
+                      >
+                        View
+                      </button>
                     </div>
                   </div>
                 ))
-              )
-            ) : (
-              scopedActivities.length === 0 ? (
+              )}
+            </div>
+          </div>
+
+          {/* Recent Field Activities for Sales Manager / Admin */}
+          <div className="lg:col-span-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+              <h4 className="text-sm font-bold text-slate-900 font-corporate flex items-center gap-2">
+                <span>Recent Field Activities & Lead Submissions</span>
+                {isSalesManager && <span className="text-burgundy-900 text-xs font-semibold ml-1.5">(Your Submissions)</span>}
+              </h4>
+              <span className="text-xs font-semibold text-slate-500">Latest 5</span>
+            </div>
+
+            <div className="space-y-2.5 max-h-72 overflow-y-auto">
+              {scopedActivities.length === 0 ? (
                 <div className="text-center py-6 text-xs text-slate-400 italic">
                   No recent field submissions logged.
                 </div>
@@ -742,11 +838,11 @@ export const DashboardPage = () => {
                     </div>
                   </div>
                 ))
-              )
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Modals */}
       <CaseSubmissionModal
