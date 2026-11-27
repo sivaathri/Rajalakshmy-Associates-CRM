@@ -39,6 +39,9 @@ export const BankLoginPage = () => {
   const [bankFilter, setBankFilter] = useState('All');
   const [executiveFilter, setExecutiveFilter] = useState('All');
   const [onlyDueReminders, setOnlyDueReminders] = useState(false);
+  // 2-Day Routine Tab: 'due' | 'in_progress' | 'disbursed' | 'rejected' | 'all'
+  // Default is 'due': "if no action of disburse or reject, every 2 days only show or else don't show"
+  const [routineTab, setRoutineTab] = useState('due');
   const [dateRangeType, setDateRangeType] = useState('all'); // 'all' | 'today' | 'week' | 'month' | 'custom'
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -49,7 +52,7 @@ export const BankLoginPage = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, bankFilter, executiveFilter, onlyDueReminders, dateRangeType, customStartDate, customEndDate, currentUser?.id]);
+  }, [searchTerm, statusFilter, bankFilter, executiveFilter, onlyDueReminders, routineTab, dateRangeType, customStartDate, customEndDate, currentUser?.id]);
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -429,16 +432,39 @@ export const BankLoginPage = () => {
   const todayStr = new Date().toISOString().split('T')[0];
 
   // Helper: check if a login is due for 2-day update
+  // Rule: If no action of disburse or reject, every 2 days only show, or else don't show
   const is2DayUpdateDue = (login) => {
+    // If action of disburse or reject was taken -> do not show in 2-day routine
+    if (login.status === 'Disbursed' || login.status === 'Rejected') return false;
     if (login.status !== 'In Progress') return false;
-    if (!login.nextFollowUpDate) return true;
+
+    // Check if 2 days have elapsed
+    if (!login.nextFollowUpDate) {
+      const refDate = login.lastUpdateDate || login.loginDate || login.createdAt;
+      if (!refDate) return true;
+      const diffMs = new Date(todayStr) - new Date(refDate);
+      const diffDays = diffMs / (1000 * 60 * 60 * 24);
+      return diffDays >= 2;
+    }
     return login.nextFollowUpDate <= todayStr;
   };
 
   // Filtered dataset
   const filteredLogins = useMemo(() => {
     return scopedBankLogins.filter(item => {
-      // 2-Day Due toggle
+      // 2-Day Routine Tab Filter
+      // Rule: "if no action of distrub or reject every 2 days only show or else dont show"
+      if (routineTab === 'due') {
+        if (!is2DayUpdateDue(item)) return false;
+      } else if (routineTab === 'in_progress') {
+        if (item.status !== 'In Progress') return false;
+      } else if (routineTab === 'disbursed') {
+        if (item.status !== 'Disbursed') return false;
+      } else if (routineTab === 'rejected') {
+        if (item.status !== 'Rejected') return false;
+      }
+
+      // Legacy toggle fallback
       if (onlyDueReminders && !is2DayUpdateDue(item)) {
         return false;
       }
@@ -484,7 +510,7 @@ export const BankLoginPage = () => {
 
       return true;
     });
-  }, [scopedBankLogins, onlyDueReminders, statusFilter, bankFilter, dateRangeType, customStartDate, customEndDate, searchTerm, todayStr]);
+  }, [scopedBankLogins, routineTab, onlyDueReminders, statusFilter, bankFilter, dateRangeType, customStartDate, customEndDate, searchTerm, todayStr]);
 
   // Distinct banks list for filter
   const distinctBanks = useMemo(() => {
@@ -720,26 +746,44 @@ export const BankLoginPage = () => {
         </button>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards (Interactive Filter Switchers) */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div
+          onClick={() => { setRoutineTab('all'); setStatusFilter('All'); }}
+          className={`rounded-2xl border p-4 shadow-sm cursor-pointer transition hover:scale-[1.02] ${
+            routineTab === 'all' ? 'border-slate-800 bg-slate-50 ring-2 ring-slate-400/40 shadow-md' : 'border-slate-200 bg-white'
+          }`}
+          title="Click to view all bank files"
+        >
           <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Files Logged In</span>
           <span className="text-2xl font-black text-slate-900">{totalLoginsCount}</span>
           <span className="text-[10px] text-slate-500 block mt-1">Across partner banks</span>
         </div>
 
-        <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4 shadow-sm">
+        <div
+          onClick={() => { setRoutineTab('in_progress'); setStatusFilter('In Progress'); }}
+          className={`rounded-2xl border p-4 shadow-sm cursor-pointer transition hover:scale-[1.02] ${
+            routineTab === 'in_progress' ? 'border-blue-600 bg-blue-100/60 ring-2 ring-blue-500/40 shadow-md' : 'border-blue-200 bg-blue-50/60'
+          }`}
+          title="Click to view all in-progress files"
+        >
           <span className="text-[10px] uppercase font-bold text-blue-800 block">In Bank Processing</span>
           <span className="text-2xl font-black text-blue-900">{inProgressCount}</span>
           <span className="text-[10px] text-blue-700 block mt-1">Active file appraisals</span>
         </div>
 
         {/* 2-Day Routine Reminder KPI */}
-        <div className={`rounded-2xl border p-4 shadow-sm transition ${
-          updatesDueCount > 0
-            ? 'border-amber-400 bg-amber-50/90 ring-2 ring-amber-400/20'
-            : 'border-slate-200 bg-white'
-        }`}>
+        <div
+          onClick={() => { setRoutineTab('due'); setStatusFilter('All'); }}
+          className={`rounded-2xl border p-4 shadow-sm cursor-pointer transition hover:scale-[1.02] ${
+            routineTab === 'due'
+              ? 'border-amber-500 bg-amber-100/80 ring-3 ring-amber-400/50 shadow-md'
+              : updatesDueCount > 0
+              ? 'border-amber-400 bg-amber-50/90 ring-2 ring-amber-400/20'
+              : 'border-slate-200 bg-white'
+          }`}
+          title="Click to view files requiring action every 2 days"
+        >
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold text-amber-900 block">2-Day Updates Due</span>
             {updatesDueCount > 0 && (
@@ -752,13 +796,25 @@ export const BankLoginPage = () => {
           </span>
         </div>
 
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm">
+        <div
+          onClick={() => { setRoutineTab('disbursed'); setStatusFilter('Disbursed'); }}
+          className={`rounded-2xl border p-4 shadow-sm cursor-pointer transition hover:scale-[1.02] ${
+            routineTab === 'disbursed' ? 'border-emerald-600 bg-emerald-100/60 ring-2 ring-emerald-500/40 shadow-md' : 'border-emerald-200 bg-emerald-50/60'
+          }`}
+          title="Click to view all disbursed cases"
+        >
           <span className="text-[10px] uppercase font-bold text-emerald-800 block">Disbursed Volume</span>
           <span className="text-xl font-black text-emerald-900">{formatCurrency(disbursedVolume)}</span>
           <span className="text-[10px] text-emerald-700 block mt-1 font-semibold">{disbursedLogins.length} files successfully funded</span>
         </div>
 
-        <div className="rounded-2xl border border-rose-200 bg-rose-50/60 p-4 shadow-sm">
+        <div
+          onClick={() => { setRoutineTab('rejected'); setStatusFilter('Rejected'); }}
+          className={`rounded-2xl border p-4 shadow-sm cursor-pointer transition hover:scale-[1.02] ${
+            routineTab === 'rejected' ? 'border-rose-600 bg-rose-100/60 ring-2 ring-rose-500/40 shadow-md' : 'border-rose-200 bg-rose-50/60'
+          }`}
+          title="Click to view all rejected files"
+        >
           <span className="text-[10px] uppercase font-bold text-rose-800 block">Rejected Files</span>
           <span className="text-2xl font-black text-rose-900">{rejectedCount}</span>
           <span className="text-[10px] text-rose-700 block mt-1">Declined with remarks</span>
@@ -1022,6 +1078,104 @@ export const BankLoginPage = () => {
         )}
       </div>
 
+      {/* 2-Day Routine Console Segmented Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { setRoutineTab('due'); setStatusFilter('All'); }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+              routineTab === 'due'
+                ? 'bg-amber-500 text-amber-950 shadow-sm ring-2 ring-amber-400/30'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5 text-amber-900" />
+            <span>2-Day Routine Due</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              routineTab === 'due' ? 'bg-amber-950 text-amber-300' : 'bg-slate-200 text-slate-700'
+            }`}>
+              {updatesDueCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setRoutineTab('in_progress'); setStatusFilter('In Progress'); }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+              routineTab === 'in_progress'
+                ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-500/30'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <span>In Bank Processing</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              routineTab === 'in_progress' ? 'bg-white text-blue-900' : 'bg-slate-200 text-slate-700'
+            }`}>
+              {inProgressCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setRoutineTab('disbursed'); setStatusFilter('Disbursed'); }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+              routineTab === 'disbursed'
+                ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-500/30'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <span>Disbursed ("Disposement")</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              routineTab === 'disbursed' ? 'bg-white text-emerald-900' : 'bg-slate-200 text-slate-700'
+            }`}>
+              {disbursedLogins.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setRoutineTab('rejected'); setStatusFilter('Rejected'); }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+              routineTab === 'rejected'
+                ? 'bg-rose-600 text-white shadow-sm ring-2 ring-rose-500/30'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <span>Rejected Files</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              routineTab === 'rejected' ? 'bg-white text-rose-900' : 'bg-slate-200 text-slate-700'
+            }`}>
+              {rejectedCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setRoutineTab('all'); setStatusFilter('All'); }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+              routineTab === 'all'
+                ? 'bg-slate-800 text-white shadow-sm ring-2 ring-slate-700/30'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <span>All Records</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              routineTab === 'all' ? 'bg-white text-slate-900' : 'bg-slate-200 text-slate-700'
+            }`}>
+              {totalLoginsCount}
+            </span>
+          </button>
+        </div>
+
+        {routineTab === 'due' && (
+          <div className="flex items-center gap-1.5 text-xs text-amber-900 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-300 font-semibold">
+            <Clock className="w-3.5 h-3.5 text-amber-700" />
+            <span>Showing active files every 2 days until Disbursed or Rejected</span>
+          </div>
+        )}
+      </div>
+
       {/* Main Table */}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -1040,8 +1194,20 @@ export const BankLoginPage = () => {
             {groupedCustomerLogins.length === 0 ? (
               <tbody className="divide-y divide-slate-100">
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 italic">
-                    No bank login records found matching criteria.
+                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                    {routineTab === 'due' ? (
+                      <div className="max-w-md mx-auto space-y-1">
+                        <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-2 border border-emerald-200">
+                          <Check className="w-5 h-5" />
+                        </div>
+                        <span className="text-sm font-bold text-slate-800 block">All 2-Day Routines Are Completed!</span>
+                        <span className="text-xs text-slate-500 block">
+                          No pending files requiring action today. Files without a Disbursed or Rejected action will automatically reappear here every 2 days.
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="italic">No bank login records found matching criteria.</span>
+                    )}
                   </td>
                 </tr>
               </tbody>
