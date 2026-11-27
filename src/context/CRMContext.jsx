@@ -1523,6 +1523,10 @@ export const CRMProvider = ({ children }) => {
   // Date format strictly: DD-MM-YYYY
   const punchIn = () => {
     if (!currentUser) return { success: false, message: 'Please log in to punch attendance' };
+    if (currentUser?.role === 'Admin') {
+      showToast('Admin accounts are exempted from attendance in-punch.', 'info');
+      return { success: false, message: 'Admin accounts are exempted from attendance in-punch.' };
+    }
 
     const nowMs = Date.now();
     const todayDate = formatDateDDMMYYYY(new Date(nowMs)); // e.g. "17-11-2026"
@@ -1571,6 +1575,10 @@ export const CRMProvider = ({ children }) => {
   // ----------------------------------------------------
   const requestLeave = (leaveData) => {
     if (!currentUser) return;
+    if (currentUser?.role === 'Admin') {
+      showToast('Admin accounts do not submit leave applications.', 'info');
+      return;
+    }
     const todayStr = new Date().toISOString().split('T')[0];
     const newId = `LV-${Date.now().toString().slice(-4)}`;
 

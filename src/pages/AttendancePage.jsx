@@ -55,6 +55,7 @@ export const AttendancePage = ({ initialTab }) => {
 
   // Check if logged-in user is Admin / Manager for approvals
   const isAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
+  const isStrictAdmin = currentUser?.role === 'Admin';
 
   // Today's formatted date strictly in DD-MM-YYYY
   const todayFormatted = useMemo(() => formatDateDDMMYYYY(currentTime), [currentTime]);
@@ -293,15 +294,17 @@ export const AttendancePage = ({ initialTab }) => {
           </button>
         </div>
 
-        {/* Action Button: Apply Leave (Opens modal directly) */}
-        <button
-          type="button"
-          onClick={() => setShowRequestModal(true)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm transition active:scale-98"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Request Leave</span>
-        </button>
+        {/* Action Button: Apply Leave (Opens modal directly, hidden for Admin) */}
+        {!isStrictAdmin && (
+          <button
+            type="button"
+            onClick={() => setShowRequestModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm transition active:scale-98"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Request Leave</span>
+          </button>
+        )}
       </div>
 
       {/* ==================================================== */}
@@ -371,14 +374,22 @@ export const AttendancePage = ({ initialTab }) => {
                         </p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={punchIn}
-                        className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 text-white font-extrabold text-base shadow-lg hover:shadow-xl hover:from-emerald-700 hover:to-teal-900 transition-all flex items-center justify-center gap-2.5 group transform active:scale-98"
-                      >
-                        <Clock className="w-5 h-5 text-emerald-200 group-hover:rotate-12 transition-transform" />
-                        <span>PUNCH IN (IN TIME)</span>
-                      </button>
+                      {isStrictAdmin ? (
+                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                          <ShieldCheck className="w-8 h-8 text-burgundy-900 mx-auto mb-1.5" />
+                          <p className="text-xs font-bold text-slate-800">Admin Account</p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">Admin accounts are exempted from daily attendance punch in.</p>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={punchIn}
+                          className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 text-white font-extrabold text-base shadow-lg hover:shadow-xl hover:from-emerald-700 hover:to-teal-900 transition-all flex items-center justify-center gap-2.5 group transform active:scale-98"
+                        >
+                          <Clock className="w-5 h-5 text-emerald-200 group-hover:rotate-12 transition-transform" />
+                          <span>PUNCH IN (IN TIME)</span>
+                        </button>
+                      )}
                       <span className="text-[10px] text-slate-400 block">
                         Recorded Date Format: <strong className="font-mono text-slate-600">DD-MM-YYYY</strong>
                       </span>
@@ -837,115 +848,117 @@ export const AttendancePage = ({ initialTab }) => {
             </div>
           )}
 
-          {/* MY PERSONAL LEAVE APPLICATIONS TABLE */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-lg bg-emerald-50 text-emerald-800">
-                  <CalendarCheck className="w-4 h-4" />
-                </span>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 font-corporate">
-                    My Personal Leave Applications
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Track the approval progress of your leave requests submitted to management
-                  </p>
+          {/* MY PERSONAL LEAVE APPLICATIONS TABLE (Hidden for Admin) */}
+          {!isStrictAdmin && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="p-2 rounded-lg bg-emerald-50 text-emerald-800">
+                    <CalendarCheck className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 font-corporate">
+                      My Personal Leave Applications
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Track the approval progress of your leave requests submitted to management
+                    </p>
+                  </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowRequestModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-950 text-white text-xs font-bold transition"
+                >
+                  <Plus className="w-3.5 h-3.5 text-gold-300" />
+                  <span>+ New Leave Request</span>
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowRequestModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-950 text-white text-xs font-bold transition"
-              >
-                <Plus className="w-3.5 h-3.5 text-gold-300" />
-                <span>+ New Leave Request</span>
-              </button>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
-                  <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-3">Leave ID</th>
-                      <th className="px-4 py-3">Leave Type</th>
-                      <th className="px-4 py-3">Dates & Days</th>
-                      <th className="px-4 py-3">Reason</th>
-                      <th className="px-4 py-3">Application Status</th>
-                      <th className="px-4 py-3">Admin Response</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {myLeaves.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
+                    <thead className="bg-[#FAF6EF] text-[11px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-200">
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-xs text-slate-400 italic">
-                          You haven't submitted any leave applications yet. Click "Request Leave" above to apply.
-                        </td>
+                        <th className="px-4 py-3">Leave ID</th>
+                        <th className="px-4 py-3">Leave Type</th>
+                        <th className="px-4 py-3">Dates & Days</th>
+                        <th className="px-4 py-3">Reason</th>
+                        <th className="px-4 py-3">Application Status</th>
+                        <th className="px-4 py-3">Admin Response</th>
                       </tr>
-                    ) : (
-                      myLeaves.map(leave => (
-                        <tr key={leave.id} className="hover:bg-[#FAF6EF]/60 transition">
-                          <td className="px-4 py-3 font-mono font-bold text-burgundy-900">
-                            {leave.id}
-                            <span className="text-[10px] text-slate-400 block font-normal">
-                              {formatDate(leave.requestedAt)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-bold text-slate-800">
-                            {leave.leaveType}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="font-mono text-slate-900">
-                              {formatDate(leave.startDate)} {leave.endDate !== leave.startDate ? `to ${formatDate(leave.endDate)}` : ''}
-                            </div>
-                            <span className="text-[10px] font-bold text-emerald-800">
-                              {leave.daysCount} Day{leave.daysCount > 1 ? 's' : ''}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-slate-700 max-w-xs">
-                            {leave.reason}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                              leave.status === 'Approved'
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                                : leave.status === 'Rejected'
-                                ? 'bg-rose-50 text-rose-800 border-rose-300'
-                                : 'bg-amber-50 text-amber-900 border-amber-300'
-                            }`}>
-                              {leave.status === 'Approved' && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
-                              {leave.status === 'Rejected' && <XCircle className="w-3 h-3 text-rose-600" />}
-                              {leave.status === 'Pending Approval' && <AlertTriangle className="w-3 h-3 text-amber-600" />}
-                              <span>{leave.status}</span>
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-[11px] text-slate-600">
-                            {leave.actionRemarks ? (
-                              <div>
-                                <span className="font-semibold text-slate-800">"{leave.actionRemarks}"</span>
-                                <span className="text-[10px] text-slate-400 block">by {leave.actionedBy}</span>
-                              </div>
-                            ) : (
-                              <span className="text-slate-400 italic">Waiting for Admin review</span>
-                            )}
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {myLeaves.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-xs text-slate-400 italic">
+                            You haven't submitted any leave applications yet. Click "Request Leave" above to apply.
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        myLeaves.map(leave => (
+                          <tr key={leave.id} className="hover:bg-[#FAF6EF]/60 transition">
+                            <td className="px-4 py-3 font-mono font-bold text-burgundy-900">
+                              {leave.id}
+                              <span className="text-[10px] text-slate-400 block font-normal">
+                                {formatDate(leave.requestedAt)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 font-bold text-slate-800">
+                              {leave.leaveType}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="font-mono text-slate-900">
+                                {formatDate(leave.startDate)} {leave.endDate !== leave.startDate ? `to ${formatDate(leave.endDate)}` : ''}
+                              </div>
+                              <span className="text-[10px] font-bold text-emerald-800">
+                                {leave.daysCount} Day{leave.daysCount > 1 ? 's' : ''}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-slate-700 max-w-xs">
+                              {leave.reason}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                leave.status === 'Approved'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                  : leave.status === 'Rejected'
+                                  ? 'bg-rose-50 text-rose-800 border-rose-300'
+                                  : 'bg-amber-50 text-amber-900 border-amber-300'
+                              }`}>
+                                {leave.status === 'Approved' && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
+                                {leave.status === 'Rejected' && <XCircle className="w-3 h-3 text-rose-600" />}
+                                {leave.status === 'Pending Approval' && <AlertTriangle className="w-3 h-3 text-amber-600" />}
+                                <span>{leave.status}</span>
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-[11px] text-slate-600">
+                              {leave.actionRemarks ? (
+                                <div>
+                                  <span className="font-semibold text-slate-800">"{leave.actionRemarks}"</span>
+                                  <span className="text-[10px] text-slate-400 block">by {leave.actionedBy}</span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 italic">Waiting for Admin review</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
       {/* ==================================================== */}
       {/* MODAL 1: REQUEST LEAVE APPLICATION                   */}
       {/* ==================================================== */}
-      {showRequestModal && (
+      {!isStrictAdmin && showRequestModal && (
         <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-950 p-4 text-white flex items-center justify-between">
