@@ -1083,6 +1083,23 @@ export const BankLoginPage = () => {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
+            onClick={() => { setRoutineTab('all'); setStatusFilter('All'); }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+              routineTab === 'all'
+                ? 'bg-slate-800 text-white shadow-sm ring-2 ring-slate-700/30'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <span>All Records</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              routineTab === 'all' ? 'bg-white text-slate-900' : 'bg-slate-200 text-slate-700'
+            }`}>
+              {totalLoginsCount}
+            </span>
+          </button>
+          
+          <button
+            type="button"
             onClick={() => { setRoutineTab('due'); setStatusFilter('All'); }}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
               routineTab === 'due'
@@ -1150,22 +1167,7 @@ export const BankLoginPage = () => {
             </span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => { setRoutineTab('all'); setStatusFilter('All'); }}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-              routineTab === 'all'
-                ? 'bg-slate-800 text-white shadow-sm ring-2 ring-slate-700/30'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
-          >
-            <span>All Records</span>
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-              routineTab === 'all' ? 'bg-white text-slate-900' : 'bg-slate-200 text-slate-700'
-            }`}>
-              {totalLoginsCount}
-            </span>
-          </button>
+          
         </div>
 
         {routineTab === 'due' && (
