@@ -136,16 +136,21 @@ export const AuthProvider = ({ children }) => {
 
     if (role === 'Admin') return true;
 
+    const roleLower = String(role || '').toLowerCase();
+    const isOps = roleLower === 'ops' || roleLower === 'operations';
+
     switch (route) {
       case 'dashboard':
       case 'notifications':
-      case 'assigned-leads':
       case 'statement':
       case 'attendance':
+        return true;
+      case 'assigned-leads':
+        return !isOps;
       case 'login':
       case 'logins':
       case 'bank-logins':
-        return true;
+        return !isOps;
       case 'resignation':
         return ['Admin', 'Manager', 'Ops', 'RM', 'Sales Manager'].includes(role);
       case 'advance':

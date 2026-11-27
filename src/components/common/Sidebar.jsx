@@ -263,7 +263,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         )}
 
         {/* Assign Lead Menu (Collect Docs Only & Case Assignments) */}
-        {canAccessRoute('assigned-leads') && (
+        {canAccessRoute('assigned-leads') && !['ops', 'operations'].includes(String(currentUser?.role || '').toLowerCase()) && (
           <NavLink
             to="/assigned-leads"
             onClick={() => isMobile && setIsOpen(false)}
@@ -309,7 +309,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         )}
 
         {/* Bank File Login Menu (Req 2, 4, 5, 6) */}
-        {canAccessRoute('bank-logins') && (
+        {canAccessRoute('bank-logins') && !['ops', 'operations'].includes(String(currentUser?.role || '').toLowerCase()) && (
           <NavLink
             to="/bank-logins"
             onClick={() => isMobile && setIsOpen(false)}
