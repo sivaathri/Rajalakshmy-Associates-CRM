@@ -18,7 +18,8 @@ import {
   Layers,
   XCircle,
   Filter,
-  RotateCcw
+  RotateCcw,
+  Activity
 } from 'lucide-react';
 import {
   BarChart,
@@ -66,22 +67,25 @@ export const DashboardPage = () => {
         ? calls.filter(c => (currentUser?.id && c.employeeId === currentUser.id) || (currentUser?.name && c.employeeName === currentUser.name))
         : calls);
 
-  // Scoped Bank Logins for RM (strictly their assigned, created, or submitted bank files)
-  const scopedBankLogins = isRM
+  // Scoped Bank Logins for RM & Sales Manager (strictly their assigned, created, or submitted bank files)
+  const scopedBankLogins = (isRM || isSalesManager)
     ? (bankLogins || []).filter(b => {
         const matchId = (
           (b.assignedRMId && b.assignedRMId === currentUser?.id) ||
           (b.createdBy && b.createdBy === currentUser?.id) ||
-          (b.submittedBy && b.submittedBy === currentUser?.id)
+          (b.submittedBy && b.submittedBy === currentUser?.id) ||
+          (b.salesManagerId && b.salesManagerId === currentUser?.id)
         );
         const matchName = (
           currentUser?.name && (
             (b.assignedRMName && b.assignedRMName.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) ||
             (b.createdByName && b.createdByName.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) ||
-            (b.submittedByName && b.submittedByName.trim().toLowerCase() === currentUser.name.trim().toLowerCase())
+            (b.submittedByName && b.submittedByName.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) ||
+            (b.salesManagerName && b.salesManagerName.trim().toLowerCase() === currentUser.name.trim().toLowerCase())
           )
         );
-        return matchId || matchName;
+        const matchCustomer = isSalesManager && scopedCustomers.some(cust => cust.id === b.customerId || (b.mobile && cust.mobile && cust.mobile.replace(/\D/g, '').slice(-10) === b.mobile.replace(/\D/g, '').slice(-10)));
+        return matchId || matchName || matchCustomer;
       })
     : (bankLogins || []);
 
@@ -135,6 +139,13 @@ export const DashboardPage = () => {
   const totalRejectedCount = rejectedBankLogins.length;
   const inProgressBankLogins = filteredBankLogins.filter(b => b.status === 'In Progress');
   const totalInProgressCount = inProgressBankLogins.length;
+
+  // Filtered Activities for Sales Manager
+  const filteredActivities = scopedActivities.filter(a => {
+    if (dateFilter === 'all') return true;
+    return isDateInRange(a.submissionDate || a.activityDate || a.date || a.createdAt);
+  });
+  const totalActivities = filteredActivities.length;
 
   // Filtered Calls based on active date filter
   const filteredCalls = scopedCalls.filter(c => {
@@ -384,7 +395,7 @@ export const DashboardPage = () => {
   const activePieData = (isRM && rmPieMode === 'actionCalls') ? rmActionCallsData : knownUnknownData;
   const totalActivePieValue = activePieData.reduce((sum, d) => sum + (d.value || 0), 0);
 
-  // Tailored KPI Stat Cards (Customized for RM Role per user request)
+  // Tailored KPI Stat Cards (Customized for RM and Sales Manager roles per user request)
   const statCards = isRM
     ? [
         {
@@ -394,6 +405,41 @@ export const DashboardPage = () => {
           icon: <PhoneCall className="w-5 h-5 text-burgundy-900" />,
           color: 'bg-burgundy-50/70 border-burgundy-200',
           link: '/telecalling'
+        },
+        {
+          title: 'Total Bank Logins',
+          value: totalBankLogins,
+          sub: 'Files logged across partner banks',
+          icon: <Layers className="w-5 h-5 text-blue-700" />,
+          color: 'bg-blue-50/60 border-blue-200',
+          link: '/bank-logins'
+        },
+        {
+          title: 'Total Disbursed ("Dispossement")',
+          value: totalDisbursedCount,
+          sub: `${totalDisbursedCount} file(s) funded successfully`,
+          icon: <CheckCircle className="w-5 h-5 text-emerald-800" />,
+          color: 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400/30',
+          link: '/bank-logins'
+        },
+        {
+          title: 'Total Rejected',
+          value: totalRejectedCount,
+          sub: 'Declined bank file submissions',
+          icon: <XCircle className="w-5 h-5 text-rose-700" />,
+          color: 'bg-rose-50/50 border-rose-200',
+          link: '/bank-logins'
+        }
+      ]
+    : isSalesManager
+    ? [
+        {
+          title: 'Total Activity',
+          value: totalActivities,
+          sub: `${totalActivities} field activities logged`,
+          icon: <Activity className="w-5 h-5 text-burgundy-900" />,
+          color: 'bg-burgundy-50/70 border-burgundy-200',
+          link: '/activities'
         },
         {
           title: 'Total Bank Logins',
@@ -592,7 +638,7 @@ export const DashboardPage = () => {
         
         </div>
 
-        <div className={`grid grid-cols-2 ${isRM ? 'lg:grid-cols-4' : 'sm:grid-cols-3 lg:grid-cols-5'} gap-3`}>
+        <div className={`grid grid-cols-2 ${(isRM || isSalesManager) ? 'lg:grid-cols-4' : 'sm:grid-cols-3 lg:grid-cols-5'} gap-3`}>
           {statCards.map((card, idx) => (
             <div
               key={idx}
