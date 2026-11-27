@@ -126,6 +126,8 @@ export const AttendancePage = ({ initialTab }) => {
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [rejectingLeave, setRejectingLeave] = useState(null);
   const [rejectRemarks, setRejectRemarks] = useState('');
+  const [approvingLeave, setApprovingLeave] = useState(null);
+  const [approveRemarks, setApproveRemarks] = useState('');
 
   // Request Leave Form Inputs
   const [leaveType, setLeaveType] = useState('Casual Leave (CL)');
@@ -897,7 +899,10 @@ export const AttendancePage = ({ initialTab }) => {
                                   <div className="flex items-center justify-end gap-1.5">
                                     <button
                                       type="button"
-                                      onClick={() => approveLeave(leave.id)}
+                                      onClick={() => {
+                                        setApprovingLeave(leave);
+                                        setApproveRemarks('Approved');
+                                      }}
                                       className="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-[11px] font-bold text-white shadow-xs transition flex items-center gap-1"
                                       title="Approve Leave Requisition"
                                     >
@@ -1220,12 +1225,88 @@ export const AttendancePage = ({ initialTab }) => {
                 <button
                   type="button"
                   onClick={() => {
-                    rejectLeave(rejectingLeave.id, rejectRemarks);
+                    if (!rejectRemarks.trim()) {
+                      showToast('Please provide a reason for rejecting this leave request.', 'error');
+                      return;
+                    }
+                    rejectLeave(rejectingLeave.id, rejectRemarks.trim());
                     setRejectingLeave(null);
                   }}
                   className="px-5 py-2 rounded-xl bg-rose-700 hover:bg-rose-800 text-white font-bold transition shadow-sm"
                 >
                   Confirm Rejection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* MODAL 3: ADMIN APPROVE LEAVE CONFIRMATION MODAL      */}
+      {/* ==================================================== */}
+      {approvingLeave && (
+        <div className="fixed inset-0 !mt-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-emerald-700 to-teal-800 p-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-200" />
+                <h3 className="text-base font-bold text-white font-corporate">Confirm Leave Approval</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setApprovingLeave(null)}
+                className="p-1 rounded-lg text-white/80 hover:bg-white/10 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-950">
+                <p className="text-sm font-extrabold text-emerald-900 flex items-center gap-1.5">
+                  <Check className="w-4 h-4 text-emerald-700" />
+                  <span>Are you sure you want to approve this leave request?</span>
+                </p>
+                <div className="mt-2.5 pt-2 border-t border-emerald-200/60 text-xs space-y-1 text-slate-800">
+                  <p><strong>Employee:</strong> {approvingLeave.employeeName} ({approvingLeave.employeeRole} • {approvingLeave.employeeId})</p>
+                  <p><strong>Leave Type:</strong> {approvingLeave.leaveType} ({approvingLeave.daysCount} Day{approvingLeave.daysCount > 1 ? 's' : ''})</p>
+                  <p><strong>Duration:</strong> {formatDate(approvingLeave.startDate)} {approvingLeave.endDate !== approvingLeave.startDate ? `to ${formatDate(approvingLeave.endDate)}` : ''}</p>
+                  <p className="text-slate-600"><strong>Reason:</strong> "{approvingLeave.reason}"</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                  Approval Remarks (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={approveRemarks}
+                  onChange={(e) => setApproveRemarks(e.target.value)}
+                  placeholder="e.g. Approved. Handover completed."
+                  className="w-full rounded-xl border border-slate-300 p-2.5 text-xs focus:outline-none focus:border-emerald-700"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setApprovingLeave(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    approveLeave(approvingLeave.id, approveRemarks || 'Approved');
+                    setApprovingLeave(null);
+                  }}
+                  className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold transition shadow-sm flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Yes, Approve Leave</span>
                 </button>
               </div>
             </div>
