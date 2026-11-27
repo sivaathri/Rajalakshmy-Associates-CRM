@@ -295,13 +295,17 @@ export const DashboardPage = () => {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     userMonthKeysSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   }
-  // Include any other months where this user has calls or bank logins
+  // Include any other months where this user has calls, bank logins, or daily activities
   scopedCalls.forEach(c => {
     const k = getRecordMonthKey(c.callDate || c.date || c.createdAt);
     if (k) userMonthKeysSet.add(k);
   });
   scopedBankLogins.forEach(b => {
     const k = getRecordMonthKey(b.disbursementDetails?.disbursementDate || b.lastUpdateDate || b.loginDate || b.createdAt);
+    if (k) userMonthKeysSet.add(k);
+  });
+  scopedActivities.forEach(a => {
+    const k = getRecordMonthKey(a.submissionDate || a.date || a.createdAt);
     if (k) userMonthKeysSet.add(k);
   });
 
@@ -365,9 +369,58 @@ export const DashboardPage = () => {
     };
   });
 
+  // Actual monthly contacts added & disbursement data for Sales Manager (NO mock data)
+  const actualMonthlySMData = sortedMonthKeys.map(mKey => {
+    const [, monthNum] = mKey.split('-').map(Number);
+    const monthLabel = monthNames[monthNum - 1] || mKey;
+
+    // Actual contacts logged in Daily Activities by this Sales Manager in this month
+    const activitiesInMonth = scopedActivities.filter(a => {
+      const k = getRecordMonthKey(a.submissionDate || a.date || a.createdAt);
+      if (k !== mKey) return false;
+      return dateFilter === 'all' || isDateInRange(a.submissionDate || a.date || a.createdAt);
+    }).length;
+
+    const contactsAddedInMonth = mKey === currentMonthKey
+      ? Math.max(activitiesInMonth, filteredActivities.length)
+      : activitiesInMonth;
+
+    // Actual disbursed bank logins for this Sales Manager in this month
+    const disbursedInMonth = scopedBankLogins.filter(b => {
+      if (b.status !== 'Disbursed') return false;
+      const k = getRecordMonthKey(b.disbursementDetails?.disbursementDate || b.lastUpdateDate || b.loginDate || b.createdAt);
+      if (k !== mKey) return false;
+      return dateFilter === 'all' || isDateInRange(b.disbursementDetails?.disbursementDate || b.lastUpdateDate || b.loginDate || b.createdAt);
+    });
+
+    const disbursedCountInMonth = mKey === currentMonthKey
+      ? Math.max(disbursedInMonth.length, totalDisbursedCount)
+      : disbursedInMonth.length;
+
+    const disbursedAmountInMonth = disbursedInMonth.reduce(
+      (sum, b) => sum + (Number(b.disbursedAmount) || Number(b.loanAmount) || 0),
+      0
+    );
+
+    const amountLakhsInMonth = mKey === currentMonthKey && totalDisbursedAmount > 0
+      ? Math.round(Math.max(disbursedAmountInMonth, totalDisbursedAmount) / 100000)
+      : Math.round(disbursedAmountInMonth / 100000);
+
+    return {
+      month: monthLabel,
+      monthKey: mKey,
+      contactsAdded: contactsAddedInMonth,
+      calls: contactsAddedInMonth, // fallback alias
+      disbursed: disbursedCountInMonth,
+      amountLakhs: amountLakhsInMonth
+    };
+  });
+
   // Monthly Performance Chart Data
   const monthlyPerformanceData = isRM
     ? actualMonthlyRMData
+    : isSalesManager
+    ? actualMonthlySMData
     : [
         { month: 'Jun', submitted: 85, approved: 65, amountLakhs: 140 },
         { month: 'Jul', submitted: 110, approved: 92, amountLakhs: 210 },
@@ -694,10 +747,16 @@ export const DashboardPage = () => {
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
             <div>
               <h4 className="text-sm font-bold text-burgundy-900 font-corporate">
-                {isRM ? 'Monthly Calls & Disbursements ("Disposement")' : 'Daily Telecalling Volume & Conversions'}
+                {isSalesManager
+                  ? 'Monthly Contacts Added & Disbursements ("Disposement")'
+                  : isRM
+                  ? 'Monthly Calls & Disbursements ("Disposement")'
+                  : 'Daily Telecalling Volume & Conversions'}
               </h4>
               <p className="text-xs text-slate-500">
-                {isRM
+                {isSalesManager
+                  ? 'Actual contacts added in daily activities and funded disbursements of this user'
+                  : isRM
                   ? 'Actual telecalling calls and funded disbursements of this user'
                   : 'Daily calling performance comparison'}
               </p>
@@ -705,11 +764,12 @@ export const DashboardPage = () => {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-3 text-xs">
                 <span className="flex items-center gap-1.5 font-medium text-slate-600">
-                  <span className="h-2.5 w-2.5 rounded-full bg-burgundy-800"></span> Total Calls
+                  <span className="h-2.5 w-2.5 rounded-full bg-burgundy-800"></span>
+                  {isSalesManager ? 'Contacts Added' : 'Total Calls'}
                 </span>
                 <span className="flex items-center gap-1.5 font-medium text-slate-600">
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-                  {isRM ? 'Disbursements ("Disposement")' : 'OK / Converted'}
+                  {(isRM || isSalesManager) ? 'Disbursements ("Disposement")' : 'OK / Converted'}
                 </span>
               </div>
             </div>
@@ -718,12 +778,12 @@ export const DashboardPage = () => {
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={isRM ? actualMonthlyRMData : callActivityData}
+                data={isRM ? actualMonthlyRMData : (isSalesManager ? actualMonthlySMData : callActivityData)}
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1ECE1" vertical={false} />
                 <XAxis
-                  dataKey={isRM ? 'month' : 'day'}
+                  dataKey={(isRM || isSalesManager) ? 'month' : 'day'}
                   tick={{ fontSize: 11, fill: '#64748B' }}
                   axisLine={false}
                   tickLine={false}
@@ -733,10 +793,16 @@ export const DashboardPage = () => {
                   formatter={(val, name) => [val, name]}
                   contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '12px' }}
                 />
-                <Bar dataKey="calls" name="Total Calls" fill="#79091D" radius={[6, 6, 0, 0]} barSize={22} />
                 <Bar
-                  dataKey={isRM ? 'disbursed' : 'converted'}
-                  name={isRM ? 'Disbursements ("Disposement")' : 'OK Outcomes'}
+                  dataKey={isSalesManager ? 'contactsAdded' : 'calls'}
+                  name={isSalesManager ? 'Contacts Added' : 'Total Calls'}
+                  fill="#79091D"
+                  radius={[6, 6, 0, 0]}
+                  barSize={22}
+                />
+                <Bar
+                  dataKey={(isRM || isSalesManager) ? 'disbursed' : 'converted'}
+                  name={(isRM || isSalesManager) ? 'Disbursements ("Disposement")' : 'OK Outcomes'}
                   fill="#10B981"
                   radius={[6, 6, 0, 0]}
                   barSize={22}
@@ -900,17 +966,23 @@ export const DashboardPage = () => {
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
             <div>
               <h4 className="text-sm font-bold text-burgundy-900 font-corporate">
-                {isRM ? 'Monthly Disbursements & Telecalling Trend' : 'Monthly Performance & Sanction Growth'}
+                {isRM
+                  ? 'Monthly Disbursements & Telecalling Trend'
+                  : isSalesManager
+                  ? 'Monthly Disbursements & Activity Trend'
+                  : 'Monthly Performance & Sanction Growth'}
               </h4>
               <p className="text-xs text-slate-500">
                 {isRM
                   ? 'Track monthly total calls vs disbursed loan portfolio in Lakhs (₹)'
+                  : isSalesManager
+                  ? 'Track monthly contacts added vs disbursed loan portfolio in Lakhs (₹)'
                   : 'Track case submissions vs approved volumes in Lakhs (₹)'}
               </p>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                {isRM
+                {(isRM || isSalesManager)
                   ? `Total Disbursed: ₹${Math.round(totalDisbursedAmount / 100000)} Lakhs (${totalDisbursedCount} Cases)`
                   : `Portfolio: ${formatCurrency(approvedVolume)}`}
               </span>
@@ -941,10 +1013,15 @@ export const DashboardPage = () => {
                   formatter={(val, name) => [name.includes('Lakhs') ? `₹${val} Lakhs` : val, name]}
                   contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '12px' }}
                 />
-                <Area type="monotone" dataKey="amountLakhs" name={isRM ? 'Disbursed Amount (₹ Lakhs)' : 'Amount (₹ Lakhs)'} stroke="#D9A52E" strokeWidth={2.5} fillOpacity={1} fill="url(#colorAmount)" />
+                <Area type="monotone" dataKey="amountLakhs" name={(isRM || isSalesManager) ? 'Disbursed Amount (₹ Lakhs)' : 'Amount (₹ Lakhs)'} stroke="#D9A52E" strokeWidth={2.5} fillOpacity={1} fill="url(#colorAmount)" />
                 {isRM ? (
                   <>
                     <Area type="monotone" dataKey="calls" name="Total Calls" stroke="#79091D" strokeWidth={2} fillOpacity={1} fill="url(#colorApproved)" />
+                    <Area type="monotone" dataKey="disbursed" name="Disbursed Cases" stroke="#10B981" strokeWidth={2} fillOpacity={1} fill="url(#colorDisbursed)" />
+                  </>
+                ) : isSalesManager ? (
+                  <>
+                    <Area type="monotone" dataKey="contactsAdded" name="Contacts Added" stroke="#79091D" strokeWidth={2} fillOpacity={1} fill="url(#colorApproved)" />
                     <Area type="monotone" dataKey="disbursed" name="Disbursed Cases" stroke="#10B981" strokeWidth={2} fillOpacity={1} fill="url(#colorDisbursed)" />
                   </>
                 ) : (
@@ -956,8 +1033,8 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Tables Section: Recent Activities & Pending Follow-ups (Hidden for RM) */}
-      {!isRM && (
+      {/* Tables Section: Recent Activities & Pending Follow-ups (Hidden for RM and Sales Manager) */}
+      {!isRM && !isSalesManager && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Pending Follow-ups Action List (6 cols) */}
           <div className="lg:col-span-6 rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">
