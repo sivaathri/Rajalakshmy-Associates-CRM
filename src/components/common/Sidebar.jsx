@@ -305,11 +305,6 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
               <Users className="w-4 h-4 shrink-0 text-gold-400" />
               {isExpanded && <span>Customer</span>}
             </div>
-            {isExpanded && (
-              <span className="text-[10px] bg-white/15 text-gold-200 font-semibold px-1.5 py-0.5 rounded-full">
-                {scopedCustomerMenuCount}
-              </span>
-            )}
           </NavLink>
         )}
 
@@ -457,11 +452,6 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
               <UserCog className="w-4 h-4 shrink-0 text-gold-400" />
               {isExpanded && <span>User Management</span>}
             </div>
-            {isExpanded && (
-              <span className="text-[10px] bg-white/15 text-gold-200 font-semibold px-1.5 py-0.5 rounded-full">
-                {employees?.length || 0}
-              </span>
-            )}
           </NavLink>
         )}
 
