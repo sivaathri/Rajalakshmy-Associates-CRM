@@ -649,7 +649,7 @@ export const TelecallingPage = () => {
       "Sl No": idx + 1,
       "Customer Name": c.customerName,
       "Mobile Contact": formatMobileNumber(c.mobile),
-      "Telecaller": c.employeeName,
+      "RM": c.employeeName,
       "Date": formatDate(c.callDate),
       "Time": c.callTime,
       "Duration": c.duration,
@@ -2025,7 +2025,7 @@ export const TelecallingPage = () => {
                     <th className="px-4 py-3">Sl.No</th>
                     <th className="px-4 py-3">Customer Name</th>
                     <th className="px-4 py-3">Mobile Contact</th>
-                    <th className="px-4 py-3">Telecaller / RM</th>
+                    <th className="px-4 py-3">Relationship Manager (RM)</th>
                     <th className="px-4 py-3">Call Date & Time</th>
                     <th className="px-4 py-3">Duration</th>
                     <th className="px-4 py-3">Call Outcome</th>
