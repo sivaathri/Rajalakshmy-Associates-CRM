@@ -52,16 +52,11 @@ export const AdvanceAmountPage = () => {
       {/* Top Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider">
-            <CreditCard className="w-4 h-4" />
-            <span>Employee Payroll & Advances</span>
-          </div>
+          
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             Advance Amount Management
           </h2>
-          <p className="text-xs text-white/80 max-w-xl">
-            Request salary advance for medical emergencies, equipment repairs, or leases. Admin and Managers approve disbursals.
-          </p>
+         
         </div>
 
         <div className="flex items-center gap-3">
