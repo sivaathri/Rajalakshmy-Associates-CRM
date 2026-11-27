@@ -117,7 +117,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
   }, [currentUser, customers, bankLogins, leads, leaves, advanceAmounts, resignations, performanceCases, attendance]);
 
   const NavContent = ({ isExpanded = true, isMobile = false }) => {
-    const dailyActivitiesMenu = canAccessRoute('daily-activities') && (
+    const dailyActivitiesMenu = canAccessRoute('daily-activities') && currentUser?.role !== 'Admin' && (
       <NavLink
         to="/daily-activities"
         onClick={() => isMobile && setIsOpen(false)}
@@ -243,7 +243,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         {isSalesManager && dailyActivitiesMenu}
 
         {/* Dedicated RM Telecalling view */}
-        {canAccessRoute('telecalling') && (
+        {canAccessRoute('telecalling') && currentUser?.role !== 'Admin' && (
           <NavLink
             to="/telecalling"
             onClick={() => isMobile && setIsOpen(false)}
@@ -263,7 +263,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         )}
 
         {/* Assign Lead Menu (Collect Docs Only & Case Assignments) */}
-        {canAccessRoute('assigned-leads') && !['ops', 'operations'].includes(String(currentUser?.role || '').toLowerCase()) && (
+        {canAccessRoute('assigned-leads') && currentUser?.role !== 'Admin' && !['ops', 'operations'].includes(String(currentUser?.role || '').toLowerCase()) && (
           <NavLink
             to="/assigned-leads"
             onClick={() => isMobile && setIsOpen(false)}
@@ -309,7 +309,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         )}
 
         {/* Bank File Login Menu (Req 2, 4, 5, 6) */}
-        {canAccessRoute('bank-logins') && !['ops', 'operations'].includes(String(currentUser?.role || '').toLowerCase()) && (
+        {canAccessRoute('bank-logins') && currentUser?.role !== 'Admin' && !['ops', 'operations'].includes(String(currentUser?.role || '').toLowerCase()) && (
           <NavLink
             to="/bank-logins"
             onClick={() => isMobile && setIsOpen(false)}
@@ -349,8 +349,8 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         {/* 5. Daily Activities (for non-Sales Manager roles) */}
         {!isSalesManager && dailyActivitiesMenu}
 
-        {/* 5. Attendance Menu (Available to All Roles - Punch In Only) */}
-        {canAccessRoute('attendance') && (
+        {/* 5. Attendance Menu (Available to non-Admin roles) */}
+        {canAccessRoute('attendance') && currentUser?.role !== 'Admin' && (
           <NavLink
             to="/attendance"
             onClick={() => isMobile && setIsOpen(false)}
@@ -411,7 +411,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         )}
 
         {/* 2. Resignation */}
-        {canAccessRoute('resignation') && (
+        {canAccessRoute('resignation') && currentUser?.role !== 'Admin' && (
           <NavLink
             to="/resignation"
             onClick={() => isMobile && setIsOpen(false)}

@@ -134,7 +134,20 @@ export const AuthProvider = ({ children }) => {
     if (!currentUser) return false;
     const role = currentUser.role;
 
-    if (role === 'Admin') return true;
+    if (role === 'Admin') {
+      const blockedForAdmin = [
+        'telecalling',
+        'assigned-leads',
+        'login',
+        'logins',
+        'bank-logins',
+        'daily-activities',
+        'attendance',
+        'resignation'
+      ];
+      if (blockedForAdmin.includes(route)) return false;
+      return true;
+    }
 
     const roleLower = String(role || '').toLowerCase();
     const isOps = roleLower === 'ops' || roleLower === 'operations';
