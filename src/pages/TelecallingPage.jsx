@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -46,6 +47,7 @@ import { formatDate, formatDateTime, getStatusBadgeClass, exportToCSV, formatMob
 import { Pagination } from '../components/common/Pagination';
 
 export const TelecallingPage = () => {
+  const location = useLocation();
   const {
     customers,
     calls,
@@ -66,6 +68,27 @@ export const TelecallingPage = () => {
   const [queueFilter, setQueueFilter] = useState('reminders'); // 'reminders' | 'completed'
   const [searchQueue, setSearchQueue] = useState('');
   const [selectedContactId, setSelectedContactId] = useState(null);
+
+  // Automatically apply incoming filter state from Dashboard navigation
+  useEffect(() => {
+    if (location.state) {
+      if (location.state.activeTab !== undefined) {
+        setActiveTab(location.state.activeTab);
+      }
+      if (location.state.reportDateRange !== undefined) {
+        setReportDateRange(location.state.reportDateRange);
+      }
+      if (location.state.selectedOutcomeFilter !== undefined) {
+        setSelectedOutcomeFilter(location.state.selectedOutcomeFilter);
+      }
+      if (location.state.customStartDate !== undefined) {
+        setCustomStartDate(location.state.customStartDate);
+      }
+      if (location.state.customEndDate !== undefined) {
+        setCustomEndDate(location.state.customEndDate);
+      }
+    }
+  }, [location.state]);
 
   // Added Numbers Tracking State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);

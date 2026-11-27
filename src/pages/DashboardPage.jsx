@@ -483,7 +483,8 @@ export const DashboardPage = () => {
           sub: `${actionCallsKnown} Known • ${actionCallsUnknown} Unknown`,
           icon: <PhoneCall className="w-5 h-5 text-burgundy-900" />,
           color: 'bg-burgundy-50/70 border-burgundy-200',
-          link: '/telecalling'
+          link: '/telecalling',
+          state: { dateRangeType: dateFilter }
         },
         {
           title: 'Total Bank Logins',
@@ -491,7 +492,8 @@ export const DashboardPage = () => {
           sub: 'Files logged across partner banks',
           icon: <Layers className="w-5 h-5 text-blue-700" />,
           color: 'bg-blue-50/60 border-blue-200',
-          link: '/bank-logins'
+          link: '/bank-logins',
+          state: { routineTab: 'all', statusFilter: 'All', dateRangeType: dateFilter, customStartDate, customEndDate }
         },
         {
           title: 'Total Disbursed ("Dispossement")',
@@ -499,7 +501,8 @@ export const DashboardPage = () => {
           sub: `${totalDisbursedCount} file(s) funded successfully`,
           icon: <CheckCircle className="w-5 h-5 text-emerald-800" />,
           color: 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400/30',
-          link: '/bank-logins'
+          link: '/bank-logins',
+          state: { routineTab: 'disbursed', statusFilter: 'Disbursed', dateRangeType: dateFilter, customStartDate, customEndDate }
         },
         {
           title: 'Total Rejected',
@@ -507,7 +510,8 @@ export const DashboardPage = () => {
           sub: 'Declined bank file submissions',
           icon: <XCircle className="w-5 h-5 text-rose-700" />,
           color: 'bg-rose-50/50 border-rose-200',
-          link: '/bank-logins'
+          link: '/bank-logins',
+          state: { routineTab: 'rejected', statusFilter: 'Rejected', dateRangeType: dateFilter, customStartDate, customEndDate }
         }
       ]
     : isSalesManager
@@ -518,7 +522,13 @@ export const DashboardPage = () => {
           sub: `${totalActivities} field activities logged`,
           icon: <Activity className="w-5 h-5 text-burgundy-900" />,
           color: 'bg-burgundy-50/70 border-burgundy-200',
-          link: '/activities'
+          link: '/activities',
+          state: {
+            activeTab: 'reports',
+            dateFilterMode: dateFilter === 'custom' ? 'range' : (dateFilter === 'today' ? 'today' : (dateFilter === 'month' ? 'month' : 'all')),
+            startDate: customStartDate,
+            endDate: customEndDate
+          }
         },
         {
           title: 'Total Bank Logins',
@@ -526,7 +536,8 @@ export const DashboardPage = () => {
           sub: 'Files logged across partner banks',
           icon: <Layers className="w-5 h-5 text-blue-700" />,
           color: 'bg-blue-50/60 border-blue-200',
-          link: '/bank-logins'
+          link: '/bank-logins',
+          state: { routineTab: 'all', statusFilter: 'All', dateRangeType: dateFilter, customStartDate, customEndDate }
         },
         {
           title: 'Total Disbursed ("Dispossement")',
@@ -534,7 +545,8 @@ export const DashboardPage = () => {
           sub: `${totalDisbursedCount} file(s) funded successfully`,
           icon: <CheckCircle className="w-5 h-5 text-emerald-800" />,
           color: 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400/30',
-          link: '/bank-logins'
+          link: '/bank-logins',
+          state: { routineTab: 'disbursed', statusFilter: 'Disbursed', dateRangeType: dateFilter, customStartDate, customEndDate }
         },
         {
           title: 'Total Rejected',
@@ -542,7 +554,8 @@ export const DashboardPage = () => {
           sub: 'Declined bank file submissions',
           icon: <XCircle className="w-5 h-5 text-rose-700" />,
           color: 'bg-rose-50/50 border-rose-200',
-          link: '/bank-logins'
+          link: '/bank-logins',
+          state: { routineTab: 'rejected', statusFilter: 'Rejected', dateRangeType: dateFilter, customStartDate, customEndDate }
         }
       ]
     : [
@@ -723,7 +736,7 @@ export const DashboardPage = () => {
               key={idx}
               onClick={() => {
                 if (card.onClick) card.onClick();
-                else if (card.link) navigate(card.link);
+                else if (card.link) navigate(card.link, { state: card.state });
               }}
               className={`rounded-2xl p-4 border transition hover:shadow-md ${card.color} ${card.onClick || card.link ? 'cursor-pointer hover:scale-[1.02]' : ''}`}
             >

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from '../components/common/Pagination';
@@ -30,6 +31,7 @@ import {
 import { formatCurrency, formatDate, formatMobileNumber, matchesMobileSearch } from '../utils/formatters';
 
 export const BankLoginPage = () => {
+  const location = useLocation();
   const { bankLogins, addBankLogin, addLoginUpdate, disburseLogin, rejectLogin, customers, activities = [], leads = [], employees = [] } = useCRM();
   const { currentUser, showToast } = useAuth();
 
@@ -45,6 +47,30 @@ export const BankLoginPage = () => {
   const [dateRangeType, setDateRangeType] = useState('all'); // 'all' | 'today' | 'week' | 'month' | 'custom'
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+
+  // Automatically apply incoming filter state from Dashboard navigation
+  useEffect(() => {
+    if (location.state) {
+      if (location.state.routineTab !== undefined) {
+        setRoutineTab(location.state.routineTab);
+      }
+      if (location.state.statusFilter !== undefined) {
+        setStatusFilter(location.state.statusFilter);
+      }
+      if (location.state.dateRangeType !== undefined) {
+        setDateRangeType(location.state.dateRangeType);
+      }
+      if (location.state.customStartDate !== undefined) {
+        setCustomStartDate(location.state.customStartDate);
+      }
+      if (location.state.customEndDate !== undefined) {
+        setCustomEndDate(location.state.customEndDate);
+      }
+      if (location.state.executiveFilter !== undefined) {
+        setExecutiveFilter(location.state.executiveFilter);
+      }
+    }
+  }, [location.state]);
 
   // Pagination (minimum 15 items per page)
   const [currentPage, setCurrentPage] = useState(1);

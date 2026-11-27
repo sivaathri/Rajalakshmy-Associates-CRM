@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -22,6 +23,7 @@ import { NumberLifecycleModal } from '../components/common/NumberLifecycleModal'
 import { formatDate, exportToCSV, formatMobileNumber } from '../utils/formatters';
 
 export const DailyActivitiesPage = () => {
+  const location = useLocation();
   const { activities, customers, employees } = useCRM();
   const { currentUser } = useAuth();
 
@@ -36,6 +38,24 @@ export const DailyActivitiesPage = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedSource, setSelectedSource] = useState('All');
+
+  // Automatically apply incoming filter state from Dashboard navigation
+  useEffect(() => {
+    if (location.state) {
+      if (location.state.activeTab !== undefined) {
+        setActiveTab(location.state.activeTab);
+      }
+      if (location.state.dateFilterMode !== undefined) {
+        setDateFilterMode(location.state.dateFilterMode);
+      }
+      if (location.state.startDate !== undefined) {
+        setStartDate(location.state.startDate);
+      }
+      if (location.state.endDate !== undefined) {
+        setEndDate(location.state.endDate);
+      }
+    }
+  }, [location.state]);
 
   // Unified dataset of all contacts added (from both activities and customer registrations)
   const unifiedActivities = useMemo(() => {
