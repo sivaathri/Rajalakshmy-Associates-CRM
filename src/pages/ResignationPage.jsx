@@ -48,10 +48,7 @@ export const ResignationPage = () => {
       {/* Top Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider">
-            <UserX className="w-4 h-4" />
-            <span>Human Resources Administration</span>
-          </div>
+         
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             Resignation Management
           </h2>
@@ -71,9 +68,7 @@ export const ResignationPage = () => {
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="px-6 py-3.5 bg-[#FAF6EF] border-b border-slate-200 text-xs font-bold text-slate-800 flex flex-wrap items-center justify-between gap-2">
           <span>Personal Resignation Records ({displayedResignations.length})</span>
-          <span className="text-[11px] text-burgundy-900 font-semibold bg-burgundy-50 px-2.5 py-0.5 rounded-full border border-burgundy-200">
-            Logged In: {currentUser?.name} ({currentUser?.id} • {currentUser?.role})
-          </span>
+        
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700 min-w-[700px]">
