@@ -109,9 +109,9 @@ export const FollowUpReminderModal = () => {
     });
   }, [customers, currentUser, respondedIds]);
 
-  // Determine 24-hour Punch-In status for ANY logged-in user
+  // Determine 24-hour Punch-In status for ANY logged-in user (Admin accounts are strictly exempted)
   const punchStatus = useMemo(() => {
-    if (!currentUser) return { isPunchDue: false, lastPunch: null };
+    if (!currentUser || currentUser.role === 'Admin') return { isPunchDue: false, lastPunch: null };
     const userPunches = (attendance || [])
       .filter(a => a.employeeId === currentUser.id)
       .map(rec => ({ rec, ts: parseAttendanceTimestamp(rec) }))
@@ -129,17 +129,18 @@ export const FollowUpReminderModal = () => {
     };
   }, [attendance, currentUser, nowMs]);
 
-  const isPunchDueForUser = Boolean(currentUser && punchStatus.isPunchDue);
+  const isPunchDueForUser = Boolean(currentUser && currentUser.role !== 'Admin' && punchStatus.isPunchDue);
   const hasMandatoryFollowUps = isMandatoryFollowUpRole && myReminders.length > 0;
   const hasVisibleFollowUps = myReminders.length > 0 && (isMandatoryFollowUpRole || showFollowUpModal);
 
   // Mandatory modal behavior:
   // 1) For RM / Sales Manager / Ops: if follow-ups exist -> complete all follow-ups first (no Close button)
-  // 2) For ALL roles: every 24 hrs, without Punch In -> cannot close popup or start work until Punch In is completed
-  const shouldForceOpen = Boolean(currentUser && (isPunchDueForUser || (showFollowUpModal && hasMandatoryFollowUps)));
+  // 2) For other roles (except Admin): every 24 hrs, without Punch In -> cannot close popup or start work until Punch In is completed
+  // 3) Admin role is completely exempted from mandatory punch in and reminder popup
+  const shouldForceOpen = Boolean(currentUser && currentUser.role !== 'Admin' && (isPunchDueForUser || (showFollowUpModal && hasMandatoryFollowUps)));
   const shouldOpen = shouldForceOpen || (showFollowUpModal && myReminders.length > 0);
 
-  if (!currentUser || !shouldOpen) return null;
+  if (!currentUser || currentUser.role === 'Admin' || !shouldOpen) return null;
 
   // Step mode: for RM/Sales Manager/Ops follow-ups come first; for other roles show follow-ups only if manually opened, otherwise mandatory Punch In
   const currentStep = hasMandatoryFollowUps || (showFollowUpModal && hasVisibleFollowUps && !isPunchDueForUser)
