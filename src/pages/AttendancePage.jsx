@@ -30,18 +30,22 @@ export const AttendancePage = ({ initialTab }) => {
   const { attendance, punchIn, leaves = [], requestLeave, approveLeave, rejectLeave } = useCRM();
   const { currentUser, showToast } = useAuth();
 
-  const isLeaveRoute = initialTab === 'leaves' || location?.pathname === '/approve-leaves';
+  // Check if logged-in user is Admin / Manager for approvals
+  const isAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
+  const isStrictAdmin = currentUser?.role === 'Admin';
+
+  const isLeaveRoute = initialTab === 'leaves' || location?.pathname === '/approve-leaves' || isStrictAdmin;
 
   // Top Tab Switcher: 'attendance' vs 'leaves'
   const [activeTab, setActiveTab] = useState(isLeaveRoute ? 'leaves' : 'attendance');
 
   useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
-    } else if (location?.pathname === '/approve-leaves') {
+    if (isStrictAdmin || location?.pathname === '/approve-leaves') {
       setActiveTab('leaves');
+    } else if (initialTab) {
+      setActiveTab(initialTab);
     }
-  }, [initialTab, location?.pathname]);
+  }, [initialTab, location?.pathname, isStrictAdmin]);
 
   // Live Clock State
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -52,10 +56,6 @@ export const AttendancePage = ({ initialTab }) => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
-
-  // Check if logged-in user is Admin / Manager for approvals
-  const isAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
-  const isStrictAdmin = currentUser?.role === 'Admin';
 
   // Today's formatted date strictly in DD-MM-YYYY
   const todayFormatted = useMemo(() => formatDateDDMMYYYY(currentTime), [currentTime]);
@@ -229,7 +229,7 @@ export const AttendancePage = ({ initialTab }) => {
             
           </div>
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
-            {currentUser?.name} — Attendance & Leave Desk
+            {isStrictAdmin ? 'Approve Employee Leaves' : `${currentUser?.name} — Attendance & Leave Desk`}
           </h2>
 
           <div className="mt-3 inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-lg text-xs font-mono border border-white/10">
@@ -261,6 +261,7 @@ export const AttendancePage = ({ initialTab }) => {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
         <div className="flex items-center gap-2">
           {/* Tab 1: Daily In-Punch & History */}
+          {!isStrictAdmin && (
           <button
             type="button"
             onClick={() => setActiveTab('attendance')}
@@ -273,6 +274,7 @@ export const AttendancePage = ({ initialTab }) => {
             <History className="w-4 h-4 text-gold-300" />
             <span>Daily In-Punch & History</span>
           </button>
+          )}
 
           {/* Tab 2: Leave Management & Approvals */}
           <button
@@ -285,7 +287,7 @@ export const AttendancePage = ({ initialTab }) => {
             }`}
           >
             <CalendarCheck className="w-4 h-4 text-emerald-300" />
-            <span>Leave Management & Approvals</span>
+            <span>{isStrictAdmin ? 'Approve Employee Leaves' : 'Leave Management & Approvals'}</span>
             {isAdmin && pendingLeavesAdminCount > 0 && (
               <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-amber-950 animate-pulse">
                 {pendingLeavesAdminCount}
@@ -310,7 +312,7 @@ export const AttendancePage = ({ initialTab }) => {
       {/* ==================================================== */}
       {/* TAB 1: DAILY IN-PUNCH & HISTORY                      */}
       {/* ==================================================== */}
-      {activeTab === 'attendance' && (
+      {!isStrictAdmin && activeTab === 'attendance' && (
         <div className="space-y-6">
           {/* Primary Punch Action & Personal Metric Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
