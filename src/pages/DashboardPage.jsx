@@ -243,7 +243,7 @@ export const DashboardPage = () => {
     .filter(c => c.status === 'Approved')
     .reduce((sum, c) => sum + (c.caseAmount || 0), 0);
 
-  // Daily Call Activity Bar Chart Data (Last 7 days mock aggregated)
+  // Daily Call Activity Bar Chart Data (For non-RM roles)
   const callActivityData = [
     { day: 'Mon 10th', calls: 14, converted: 6 },
     { day: 'Tue 11th', calls: 22, converted: 9 },
@@ -254,16 +254,108 @@ export const DashboardPage = () => {
     { day: 'Today (16th)', calls: todayCalls, converted: calls.filter(c => (c.callDate === todayStr || c.callDate === '2026-11-16') && c.outcome === 'OK').length }
   ];
 
+  // Helper to extract "YYYY-MM" from date strings (supports YYYY-MM-DD, DD-MM-YYYY, ISO)
+  const getRecordMonthKey = (dateStr) => {
+    if (!dateStr) return null;
+    let d = String(dateStr).trim();
+    if (/^\d{2}-\d{2}-\d{4}$/.test(d)) {
+      const [day, m, y] = d.split('-');
+      d = `${y}-${m}-${day}`;
+    }
+    const match = d.match(/^(\d{4})-(\d{2})/);
+    if (match) return `${match[1]}-${match[2]}`;
+    try {
+      const dt = new Date(d);
+      if (!isNaN(dt.getTime())) {
+        return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+      }
+    } catch {}
+    return null;
+  };
+
+  // Build rolling 6 months up to current month (e.g. Jun, Jul, Aug, Sep, Oct, Nov)
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const userMonthKeysSet = new Set();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    userMonthKeysSet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  // Include any other months where this user has calls or bank logins
+  scopedCalls.forEach(c => {
+    const k = getRecordMonthKey(c.callDate || c.date || c.createdAt);
+    if (k) userMonthKeysSet.add(k);
+  });
+  scopedBankLogins.forEach(b => {
+    const k = getRecordMonthKey(b.disbursementDetails?.disbursementDate || b.lastUpdateDate || b.loginDate || b.createdAt);
+    if (k) userMonthKeysSet.add(k);
+  });
+
+  const sortedMonthKeys = Array.from(userMonthKeysSet).sort();
+
+  // Actual monthly telecalling & disbursement data for this user (NO mock data)
+  const actualMonthlyRMData = sortedMonthKeys.map(mKey => {
+    const [, monthNum] = mKey.split('-').map(Number);
+    const monthLabel = monthNames[monthNum - 1] || mKey;
+
+    // Actual calls made by this user in this month
+    const callsInMonth = scopedCalls.filter(c => {
+      const k = getRecordMonthKey(c.callDate || c.date || c.createdAt);
+      if (k !== mKey) return false;
+      return dateFilter === 'all' || isDateInRange(c.callDate || c.date || c.createdAt);
+    }).length;
+
+    // Actual actioned customers for this user in this month
+    const actionedInMonth = filteredCustomers.filter(c => {
+      const isUserActioned = (
+        (currentUser?.id && (c.actionedBy === currentUser.id || c.assignedTo === currentUser.id)) ||
+        (currentUser?.name && (c.actionedByName === currentUser.name || c.assignedName === currentUser.name))
+      );
+      if (!isUserActioned) return false;
+      const k = getRecordMonthKey(c.lastCallDate || c.updatedAt || c.createdAt);
+      return k === mKey;
+    }).length;
+
+    // For current month, guarantee alignment with top KPI card
+    const totalCallsInMonth = mKey === currentMonthKey
+      ? Math.max(callsInMonth, actionedInMonth, totalActionCalls)
+      : Math.max(callsInMonth, actionedInMonth);
+
+    // Actual disbursed bank logins for this user in this month
+    const disbursedInMonth = scopedBankLogins.filter(b => {
+      if (b.status !== 'Disbursed') return false;
+      const k = getRecordMonthKey(b.disbursementDetails?.disbursementDate || b.lastUpdateDate || b.loginDate || b.createdAt);
+      if (k !== mKey) return false;
+      return dateFilter === 'all' || isDateInRange(b.disbursementDetails?.disbursementDate || b.lastUpdateDate || b.loginDate || b.createdAt);
+    });
+
+    const disbursedCountInMonth = mKey === currentMonthKey
+      ? Math.max(disbursedInMonth.length, totalDisbursedCount)
+      : disbursedInMonth.length;
+
+    const disbursedAmountInMonth = disbursedInMonth.reduce(
+      (sum, b) => sum + (Number(b.disbursedAmount) || Number(b.loanAmount) || 0),
+      0
+    );
+
+    const amountLakhsInMonth = mKey === currentMonthKey && totalDisbursedAmount > 0
+      ? Math.round(Math.max(disbursedAmountInMonth, totalDisbursedAmount) / 100000)
+      : Math.round(disbursedAmountInMonth / 100000);
+
+    return {
+      month: monthLabel,
+      monthKey: mKey,
+      calls: totalCallsInMonth,
+      disbursed: disbursedCountInMonth,
+      amountLakhs: amountLakhsInMonth
+    };
+  });
+
   // Monthly Performance Chart Data
   const monthlyPerformanceData = isRM
-    ? [
-        { month: 'Jun', submitted: 4, approved: 3, amountLakhs: 25 },
-        { month: 'Jul', submitted: 6, approved: 5, amountLakhs: 40 },
-        { month: 'Aug', submitted: 8, approved: 6, amountLakhs: 55 },
-        { month: 'Sep', submitted: 10, approved: 7, amountLakhs: 70 },
-        { month: 'Oct', submitted: 12, approved: 9, amountLakhs: 85 },
-        { month: 'Nov (Mtd)', submitted: totalBankLogins || 2, approved: totalDisbursedCount || 1, amountLakhs: Math.round(totalDisbursedAmount / 100000) || 1 }
-      ]
+    ? actualMonthlyRMData
     : [
         { month: 'Jun', submitted: 85, approved: 65, amountLakhs: 140 },
         { month: 'Jul', submitted: 110, approved: 92, amountLakhs: 210 },
@@ -526,36 +618,58 @@ export const DashboardPage = () => {
 
       {/* Charts Section: 3 Comprehensive Visualizations */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Daily Call Activity Bar Chart (7 cols) */}
+        {/* Monthly Call Activity & Disbursements Bar Chart (7 cols) */}
         <div className="lg:col-span-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
             <div>
               <h4 className="text-sm font-bold text-burgundy-900 font-corporate">
-                Daily Telecalling Volume & Conversions
+                {isRM ? 'Monthly Calls & Disbursements ("Disposement")' : 'Daily Telecalling Volume & Conversions'}
               </h4>
-              <p className="text-xs text-slate-500">Daily calling performance comparison</p>
+              <p className="text-xs text-slate-500">
+                {isRM
+                  ? 'Actual telecalling calls and funded disbursements of this user'
+                  : 'Daily calling performance comparison'}
+              </p>
             </div>
-            <div className="flex items-center gap-3 text-xs">
-              <span className="flex items-center gap-1.5 font-medium text-slate-600">
-                <span className="h-2.5 w-2.5 rounded-full bg-burgundy-800"></span> Total Calls
-              </span>
-              <span className="flex items-center gap-1.5 font-medium text-slate-600">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> OK / Converted
-              </span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 text-xs">
+                <span className="flex items-center gap-1.5 font-medium text-slate-600">
+                  <span className="h-2.5 w-2.5 rounded-full bg-burgundy-800"></span> Total Calls
+                </span>
+                <span className="flex items-center gap-1.5 font-medium text-slate-600">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                  {isRM ? 'Disbursements ("Disposement")' : 'OK / Converted'}
+                </span>
+              </div>
             </div>
           </div>
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={callActivityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart
+                data={isRM ? actualMonthlyRMData : callActivityData}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1ECE1" vertical={false} />
-                <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                <XAxis
+                  dataKey={isRM ? 'month' : 'day'}
+                  tick={{ fontSize: 11, fill: '#64748B' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
                 <YAxis tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
                 <Tooltip
+                  formatter={(val, name) => [val, name]}
                   contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '12px' }}
                 />
                 <Bar dataKey="calls" name="Total Calls" fill="#79091D" radius={[6, 6, 0, 0]} barSize={22} />
-                <Bar dataKey="converted" name="OK Outcomes" fill="#10B981" radius={[6, 6, 0, 0]} barSize={22} />
+                <Bar
+                  dataKey={isRM ? 'disbursed' : 'converted'}
+                  name={isRM ? 'Disbursements ("Disposement")' : 'OK Outcomes'}
+                  fill="#10B981"
+                  radius={[6, 6, 0, 0]}
+                  barSize={22}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -668,15 +782,19 @@ export const DashboardPage = () => {
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
             <div>
               <h4 className="text-sm font-bold text-burgundy-900 font-corporate">
-                Monthly Performance & Sanction Growth
+                {isRM ? 'Monthly Disbursements & Telecalling Trend' : 'Monthly Performance & Sanction Growth'}
               </h4>
               <p className="text-xs text-slate-500">
-                Track case submissions vs approved volumes in Lakhs (₹)
+                {isRM
+                  ? 'Track monthly total calls vs disbursed loan portfolio in Lakhs (₹)'
+                  : 'Track case submissions vs approved volumes in Lakhs (₹)'}
               </p>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                Portfolio: {formatCurrency(approvedVolume)}
+                {isRM
+                  ? `Total Disbursed: ₹${Math.round(totalDisbursedAmount / 100000)} Lakhs (${totalDisbursedCount} Cases)`
+                  : `Portfolio: ${formatCurrency(approvedVolume)}`}
               </span>
             </div>
           </div>
@@ -693,16 +811,27 @@ export const DashboardPage = () => {
                     <stop offset="5%" stopColor="#79091D" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#79091D" stopOpacity={0.0} />
                   </linearGradient>
+                  <linearGradient id="colorDisbursed" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
+                  </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1ECE1" vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
                 <Tooltip
-                  formatter={(val, name) => [name === 'Amount (₹ Lakhs)' ? `₹${val} Lakhs` : val, name]}
+                  formatter={(val, name) => [name.includes('Lakhs') ? `₹${val} Lakhs` : val, name]}
                   contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '12px' }}
                 />
-                <Area type="monotone" dataKey="amountLakhs" name="Amount (₹ Lakhs)" stroke="#D9A52E" strokeWidth={2.5} fillOpacity={1} fill="url(#colorAmount)" />
-                <Area type="monotone" dataKey="approved" name="Approved Cases" stroke="#79091D" strokeWidth={2} fillOpacity={1} fill="url(#colorApproved)" />
+                <Area type="monotone" dataKey="amountLakhs" name={isRM ? 'Disbursed Amount (₹ Lakhs)' : 'Amount (₹ Lakhs)'} stroke="#D9A52E" strokeWidth={2.5} fillOpacity={1} fill="url(#colorAmount)" />
+                {isRM ? (
+                  <>
+                    <Area type="monotone" dataKey="calls" name="Total Calls" stroke="#79091D" strokeWidth={2} fillOpacity={1} fill="url(#colorApproved)" />
+                    <Area type="monotone" dataKey="disbursed" name="Disbursed Cases" stroke="#10B981" strokeWidth={2} fillOpacity={1} fill="url(#colorDisbursed)" />
+                  </>
+                ) : (
+                  <Area type="monotone" dataKey="approved" name="Approved Cases" stroke="#79091D" strokeWidth={2} fillOpacity={1} fill="url(#colorApproved)" />
+                )}
               </AreaChart>
             </ResponsiveContainer>
           </div>
