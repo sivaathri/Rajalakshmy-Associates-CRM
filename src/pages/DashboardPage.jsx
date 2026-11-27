@@ -498,14 +498,7 @@ export const DashboardPage = () => {
       {/* Top Welcome & Quick Actions Bar */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-gold-300 text-xs font-bold uppercase tracking-wider flex-wrap">
-          
-            {isSalesManager && (
-              <span className="bg-gold-500/20 text-gold-300 border border-gold-400/40 text-[10px] px-2 py-0.5 rounded-full font-extrabold">
-                Personal Activity Dashboard
-              </span>
-            )}
-          </div>
+         
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             {currentUser?.name}!
           </h2>
