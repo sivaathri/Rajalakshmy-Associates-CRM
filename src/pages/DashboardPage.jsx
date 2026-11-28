@@ -772,13 +772,7 @@ export const DashboardPage = () => {
                   ? 'Monthly Calls & Disbursements ("Disposement")'
                   : 'Daily Telecalling Volume & Conversions'}
               </h4>
-              <p className="text-xs text-slate-500">
-                {isSalesManager
-                  ? 'Actual contacts added in daily activities and funded disbursements of this user'
-                  : isRM
-                  ? 'Actual telecalling calls and funded disbursements of this user'
-                  : 'Daily calling performance comparison'}
-              </p>
+            
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-3 text-xs">
