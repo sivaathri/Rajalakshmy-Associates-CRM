@@ -397,7 +397,9 @@ export const ActiveCallModal = () => {
                   <div key={c.id} className="flex items-center justify-between text-xs bg-slate-50 p-2 rounded-lg border border-slate-200">
                     <div>
                       <span className="font-semibold text-slate-800">{formatDate(c.callDate)} ({c.callTime})</span>
-                      <span className="text-slate-500 ml-2">by {c.employeeName}</span>
+                      <span className="text-slate-600 ml-2 font-medium">
+                        by {c.employeeName || 'User'}{c.employeeId ? ` (${c.employeeId})` : ''}
+                      </span>
                       <div className="text-[11px] text-slate-600 italic">"{c.remarks}"</div>
                     </div>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200">

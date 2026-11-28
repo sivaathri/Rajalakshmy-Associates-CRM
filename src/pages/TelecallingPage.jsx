@@ -1345,14 +1345,22 @@ export const TelecallingPage = () => {
                   ) : (
                     <div className="space-y-2">
                       {calls.filter(c => c.customerId === currentFocusedContact.id).map(c => (
-                        <div key={c.id} className="p-3 rounded-xl border border-slate-200 bg-white text-xs">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-slate-800">{formatDate(c.callDate)} ({c.callTime})</span>
+                        <div key={c.id} className="p-3 rounded-xl border border-slate-200 bg-white text-xs space-y-1">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-slate-800">{formatDate(c.callDate)} ({c.callTime})</span>
+                              {(c.employeeName || c.employeeId) && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-burgundy-50 text-burgundy-900 border border-burgundy-200 text-[10px] font-bold">
+                                  <span>{c.employeeName || 'User'}</span>
+                                  {c.employeeId && <span className="font-mono text-burgundy-700">({c.employeeId})</span>}
+                                </span>
+                              )}
+                            </div>
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(c.outcome)}`}>
                               {c.outcome} ({c.duration})
                             </span>
                           </div>
-                          <div className="text-slate-600 mt-1 italic">"{c.remarks}"</div>
+                          <div className="text-slate-600 italic">"{c.remarks}"</div>
                         </div>
                       ))}
                     </div>
