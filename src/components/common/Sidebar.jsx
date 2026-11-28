@@ -313,7 +313,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         )}
 
         {/* Bank File Login Menu (Req 2, 4, 5, 6) */}
-        {canAccessRoute('bank-logins') && currentUser?.role !== 'Admin' && !['ops', 'operations'].includes(String(currentUser?.role || '').toLowerCase()) && (
+        {canAccessRoute('bank-logins') && currentUser?.role !== 'Admin' && (
           <NavLink
             to="/bank-logins"
             onClick={() => isMobile && setIsOpen(false)}
