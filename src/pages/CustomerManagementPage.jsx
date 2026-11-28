@@ -15,19 +15,23 @@ import {
   Layers,
   CheckCircle,
   Building2,
-  CalendarCheck
+  CalendarCheck,
+  Edit3,
+  X
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { formatDate, exportToCSV, getStatusBadgeClass, formatMobileNumber, matchesMobileSearch } from '../utils/formatters';
 import { AddCustomerModal } from '../components/customers/AddCustomerModal';
 import { CustomerDetailModal } from '../components/customers/CustomerDetailModal';
 import { Pagination } from '../components/common/Pagination';
 
 export const CustomerManagementPage = () => {
-  const { customers } = useCRM();
+  const { customers, updateCustomer } = useCRM();
   const { currentUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const isSalesManager = currentUser?.role === 'Sales Manager';
+  const canEditCustomer = ['admin', 'ops', 'operations'].includes(String(currentUser?.role || '').toLowerCase());
 
   // State
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,6 +45,66 @@ export const CustomerManagementPage = () => {
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    mobile: '',
+    altMobile: '',
+    dob: '',
+    panNumber: '',
+    business: '',
+    city: '',
+    state: '',
+    address: ''
+  });
+
+  const handleOpenEditModal = (c) => {
+    if (!c) return;
+    let normalizedDob = c.dob || c.dateOfBirth || '';
+    if (normalizedDob && /^\d{2}[/-]\d{2}[/-]\d{4}$/.test(normalizedDob)) {
+      const [dd, mm, yyyy] = normalizedDob.split(/[/-]/);
+      normalizedDob = `${yyyy}-${mm}-${dd}`;
+    }
+    setEditForm({
+      name: c.name || '',
+      mobile: formatMobileNumber(c.mobile || ''),
+      altMobile: c.altMobile ? formatMobileNumber(c.altMobile) : '',
+      dob: normalizedDob,
+      panNumber: (c.panNumber || c.pan || '').toUpperCase(),
+      business: c.business || '',
+      city: c.city || '',
+      state: c.state || '',
+      address: c.address || ''
+    });
+    setEditingCustomer(c);
+  };
+
+  const handleSaveCustomerEdit = (e) => {
+    e.preventDefault();
+    if (!editingCustomer) return;
+    const digits = String(editForm.mobile || '').replace(/\D/g, '');
+    if (digits.length < 10) {
+      alert('Please enter a valid 10-digit mobile number');
+      return;
+    }
+    const formattedMobile = `+91 ${digits.slice(-10)}`;
+    const formattedAltMobile = editForm.altMobile.trim()
+      ? formatMobileNumber(editForm.altMobile.trim())
+      : '';
+
+    updateCustomer(editingCustomer.id, {
+      name: editForm.name.trim() || editingCustomer.name,
+      mobile: formattedMobile,
+      altMobile: formattedAltMobile,
+      dob: editForm.dob || '',
+      panNumber: editForm.panNumber.trim().toUpperCase(),
+      business: editForm.business.trim(),
+      city: editForm.city.trim(),
+      state: editForm.state.trim(),
+      address: editForm.address.trim()
+    });
+    setEditingCustomer(null);
+  };
 
   // Scoped customers for Customer Directory
   // Only actual verified/converted customers (converted from Lead -> Bank Login or added directly as Customers) appear here.
@@ -292,6 +356,17 @@ export const CustomerManagementPage = () => {
                             <Eye className="w-3 h-3" />
                             <span>View</span>
                           </button>
+                          {canEditCustomer && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditModal(c)}
+                              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 transition"
+                              title="Edit Customer Details"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -325,6 +400,162 @@ export const CustomerManagementPage = () => {
           customer={selectedCustomer}
           onClose={() => setSelectedCustomer(null)}
         />
+      )}
+
+      {/* Edit Customer Profile Modal (Admin & Ops Roles) */}
+      {editingCustomer && canEditCustomer && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 px-6 py-4 text-white flex items-center justify-between">
+              <div>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-gold-300 block">
+                  {editingCustomer.customerId || editingCustomer.id} • Admin &amp; Ops Edit
+                </span>
+                <h3 className="text-base font-bold text-white">Edit Customer Profile</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingCustomer(null)}
+                className="rounded-lg p-1 text-white/70 hover:bg-white/10 hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCustomerEdit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Customer Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.name}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Mobile Number <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.mobile}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, mobile: e.target.value }))}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 font-mono focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Alternate Mobile
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Optional"
+                    value={editForm.altMobile}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, altMobile: e.target.value }))}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 font-mono focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Date of Birth
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.dob}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, dob: e.target.value }))}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    PAN Card Number
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={10}
+                    placeholder="e.g. ABCDE1234F"
+                    value={editForm.panNumber}
+                    onChange={(e) =>
+                      setEditForm(prev => ({
+                        ...prev,
+                        panNumber: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)
+                      }))
+                    }
+                    className="w-full text-xs font-mono font-bold uppercase rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Business / Enterprise
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.business}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, business: e.target.value }))}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Location / City
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.city}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, city: e.target.value }))}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.state}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, state: e.target.value }))}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-burgundy-800"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Registered Address
+                </label>
+                <textarea
+                  rows={2}
+                  value={editForm.address}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, address: e.target.value }))}
+                  className="w-full text-xs rounded-xl border border-slate-300 p-2.5 focus:outline-none focus:border-burgundy-800"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingCustomer(null)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-burgundy-900 hover:bg-burgundy-800 rounded-xl shadow-md transition flex items-center gap-1.5"
+                >
+                  <CheckCircle className="w-4 h-4 text-gold-300" />
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
