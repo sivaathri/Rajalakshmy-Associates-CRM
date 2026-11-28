@@ -66,7 +66,7 @@ export const TelecallingPage = () => {
   // State
   const [activeTab, setActiveTab] = useState('focused'); // 'focused' | 'queue' | 'my-numbers' | 'history' | 'analytics'
   const [queueFilter, setQueueFilter] = useState('reminders'); // 'reminders' | 'completed'
-  const [queueOutcomeFilter, setQueueOutcomeFilter] = useState('all'); // 'all' | 'fresh' | 'Not Attend' | 'No Need'
+  const [queueOutcomeFilter, setQueueOutcomeFilter] = useState('fresh'); // 'fresh' | 'Not Attend' | 'No Need'
   const [searchQueue, setSearchQueue] = useState('');
   const [selectedContactId, setSelectedContactId] = useState(null);
 
@@ -211,8 +211,8 @@ export const TelecallingPage = () => {
   const myActionedCount = useMemo(() => {
     return assignedCustomers.filter(c => {
       if (!['OK', 'Not Attend', 'No Need', 'Field Visit'].includes(c.callingStatus)) return false;
-      const isOpenShared = c.callingStatus === 'Not Attend' || c.callingStatus === 'No Need';
-      return isOpenShared || c.actionedBy === currentUser?.id;
+      const actedByMe = c.actionedBy === currentUser?.id || (['Not Attend', 'No Need'].includes(c.callingStatus) && c.lastActionedBy === currentUser?.id);
+      return actedByMe;
     }).length;
   }, [assignedCustomers, currentUser]);
 
@@ -367,8 +367,8 @@ export const TelecallingPage = () => {
         if (queueOutcomeFilter === 'No Need' && c.callingStatus !== 'No Need') return false;
       } else if (queueFilter === 'completed') {
         if (!['OK', 'Not Attend', 'No Need', 'Field Visit'].includes(c.callingStatus)) return false;
-        const isOpenShared = c.callingStatus === 'Not Attend' || c.callingStatus === 'No Need';
-        if (currentUser?.role === 'RM' && !isOpenShared && c.actionedBy !== currentUser.id) return false;
+        const actedByMe = c.actionedBy === currentUser?.id || (['Not Attend', 'No Need'].includes(c.callingStatus) && c.lastActionedBy === currentUser?.id);
+        if (currentUser?.role === 'RM' && !actedByMe) return false;
       } else {
         // 'reminders' (default in Assigned Queue)
         if (c.callingStatus !== 'Reminder') return false;
@@ -550,8 +550,8 @@ export const TelecallingPage = () => {
   const filteredCalls = useMemo(() => {
     const todayStr = '2026-11-16'; // Current local system date
     return calls.filter(call => {
-      // Role scope: RM sees their own calls + all 'Not Attend' / 'No Need' calls logged by anyone
-      if (currentUser?.role === 'RM' && call.employeeId !== currentUser.id && !['Not Attend', 'No Need'].includes(call.outcome)) {
+      // Role scope: RM strictly sees only calls they personally logged
+      if (currentUser?.role === 'RM' && call.employeeId !== currentUser.id) {
         return false;
       }
 
@@ -1400,51 +1400,32 @@ export const TelecallingPage = () => {
               <h4 className="text-sm font-bold text-slate-900 font-corporate">
                 Queue Leads ({displayQueue.length})
               </h4>
-              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${
-                queueOutcomeFilter === 'Not Attend'
-                  ? 'text-blue-800 bg-blue-50 border-blue-200'
-                  : queueOutcomeFilter === 'No Need'
-                  ? 'text-rose-800 bg-rose-50 border-rose-200'
-                  : 'text-emerald-700 bg-emerald-50 border-emerald-200'
-              }`}>
-                {queueOutcomeFilter === 'Not Attend'
-                  ? 'Not Attend Only'
-                  : queueOutcomeFilter === 'No Need'
-                  ? 'No Need Only'
-                  : queueOutcomeFilter === 'fresh'
-                  ? 'Fresh Numbers Only'
-                  : 'Fresh & Open Leads'}
-              </span>
-            </div>
-
-            {/* Outcome Filter Buttons: All / Fresh / Not Attend / No Need */}
-            <div className="grid grid-cols-4 gap-1.5 text-[11px] font-bold">
-              <button
-                type="button"
-                onClick={() => setQueueOutcomeFilter('all')}
-                className={`py-1.5 px-1.5 rounded-lg border text-center transition truncate ${
-                  queueOutcomeFilter === 'all'
-                    ? 'bg-burgundy-900 text-white border-burgundy-900 shadow-2xs'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                All ({focusedQueueCounts.all})
-              </button>
               <button
                 type="button"
                 onClick={() => setQueueOutcomeFilter('fresh')}
-                className={`py-1.5 px-1.5 rounded-lg border text-center transition truncate ${
-                  queueOutcomeFilter === 'fresh'
-                    ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
-                    : 'bg-emerald-50/70 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                title="Show Fresh Numbers Only"
+                className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full border transition ${
+                  queueOutcomeFilter === 'Not Attend'
+                    ? 'text-blue-800 bg-blue-50 border-blue-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
+                    : queueOutcomeFilter === 'No Need'
+                    ? 'text-rose-800 bg-rose-50 border-rose-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
+                    : 'text-emerald-700 bg-emerald-50 border-emerald-200'
                 }`}
               >
-                Fresh ({focusedQueueCounts.fresh})
+                {queueOutcomeFilter === 'Not Attend'
+                  ? 'Not Attend Only • Show Fresh'
+                  : queueOutcomeFilter === 'No Need'
+                  ? 'No Need Only • Show Fresh'
+                  : 'Fresh Numbers Only'}
               </button>
+            </div>
+
+            {/* Filter Buttons: Not Attend / No Need (click again to return to Fresh Numbers) */}
+            <div className="grid grid-cols-2 gap-2 text-[11px] font-bold">
               <button
                 type="button"
-                onClick={() => setQueueOutcomeFilter('Not Attend')}
-                className={`py-1.5 px-1.5 rounded-lg border text-center transition truncate ${
+                onClick={() => setQueueOutcomeFilter(prev => (prev === 'Not Attend' ? 'fresh' : 'Not Attend'))}
+                className={`py-1.5 px-2.5 rounded-lg border text-center transition truncate ${
                   queueOutcomeFilter === 'Not Attend'
                     ? 'bg-blue-700 text-white border-blue-700 shadow-2xs'
                     : 'bg-blue-50/70 text-blue-800 border-blue-200 hover:bg-blue-100'
@@ -1454,8 +1435,8 @@ export const TelecallingPage = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setQueueOutcomeFilter('No Need')}
-                className={`py-1.5 px-1.5 rounded-lg border text-center transition truncate ${
+                onClick={() => setQueueOutcomeFilter(prev => (prev === 'No Need' ? 'fresh' : 'No Need'))}
+                className={`py-1.5 px-2.5 rounded-lg border text-center transition truncate ${
                   queueOutcomeFilter === 'No Need'
                     ? 'bg-rose-700 text-white border-rose-700 shadow-2xs'
                     : 'bg-rose-50/70 text-rose-800 border-rose-200 hover:bg-rose-100'
