@@ -669,11 +669,7 @@ export const TelecallingPage = () => {
             <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               Database & Classification Filter
             </span>
-            {(activeTab === 'queue' || activeTab === 'my-numbers') && (
-              <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                Optional: Showing all data by default
-              </span>
-            )}
+           
            
           </div>
 
