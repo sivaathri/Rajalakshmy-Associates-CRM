@@ -20,7 +20,9 @@ import {
   Target,
   MapPin,
   Calendar,
-  BadgeCheck
+  BadgeCheck,
+  Edit3,
+  X
 } from 'lucide-react';
 
 // Resize uploaded profile image cleanly to avoid exceeding localStorage quota
@@ -53,31 +55,24 @@ export const SettingsPage = () => {
 
   const fileInputRef = useRef(null);
   const liveEmployee = (employees || []).find(e => e.id === currentUser?.id) || currentUser || {};
+  const [isEditing, setIsEditing] = useState(false);
 
-  const [profileForm, setProfileForm] = useState({
-    name: '',
-    avatar: '',
-    id: '',
-    role: '',
-    mobile: '',
-    dob: '',
-    dateOfJoining: '',
-    address: '',
-    target: ''
+  const buildFormFromEmployee = (emp = {}) => ({
+    name: emp.name || '',
+    avatar: emp.avatar || '',
+    id: emp.id || '',
+    role: emp.role || '',
+    mobile: emp.mobile ? formatMobileNumber(emp.mobile) : '',
+    dob: emp.dob || '',
+    dateOfJoining: emp.dateOfJoining || emp.joiningDate || '',
+    address: emp.address || emp.location || '',
+    target: emp.target || ''
   });
 
+  const [profileForm, setProfileForm] = useState(() => buildFormFromEmployee(liveEmployee));
+
   useEffect(() => {
-    setProfileForm({
-      name: liveEmployee.name || '',
-      avatar: liveEmployee.avatar || '',
-      id: liveEmployee.id || '',
-      role: liveEmployee.role || '',
-      mobile: liveEmployee.mobile ? formatMobileNumber(liveEmployee.mobile) : '',
-      dob: liveEmployee.dob || '',
-      dateOfJoining: liveEmployee.dateOfJoining || liveEmployee.joiningDate || '',
-      address: liveEmployee.address || liveEmployee.location || '',
-      target: liveEmployee.target || ''
-    });
+    setProfileForm(buildFormFromEmployee(liveEmployee));
   }, [
     liveEmployee.id,
     liveEmployee.name,
@@ -91,6 +86,10 @@ export const SettingsPage = () => {
     liveEmployee.location,
     liveEmployee.target
   ]);
+
+  useEffect(() => {
+    setIsEditing(false);
+  }, [currentUser?.id]);
 
   const handleAvatarUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -138,7 +137,13 @@ export const SettingsPage = () => {
     if (currentUser?.id) {
       updateEmployee(currentUser.id, updatedPayload);
       updateCurrentUser(updatedPayload);
+      setIsEditing(false);
     }
+  };
+
+  const handleCancelEdit = () => {
+    setProfileForm(buildFormFromEmployee(liveEmployee));
+    setIsEditing(false);
   };
 
   const roleLower = String(currentUser?.role || '').toLowerCase();
@@ -218,36 +223,40 @@ export const SettingsPage = () => {
             <div>
               <h3 className="text-sm font-bold text-slate-900">Profile Image</h3>
               <p className="text-xs text-slate-500">
-                Upload a photo for {profileForm.name || 'your account'} ({profileForm.id || 'EMP'})
+                {isEditing
+                  ? `Upload a photo for ${profileForm.name || 'your account'} (${profileForm.id || 'EMP'})`
+                  : `${profileForm.name || 'Account'} (${profileForm.id || 'EMP'}) • Click Edit to update profile`}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                className="hidden"
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition"
-              >
-                <Camera className="w-3.5 h-3.5 text-gold-300" />
-                <span>{profileForm.avatar ? 'Change Profile Image' : 'Upload Profile Image'}</span>
-              </button>
-              {profileForm.avatar && (
+            {isEditing && (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
                 <button
                   type="button"
-                  onClick={() => setProfileForm(prev => ({ ...prev, avatar: '' }))}
-                  className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700 transition"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Remove</span>
+                  <Camera className="w-3.5 h-3.5 text-gold-300" />
+                  <span>{profileForm.avatar ? 'Change Profile Image' : 'Upload Profile Image'}</span>
                 </button>
-              )}
-            </div>
+                {profileForm.avatar && (
+                  <button
+                    type="button"
+                    onClick={() => setProfileForm(prev => ({ ...prev, avatar: '' }))}
+                    className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 px-3 py-2 text-xs font-semibold text-rose-700 transition"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Remove</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -260,10 +269,16 @@ export const SettingsPage = () => {
             <input
               type="text"
               required
+              readOnly={!isEditing}
+              disabled={!isEditing}
               placeholder="Enter full name"
               value={profileForm.name}
               onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full text-xs rounded-xl border border-slate-300 py-2.5 px-3 bg-white focus:outline-none focus:border-burgundy-800 font-semibold text-slate-900"
+              className={`w-full text-xs rounded-xl border py-2.5 px-3 focus:outline-none font-semibold text-slate-900 transition ${
+                isEditing
+                  ? 'border-slate-300 bg-white focus:border-burgundy-800'
+                  : 'border-slate-200 bg-slate-50/90 text-slate-700 cursor-default'
+              }`}
             />
           </div>
 
@@ -300,10 +315,16 @@ export const SettingsPage = () => {
             <input
               type="text"
               required
+              readOnly={!isEditing}
+              disabled={!isEditing}
               placeholder="+91 9876543210"
               value={profileForm.mobile}
               onChange={(e) => setProfileForm(prev => ({ ...prev, mobile: e.target.value }))}
-              className="w-full text-xs rounded-xl border border-slate-300 py-2.5 px-3 bg-white focus:outline-none focus:border-burgundy-800 font-mono font-semibold text-slate-900"
+              className={`w-full text-xs rounded-xl border py-2.5 px-3 focus:outline-none font-mono font-semibold text-slate-900 transition ${
+                isEditing
+                  ? 'border-slate-300 bg-white focus:border-burgundy-800'
+                  : 'border-slate-200 bg-slate-50/90 text-slate-700 cursor-default'
+              }`}
             />
           </div>
 
@@ -314,9 +335,15 @@ export const SettingsPage = () => {
             </label>
             <input
               type="date"
+              readOnly={!isEditing}
+              disabled={!isEditing}
               value={profileForm.dob}
               onChange={(e) => setProfileForm(prev => ({ ...prev, dob: e.target.value }))}
-              className="w-full text-xs rounded-xl border border-slate-300 py-2.5 px-3 bg-white focus:outline-none focus:border-burgundy-800 text-slate-900"
+              className={`w-full text-xs rounded-xl border py-2.5 px-3 focus:outline-none text-slate-900 transition ${
+                isEditing
+                  ? 'border-slate-300 bg-white focus:border-burgundy-800'
+                  : 'border-slate-200 bg-slate-50/90 text-slate-700 cursor-default'
+              }`}
             />
           </div>
 
@@ -327,9 +354,15 @@ export const SettingsPage = () => {
             </label>
             <input
               type="date"
+              readOnly={!isEditing}
+              disabled={!isEditing}
               value={profileForm.dateOfJoining}
               onChange={(e) => setProfileForm(prev => ({ ...prev, dateOfJoining: e.target.value }))}
-              className="w-full text-xs rounded-xl border border-slate-300 py-2.5 px-3 bg-white focus:outline-none focus:border-burgundy-800 text-slate-900"
+              className={`w-full text-xs rounded-xl border py-2.5 px-3 focus:outline-none text-slate-900 transition ${
+                isEditing
+                  ? 'border-slate-300 bg-white focus:border-burgundy-800'
+                  : 'border-slate-200 bg-slate-50/90 text-slate-700 cursor-default'
+              }`}
             />
           </div>
 
@@ -340,10 +373,16 @@ export const SettingsPage = () => {
             </label>
             <input
               type="text"
-              placeholder="e.g. ₹25,00,000 / 50 Calls per day"
+              readOnly={!isEditing}
+              disabled={!isEditing}
+              placeholder={isEditing ? 'e.g. ₹25,00,000 / 50 Calls per day' : 'Not set'}
               value={profileForm.target}
               onChange={(e) => setProfileForm(prev => ({ ...prev, target: e.target.value }))}
-              className="w-full text-xs rounded-xl border border-slate-300 py-2.5 px-3 bg-white focus:outline-none focus:border-burgundy-800 font-semibold text-slate-900"
+              className={`w-full text-xs rounded-xl border py-2.5 px-3 focus:outline-none font-semibold text-slate-900 transition ${
+                isEditing
+                  ? 'border-slate-300 bg-white focus:border-burgundy-800'
+                  : 'border-slate-200 bg-slate-50/90 text-slate-700 cursor-default'
+              }`}
             />
           </div>
 
@@ -354,22 +393,49 @@ export const SettingsPage = () => {
             </label>
             <textarea
               rows={2}
-              placeholder="Enter residential or branch address"
+              readOnly={!isEditing}
+              disabled={!isEditing}
+              placeholder={isEditing ? 'Enter residential or branch address' : 'Not set'}
               value={profileForm.address}
               onChange={(e) => setProfileForm(prev => ({ ...prev, address: e.target.value }))}
-              className="w-full text-xs rounded-xl border border-slate-300 p-3 bg-white focus:outline-none focus:border-burgundy-800 text-slate-900"
+              className={`w-full text-xs rounded-xl border p-3 focus:outline-none text-slate-900 transition ${
+                isEditing
+                  ? 'border-slate-300 bg-white focus:border-burgundy-800'
+                  : 'border-slate-200 bg-slate-50/90 text-slate-700 cursor-default'
+              }`}
             />
           </div>
         </div>
 
-        <div className="flex items-center justify-end pt-3 border-t border-slate-100">
-          <button
-            type="submit"
-            className="inline-flex items-center gap-2 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 px-6 py-2.5 text-xs font-bold text-white shadow-md transition"
-          >
-            <CheckCircle className="w-4 h-4 text-gold-300" />
-            <span>Save Profile Settings</span>
-          </button>
+        <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+          {!isEditing ? (
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 px-6 py-2.5 text-xs font-bold text-white shadow-md transition"
+            >
+              <Edit3 className="w-4 h-4 text-gold-300" />
+              <span>Edit</span>
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 px-5 py-2.5 text-xs font-bold text-slate-700 transition"
+              >
+                <X className="w-4 h-4" />
+                <span>Cancel</span>
+              </button>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 px-6 py-2.5 text-xs font-bold text-white shadow-md transition"
+              >
+                <CheckCircle className="w-4 h-4 text-gold-300" />
+                <span>Save Profile Settings</span>
+              </button>
+            </>
+          )}
         </div>
       </form>
 
