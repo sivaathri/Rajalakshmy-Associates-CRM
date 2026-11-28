@@ -64,9 +64,10 @@ export const CustomerDatabasePage = () => {
       // In New Database: RM has full visibility to all prospect records added by Sales Manager from daily activities
       // In Old Database: RM sees records assigned to them
       if (currentUser?.role === 'RM') {
-        const isFresh = c.callingStatus === 'Pending' && (!c.assignedTo || c.assignedTo === currentUser.id);
+        const isOpenShared = c.callingStatus === 'Not Attend' || c.callingStatus === 'No Need';
+        const isFresh = (c.callingStatus === 'Pending' || !c.callingStatus) && (!c.assignedTo || c.assignedTo === currentUser.id);
         const isMine = c.assignedTo === currentUser.id || c.actionedBy === currentUser.id;
-        if (!isFresh && !isMine) {
+        if (!isFresh && !isMine && !isOpenShared) {
           return false;
         }
       }

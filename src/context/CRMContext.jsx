@@ -994,14 +994,19 @@ export const CRMProvider = ({ children }) => {
       details: `${remarks ? `Response: "${remarks}"` : 'No remarks'}${reminderDate ? ` • Follow-up date: ${reminderDate}` : ''}${effectiveAssign === 'collect_docs' ? ` • Doc Collection Assigned to ${targetAssignee.name} (${targetAssignee.role})` : effectiveAssign === 'transfer_case' ? ` • Case Assigned to ${targetAssignee.name} (${targetAssignee.role})` : ''} • Duration: ${duration}`
     });
 
+    const isOpenSharedOutcome = outcome === 'Not Attend' || outcome === 'No Need';
+
     // Update customer's status AND ownership/assignment metadata
+    // Note: Not Attend / No Need contacts are NOT claimed exclusively — they stay open & visible to all users
     const customerUpdates = {
       callingStatus: outcome,
       lastCallDate: callDate,
-      assignedTo: effectiveAssign === 'transfer_case' ? targetAssignee.id : actionUser.id,
-      assignedName: effectiveAssign === 'transfer_case' ? targetAssignee.name : actionUser.name,
-      actionedBy: effectiveAssign === 'transfer_case' ? targetAssignee.id : actionUser.id,
-      actionedByName: effectiveAssign === 'transfer_case' ? targetAssignee.name : actionUser.name
+      lastActionedBy: actionUser.id,
+      lastActionedByName: actionUser.name,
+      assignedTo: isOpenSharedOutcome ? '' : (effectiveAssign === 'transfer_case' ? targetAssignee.id : actionUser.id),
+      assignedName: isOpenSharedOutcome ? '' : (effectiveAssign === 'transfer_case' ? targetAssignee.name : actionUser.name),
+      actionedBy: isOpenSharedOutcome ? '' : (effectiveAssign === 'transfer_case' ? targetAssignee.id : actionUser.id),
+      actionedByName: isOpenSharedOutcome ? '' : (effectiveAssign === 'transfer_case' ? targetAssignee.name : actionUser.name)
     };
 
     if (effectiveAssign === 'collect_docs') {
@@ -1201,6 +1206,8 @@ export const CRMProvider = ({ children }) => {
         });
         showToast(`Contact saved as ${outcome}!`, 'success');
       }
+    } else if (isOpenSharedOutcome) {
+      showToast(`Response (${outcome}) saved! Number remains visible to all users.`, 'success');
     } else {
       showToast(`Response saved! Number now follows you (${currentUser?.name || 'RM'})`, 'success');
     }

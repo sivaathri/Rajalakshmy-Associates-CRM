@@ -66,6 +66,7 @@ export const TelecallingPage = () => {
   // State
   const [activeTab, setActiveTab] = useState('focused'); // 'focused' | 'queue' | 'my-numbers' | 'history' | 'analytics'
   const [queueFilter, setQueueFilter] = useState('reminders'); // 'reminders' | 'completed'
+  const [queueOutcomeFilter, setQueueOutcomeFilter] = useState('all'); // 'all' | 'fresh' | 'Not Attend' | 'No Need'
   const [searchQueue, setSearchQueue] = useState('');
   const [selectedContactId, setSelectedContactId] = useState(null);
 
@@ -128,12 +129,19 @@ export const TelecallingPage = () => {
   const [selectedDb, setSelectedDb] = useState(null); // 'old' | 'new' | null
   const [selectedType, setSelectedType] = useState(null); // 'known' | 'unknown' | null
 
-  // Helper: check if a customer is a fresh, un-actioned number (excludes converted leads, actioned numbers, and numbers currently locked by another RM)
+  // Helper: check if a customer is available in Focused Calling Queue
+  // Fresh un-actioned numbers PLUS 'Not Attend' / 'No Need' numbers remain visible to all users
   const isFreshNumber = (c) => {
-    const isPending = (c.callingStatus === 'Pending' || !c.callingStatus) && !c.actionedBy && c.status !== 'Lead' && c.callingStatus !== 'OK' && c.callingStatus !== 'Field Visit';
+    if (c.status === 'Lead' || c.callingStatus === 'OK' || c.callingStatus === 'Field Visit' || c.callingStatus === 'Reminder') {
+      return false;
+    }
     if (isLockedByOther(c.id)) {
       return false;
     }
+    if (c.callingStatus === 'Not Attend' || c.callingStatus === 'No Need') {
+      return true;
+    }
+    const isPending = (c.callingStatus === 'Pending' || !c.callingStatus) && !c.actionedBy;
     if (currentUser?.role === 'RM') {
       return isPending && (!c.assignedTo || c.assignedTo === currentUser.id);
     }
@@ -141,14 +149,15 @@ export const TelecallingPage = () => {
   };
 
   // Base accessible contacts for current user:
-  // - Shows fresh un-actioned numbers (accessible to RMs)
-  // - Shows numbers actioned by current user (for their reminders, history)
+  // - Fresh numbers and 'Not Attend' / 'No Need' numbers are visible to ALL users
+  // - Actioned/assigned leads ('OK', 'Reminder', 'Field Visit') belong to the RM who claimed them
   const baseCustomers = useMemo(() => {
     return customers.filter(c => {
       if (currentUser?.role === 'RM') {
         const isFresh = isFreshNumber(c);
         const isMine = c.actionedBy === currentUser.id || c.assignedTo === currentUser.id;
-        return isFresh || isMine;
+        const isOpenShared = c.callingStatus === 'Not Attend' || c.callingStatus === 'No Need';
+        return isFresh || isMine || isOpenShared;
       }
       return true;
     });
@@ -200,7 +209,11 @@ export const TelecallingPage = () => {
   }, [assignedCustomers, currentUser]);
 
   const myActionedCount = useMemo(() => {
-    return assignedCustomers.filter(c => ['OK', 'Not Attend', 'No Need', 'Field Visit'].includes(c.callingStatus) && c.actionedBy === currentUser?.id).length;
+    return assignedCustomers.filter(c => {
+      if (!['OK', 'Not Attend', 'No Need', 'Field Visit'].includes(c.callingStatus)) return false;
+      const isOpenShared = c.callingStatus === 'Not Attend' || c.callingStatus === 'No Need';
+      return isOpenShared || c.actionedBy === currentUser?.id;
+    }).length;
   }, [assignedCustomers, currentUser]);
 
   // Customers / Leads that current logged-in RM sent out via Option 1 (Collect Docs) or Option 2 (Transfer Case)
@@ -347,11 +360,15 @@ export const TelecallingPage = () => {
     const sourceCustomers = activeTab === 'focused' ? focusedCustomers : assignedCustomers;
     const filtered = sourceCustomers.filter(c => {
       if (activeTab === 'focused') {
-        // Focused Calling strictly shows fresh numbers
+        // Focused Calling shows fresh numbers + shared Not Attend / No Need contacts
         if (!isFreshNumber(c)) return false;
+        if (queueOutcomeFilter === 'fresh' && c.callingStatus && c.callingStatus !== 'Pending') return false;
+        if (queueOutcomeFilter === 'Not Attend' && c.callingStatus !== 'Not Attend') return false;
+        if (queueOutcomeFilter === 'No Need' && c.callingStatus !== 'No Need') return false;
       } else if (queueFilter === 'completed') {
         if (!['OK', 'Not Attend', 'No Need', 'Field Visit'].includes(c.callingStatus)) return false;
-        if (currentUser?.role === 'RM' && c.actionedBy !== currentUser.id) return false;
+        const isOpenShared = c.callingStatus === 'Not Attend' || c.callingStatus === 'No Need';
+        if (currentUser?.role === 'RM' && !isOpenShared && c.actionedBy !== currentUser.id) return false;
       } else {
         // 'reminders' (default in Assigned Queue)
         if (c.callingStatus !== 'Reminder') return false;
@@ -390,7 +407,18 @@ export const TelecallingPage = () => {
     }
 
     return filtered;
-  }, [focusedCustomers, assignedCustomers, activeTab, queueFilter, searchQueue, currentUser, rmQueueInfo, callLocks]);
+  }, [focusedCustomers, assignedCustomers, activeTab, queueFilter, queueOutcomeFilter, searchQueue, currentUser, rmQueueInfo, callLocks]);
+
+  // Queue Leads breakdown counts for Focused Calling filter pills
+  const focusedQueueCounts = useMemo(() => {
+    const base = focusedCustomers.filter(isFreshNumber);
+    return {
+      all: base.length,
+      fresh: base.filter(c => !c.callingStatus || c.callingStatus === 'Pending').length,
+      notAttend: base.filter(c => c.callingStatus === 'Not Attend').length,
+      noNeed: base.filter(c => c.callingStatus === 'No Need').length
+    };
+  }, [focusedCustomers, currentUser, callLocks]);
 
   // Derived focused contact from explicit selectedContactId
   const focusedIndex = useMemo(() => {
@@ -522,8 +550,8 @@ export const TelecallingPage = () => {
   const filteredCalls = useMemo(() => {
     const todayStr = '2026-11-16'; // Current local system date
     return calls.filter(call => {
-      // Role scope
-      if (currentUser?.role === 'RM' && call.employeeId !== currentUser.id) {
+      // Role scope: RM sees their own calls + all 'Not Attend' / 'No Need' calls logged by anyone
+      if (currentUser?.role === 'RM' && call.employeeId !== currentUser.id && !['Not Attend', 'No Need'].includes(call.outcome)) {
         return false;
       }
 
@@ -1367,14 +1395,74 @@ export const TelecallingPage = () => {
           </div>
 
           {/* Side Queue Quick List (4 cols) */}
-          <div className="lg:col-span-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="lg:col-span-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3.5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 gap-2">
               <h4 className="text-sm font-bold text-slate-900 font-corporate">
                 Queue Leads ({displayQueue.length})
               </h4>
-              <span className="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                Fresh Numbers Only
+              <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${
+                queueOutcomeFilter === 'Not Attend'
+                  ? 'text-blue-800 bg-blue-50 border-blue-200'
+                  : queueOutcomeFilter === 'No Need'
+                  ? 'text-rose-800 bg-rose-50 border-rose-200'
+                  : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+              }`}>
+                {queueOutcomeFilter === 'Not Attend'
+                  ? 'Not Attend Only'
+                  : queueOutcomeFilter === 'No Need'
+                  ? 'No Need Only'
+                  : queueOutcomeFilter === 'fresh'
+                  ? 'Fresh Numbers Only'
+                  : 'Fresh & Open Leads'}
               </span>
+            </div>
+
+            {/* Outcome Filter Buttons: All / Fresh / Not Attend / No Need */}
+            <div className="grid grid-cols-4 gap-1.5 text-[11px] font-bold">
+              <button
+                type="button"
+                onClick={() => setQueueOutcomeFilter('all')}
+                className={`py-1.5 px-1.5 rounded-lg border text-center transition truncate ${
+                  queueOutcomeFilter === 'all'
+                    ? 'bg-burgundy-900 text-white border-burgundy-900 shadow-2xs'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                All ({focusedQueueCounts.all})
+              </button>
+              <button
+                type="button"
+                onClick={() => setQueueOutcomeFilter('fresh')}
+                className={`py-1.5 px-1.5 rounded-lg border text-center transition truncate ${
+                  queueOutcomeFilter === 'fresh'
+                    ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
+                    : 'bg-emerald-50/70 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                }`}
+              >
+                Fresh ({focusedQueueCounts.fresh})
+              </button>
+              <button
+                type="button"
+                onClick={() => setQueueOutcomeFilter('Not Attend')}
+                className={`py-1.5 px-1.5 rounded-lg border text-center transition truncate ${
+                  queueOutcomeFilter === 'Not Attend'
+                    ? 'bg-blue-700 text-white border-blue-700 shadow-2xs'
+                    : 'bg-blue-50/70 text-blue-800 border-blue-200 hover:bg-blue-100'
+                }`}
+              >
+                Not Attend ({focusedQueueCounts.notAttend})
+              </button>
+              <button
+                type="button"
+                onClick={() => setQueueOutcomeFilter('No Need')}
+                className={`py-1.5 px-1.5 rounded-lg border text-center transition truncate ${
+                  queueOutcomeFilter === 'No Need'
+                    ? 'bg-rose-700 text-white border-rose-700 shadow-2xs'
+                    : 'bg-rose-50/70 text-rose-800 border-rose-200 hover:bg-rose-100'
+                }`}
+              >
+                No Need ({focusedQueueCounts.noNeed})
+              </button>
             </div>
 
             {/* Quick search */}
@@ -1411,9 +1499,19 @@ export const TelecallingPage = () => {
                       <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
                         item.id === selectedContactId
                           ? 'border-burgundy-300 bg-burgundy-50 text-burgundy-900'
+                          : item.callingStatus === 'Not Attend'
+                          ? 'border-blue-300 bg-blue-50 text-blue-800'
+                          : item.callingStatus === 'No Need'
+                          ? 'border-rose-300 bg-rose-50 text-rose-800'
                           : 'border-emerald-300 bg-emerald-50 text-emerald-800'
                       }`}>
-                        {item.id === selectedContactId ? '● Selected' : '★ Fresh Number'}
+                        {item.id === selectedContactId
+                          ? '● Selected'
+                          : item.callingStatus === 'Not Attend'
+                          ? 'Not Attend'
+                          : item.callingStatus === 'No Need'
+                          ? 'No Need'
+                          : '★ Fresh Number'}
                       </span>
                     </div>
                     <div className="font-mono text-slate-600 text-[11px] mt-0.5">{formatMobileNumber(item.mobile)}</div>
@@ -1639,9 +1737,10 @@ export const TelecallingPage = () => {
                         <td className="px-4 py-3 text-right">
                           <button
                             onClick={() => {
-                              const qIdx = displayQueue.findIndex(q => q.id === item.id);
-                              if (qIdx !== -1) setFocusedIndex(qIdx);
+                              if (item.databaseType) setSelectedDb(item.databaseType);
+                              if (item.customerType) setSelectedType(item.customerType);
                               setActiveTab('focused');
+                              setTimeout(() => selectContactForCall(item), 0);
                             }}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
                             title="View mobile number & enter response"
