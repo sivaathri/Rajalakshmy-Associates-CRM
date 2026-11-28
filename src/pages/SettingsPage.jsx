@@ -152,9 +152,6 @@ export const SettingsPage = () => {
       {/* Top Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-burgundy-900 via-[#79091D] to-burgundy-950 p-6 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-gold-300">
-            Account Profile &amp; Preferences
-          </span>
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
             Setting
           </h2>
