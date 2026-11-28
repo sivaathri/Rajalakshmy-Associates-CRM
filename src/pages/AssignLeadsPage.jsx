@@ -181,8 +181,7 @@ export const AssignLeadsPage = () => {
         <div className="flex items-center gap-2 flex-wrap">
           {[
             { id: 'all', label: `All Assigned (${assignedToMeLeads.length})` },
-            { id: 'collect_docs', label: `1. Collect Document Only (${docCount})` },
-            { id: 'transfer_case', label: `2. Case Transfer / For Bank Login (${caseCount})` }
+            { id: 'transfer_case', label: `Case Transfer / For Bank Login (${caseCount})` }
           ].map(tab => (
             <button
               key={tab.id}

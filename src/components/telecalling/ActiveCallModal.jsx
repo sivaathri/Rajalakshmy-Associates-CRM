@@ -332,11 +332,10 @@ export const ActiveCallModal = () => {
                 <UserCheck className="w-4 h-4 text-burgundy-800" />
                 <span>Lead Assignment Option (Optional)</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {[
                   { id: 'none', title: 'Handle Myself', desc: 'Keep with yourself' },
-                  { id: 'collect_docs', title: '1. Collect Docs Only', desc: 'Assignee only collects docs' },
-                  { id: 'transfer_case', title: '2. Assign Case', desc: 'Transfer for Bank Login' }
+                  { id: 'transfer_case', title: 'Assign Case', desc: 'Transfer for Bank Login' }
                 ].map(opt => (
                   <button
                     key={opt.id}

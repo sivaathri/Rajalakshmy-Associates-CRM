@@ -1178,7 +1178,7 @@ export const TelecallingPage = () => {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <button
                           type="button"
                           onClick={() => {
@@ -1201,24 +1201,6 @@ export const TelecallingPage = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setAssignOption('collect_docs');
-                            setAssigneeId('');
-                          }}
-                          className={`p-3 rounded-xl border-2 text-left transition ${
-                            assignOption === 'collect_docs'
-                              ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-500/20 shadow-xs'
-                              : 'border-slate-200 bg-white/70 hover:border-amber-300'
-                          }`}
-                        >
-                          <div className="text-xs font-bold text-amber-950">1. Assign — Collect Only Document</div>
-                          <div className="text-[10px] text-amber-800/90 mt-0.5">
-                            Other user only collects docs in Assign Lead &amp; receives notification.
-                          </div>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
                             setAssignOption('transfer_case');
                             setAssigneeId('');
                             setDocCollectionNote('');
@@ -1229,7 +1211,7 @@ export const TelecallingPage = () => {
                               : 'border-slate-200 bg-white/70 hover:border-indigo-300'
                           }`}
                         >
-                          <div className="text-xs font-bold text-indigo-950">2. Assign Case to User</div>
+                          <div className="text-xs font-bold text-indigo-950">Assign Case to User</div>
                           <div className="text-[10px] text-indigo-800/90 mt-0.5">
                             Other user gets notification, views Assign Lead, copies number &amp; adds Bank Login.
                           </div>
