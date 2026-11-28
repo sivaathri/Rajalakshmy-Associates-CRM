@@ -164,7 +164,7 @@ export const AuthProvider = ({ children }) => {
       case 'login':
       case 'logins':
       case 'bank-logins':
-        return !isOps;
+        return true;
       case 'resignation':
         return ['Admin', 'Manager', 'Ops', 'RM', 'Sales Manager'].includes(role);
       case 'advance-requests':
