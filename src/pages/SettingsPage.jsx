@@ -59,7 +59,7 @@ export const SettingsPage = () => {
         <div>
           
           <h2 className="text-xl md:text-2xl font-extrabold text-white mt-1 font-corporate">
-            Operations & System Settings
+            Setting
           </h2>
 
         </div>

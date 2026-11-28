@@ -512,7 +512,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
           </NavLink>
         )}
 
-        {/* 9. Settings & Distribution */}
+        {/* 9. Setting (Visible to all roles) */}
         {canAccessRoute('settings') && (
           <NavLink
             to="/settings"
@@ -526,7 +526,7 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
             }
           >
             <Settings className="w-4 h-4 shrink-0 text-slate-300" />
-            {isExpanded && <span>Settings & Ops</span>}
+            {isExpanded && <span>Setting</span>}
           </NavLink>
         )}
       </div>

@@ -185,7 +185,7 @@ export const AuthProvider = ({ children }) => {
       case 'reports':
         return ['Admin', 'Manager', 'Ops', 'Sales Manager', 'RM'].includes(role);
       case 'settings':
-        return ['Admin', 'Ops'].includes(role);
+        return true;
       case 'users':
       case 'user-management':
         return ['Admin', 'Manager', 'Ops'].includes(role);

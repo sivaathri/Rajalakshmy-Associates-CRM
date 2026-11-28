@@ -65,7 +65,7 @@ const ProtectedLayout = ({ children, requiredRoute }) => {
     if (path.startsWith('/approve-leaves')) return 'Employee Leave Approvals & Requisitions';
     if (path.startsWith('/reports')) return 'Intelligence Reports & Leaderboards';
     if (path.startsWith('/users') || path.startsWith('/user-management')) return 'User Management & Personnel Directory';
-    if (path.startsWith('/settings')) return 'Operations Settings & Lead Distribution';
+    if (path.startsWith('/settings')) return 'Setting';
     return 'Rajalakshmy Associates CRM';
   };
 
