@@ -2,12 +2,11 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   parseStatementFile,
-  analyzeStatementLines,
-  parseNumericAmount
+  parseNumericAmount,
+  isMoneyLikeCell
 } from '../utils/statementParser';
 import { Pagination } from '../components/common/Pagination';
 import {
-  FileText,
   Upload,
   Search,
   Calendar,
@@ -24,9 +23,19 @@ import {
   Eye,
   Building2
 } from 'lucide-react';
-import { formatDate, formatCurrency, exportToCSV } from '../utils/formatters';
+import { formatDate, exportToCSV } from '../utils/formatters';
 
-const STORAGE_KEY_STATEMENTS = 'rajalakshmy_bank_statements_v2';
+const formatStatementCurrency = (amount) => {
+  if (amount === undefined || amount === null || isNaN(amount)) return '₹0.00';
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+};
+
+const STORAGE_KEY_STATEMENTS = 'rajalakshmy_bank_statements_v3';
 
 const HighlightText = ({ text = '', query = '' }) => {
   const q = query.trim();
@@ -74,8 +83,6 @@ export const StatementPage = () => {
   // In-session Object URLs so uploaded PDFs can also be viewed in exact original document view
   const [originalPdfUrls, setOriginalPdfUrls] = useState({});
 
-  const [uploadMode, setUploadMode] = useState('file'); // 'file' | 'paste'
-  const [pastedText, setPastedText] = useState('');
   const [isParsing, setIsParsing] = useState(false);
 
   // Encrypted PDF password retry state
@@ -88,6 +95,7 @@ export const StatementPage = () => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'raw' | 'document'
+  const [showAllRows, setShowAllRows] = useState(true); // Show all extracted rows without hiding pages by default
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedFull, setCopiedFull] = useState(false);
   const itemsPerPage = 50;
@@ -131,11 +139,12 @@ export const StatementPage = () => {
       tableRows: parsed.tableRows || [],
       lines: parsed.lines || [],
       fullText: parsed.fullText || '',
+      statementSummary: parsed.statementSummary || null,
       uploadedAt: todayIso,
       uploadedBy: currentUser?.name || 'User'
     };
 
-    if (rawFile && rawFile.type === 'application/pdf') {
+    if (rawFile && (rawFile.type === 'application/pdf' || /\.pdf$/i.test(rawFile.name || ''))) {
       const objUrl = URL.createObjectURL(rawFile);
       setOriginalPdfUrls(prev => ({ ...prev, [id]: objUrl }));
     }
@@ -196,24 +205,6 @@ export const StatementPage = () => {
     processFile(pendingPdfFile, pdfPassword);
   };
 
-  const handleAnalyzePastedText = (e) => {
-    e.preventDefault();
-    if (!pastedText.trim()) {
-      alert('Please paste customer bank statement text first');
-      return;
-    }
-    const rawLines = pastedText
-      .split(/\r?\n/)
-      .map(l => ({ source: 'Pasted Text', text: l }))
-      .filter(l => l.text.trim());
-    const analysis = analyzeStatementLines(rawLines);
-    saveParsedStatement(
-      { fileType: 'TEXT', pageCount: 1, ...analysis },
-      { fileName: 'Pasted_Statement.txt' }
-    );
-    setPastedText('');
-  };
-
   const handleDeleteStatement = (id) => {
     if (originalPdfUrls[id]) {
       URL.revokeObjectURL(originalPdfUrls[id]);
@@ -270,34 +261,119 @@ export const StatementPage = () => {
     });
   }, [activeStatement, fromDate, toDate, searchText]);
 
-  // Compute Debit / Credit totals across filtered table rows if those columns exist
-  const debitCreditTotals = useMemo(() => {
-    if (!hasStructuredTable) return null;
-    const cols = activeStatement.columns;
-    const debitIdx = cols.findIndex(c => /\b(debit|withdrawal|dr)\b/i.test(c.label));
-    const creditIdx = cols.findIndex(c => /\b(credit|deposit|cr)\b/i.test(c.label));
-    if (debitIdx === -1 && creditIdx === -1) return null;
+  // Compute Debit / Credit / Transaction Total & Closing Balance across active/filtered rows + extracted statement summary
+  const statementTotalsSummary = useMemo(() => {
+    if (!activeStatement) return null;
+    const extracted = activeStatement.statementSummary || {};
+    const isFiltered = Boolean(fromDate || toDate || searchText.trim());
 
-    let totalDebit = 0;
-    let totalCredit = 0;
-    filteredTableRows.forEach(r => {
-      if (r.isBalanceBanner) return;
-      if (debitIdx >= 0 && r.cells[debitIdx]) {
-        totalDebit += parseNumericAmount(r.cells[debitIdx]);
-      }
-      if (creditIdx >= 0 && r.cells[creditIdx]) {
-        totalCredit += parseNumericAmount(r.cells[creditIdx]);
-      }
-    });
+    if (hasStructuredTable) {
+      const cols = activeStatement.columns;
+      const debitIdx = cols.findIndex(
+        c => /\b(debits?|withdraws?|withdrawals?|money\s*out|paid\s*out|dr)\b/i.test(c.label) && !/\b(dr\s*\/?\s*cr|cr\s*\/?\s*dr|debit\s*\/\s*credit)\b/i.test(c.label)
+      );
+      const creditIdx = cols.findIndex(
+        c => /\b(credits?|deposits?|money\s*in|paid\s*in|cr)\b/i.test(c.label) && !/\b(dr\s*\/?\s*cr|cr\s*\/?\s*dr|debit\s*\/\s*credit)\b/i.test(c.label)
+      );
+      const amountIdx = debitIdx === -1 && creditIdx === -1
+        ? cols.findIndex(c => /\b(amounts?|amts?|txn\s*amt|transaction\s*amount)\b/i.test(c.label))
+        : -1;
+      const typeIdx = cols.findIndex(c => /\b(dr\s*\/?\s*cr|cr\s*\/?\s*dr|debit\s*\/\s*credit|d\/c|txn\s*type|^type$|^ind$|^sign$)\b/i.test(c.label.trim()));
+      const balanceIdx = cols.findIndex(c => /\b(balances?|bal|closing\s*bal|running\s*bal|avail(?:able)?\s*bal)\b/i.test(c.label));
 
-    return { hasDebit: debitIdx >= 0, hasCredit: creditIdx >= 0, totalDebit, totalCredit };
-  }, [hasStructuredTable, activeStatement, filteredTableRows]);
+      let totalDebit = 0;
+      let totalCredit = 0;
+      let txnCount = 0;
+      let filteredClosingBalance = null;
+
+      const parseFilteredBalance = (raw = '') => {
+        const val = parseNumericAmount(raw);
+        return /\b\d[\d,]*(?:\.\d+)?\s*dr\.?$/i.test(String(raw || '').trim()) && val > 0 ? -val : val;
+      };
+
+      filteredTableRows.forEach(r => {
+        const joinedLower = (r.joined || '').toLowerCase();
+        if (/\bclosing\s*balance\b/i.test(joinedLower) && balanceIdx >= 0 && isMoneyLikeCell(r.cells[balanceIdx] || '')) {
+          filteredClosingBalance = parseFilteredBalance(r.cells[balanceIdx]);
+          return;
+        }
+        if (r.isBalanceBanner || r.isFullWidthRow) return;
+
+        const hasDr = debitIdx >= 0 && isMoneyLikeCell(r.cells[debitIdx] || '');
+        const hasCr = creditIdx >= 0 && isMoneyLikeCell(r.cells[creditIdx] || '');
+        const hasSingleAmt = amountIdx >= 0 && isMoneyLikeCell(r.cells[amountIdx] || '');
+        if (hasDr || hasCr || hasSingleAmt || r.date) txnCount += 1;
+        if (hasDr) totalDebit += Math.abs(parseNumericAmount(r.cells[debitIdx]));
+        if (hasCr) totalCredit += Math.abs(parseNumericAmount(r.cells[creditIdx]));
+        if (hasSingleAmt) {
+          const amtVal = parseNumericAmount(r.cells[amountIdx]);
+          const typeSignal = `${typeIdx >= 0 ? (r.cells[typeIdx] || '') : ''} ${r.cells[amountIdx] || ''}`;
+          if (/\bcr\b|\(cr\)|credit/i.test(typeSignal)) {
+            totalCredit += Math.abs(amtVal);
+          } else {
+            totalDebit += Math.abs(amtVal);
+          }
+        }
+        if (balanceIdx >= 0 && isMoneyLikeCell(r.cells[balanceIdx] || '')) {
+          filteredClosingBalance = parseFilteredBalance(r.cells[balanceIdx]);
+        }
+      });
+
+      const resolvedDebit = !isFiltered && extracted.debitTotal !== null && extracted.debitTotal !== undefined
+        ? extracted.debitTotal
+        : (debitIdx >= 0 || amountIdx >= 0 ? totalDebit : null);
+      const resolvedCredit = !isFiltered && extracted.creditTotal !== null && extracted.creditTotal !== undefined
+        ? extracted.creditTotal
+        : (creditIdx >= 0 || amountIdx >= 0 ? totalCredit : null);
+      const resolvedClosing = isFiltered
+        ? (filteredClosingBalance ?? extracted.closingBalance ?? null)
+        : (extracted.closingBalance ?? filteredClosingBalance ?? null);
+
+      const resolvedTransactionTotal =
+        resolvedDebit !== null || resolvedCredit !== null
+          ? (resolvedDebit || 0) + (resolvedCredit || 0)
+          : null;
+
+      return {
+        isFiltered,
+        openingBalance: extracted.openingBalance ?? null,
+        closingBalance: resolvedClosing,
+        hasDebit: debitIdx >= 0 || amountIdx >= 0 || resolvedDebit !== null,
+        hasCredit: creditIdx >= 0 || amountIdx >= 0 || resolvedCredit !== null,
+        totalDebit: resolvedDebit || 0,
+        totalCredit: resolvedCredit || 0,
+        transactionTotal: resolvedTransactionTotal,
+        transactionCount: isFiltered ? txnCount : (extracted.transactionCount || txnCount),
+        debitIdx,
+        creditIdx,
+        amountIdx,
+        balanceIdx
+      };
+    }
+
+    return {
+      isFiltered,
+      openingBalance: extracted.openingBalance ?? null,
+      closingBalance: extracted.closingBalance ?? null,
+      hasDebit: extracted.debitTotal !== null && extracted.debitTotal !== undefined,
+      hasCredit: extracted.creditTotal !== null && extracted.creditTotal !== undefined,
+      totalDebit: extracted.debitTotal || 0,
+      totalCredit: extracted.creditTotal || 0,
+      transactionTotal: extracted.transactionTotal ?? null,
+      transactionCount: extracted.transactionCount || 0,
+      debitIdx: -1,
+      creditIdx: -1,
+      amountIdx: -1,
+      balanceIdx: -1
+    };
+  }, [activeStatement, hasStructuredTable, filteredTableRows, fromDate, toDate, searchText]);
 
   const activeItems = (viewMode === 'table' && hasStructuredTable) ? filteredTableRows : filteredLines;
   const paginatedItems = useMemo(() => {
+    if (showAllRows) return activeItems;
     const start = (currentPage - 1) * itemsPerPage;
     return activeItems.slice(start, start + itemsPerPage);
-  }, [activeItems, currentPage, itemsPerPage]);
+  }, [activeItems, currentPage, itemsPerPage, showAllRows]);
 
   const handleResetFilters = () => {
     setFromDate('');
@@ -367,66 +443,24 @@ export const StatementPage = () => {
               </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setUploadMode('file')}
-              className={`px-3 py-1.5 rounded-lg transition ${
-                uploadMode === 'file' ? 'bg-white text-burgundy-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Upload File
-            </button>
-            <button
-              type="button"
-              onClick={() => setUploadMode('paste')}
-              className={`px-3 py-1.5 rounded-lg transition ${
-                uploadMode === 'paste' ? 'bg-white text-burgundy-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Paste Text
-            </button>
-          </div>
         </div>
 
-        {uploadMode === 'file' ? (
-          <div>
-            <label className="flex w-full items-center justify-center gap-2 h-11 rounded-xl border-2 border-dashed border-burgundy-300 bg-[#FAF6EF] hover:bg-burgundy-50/60 px-4 text-xs font-bold text-burgundy-950 cursor-pointer transition">
-              <Upload className="w-4 h-4 text-burgundy-800" />
-              <span>
-                {isParsing ? 'Analyzing Bank Statement...' : 'Select Bank Statement (PDF, Excel, CSV, TXT)'}
-              </span>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.xlsx,.xls,.csv,.txt"
-                disabled={isParsing}
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </label>
-          </div>
-        ) : (
-          <form onSubmit={handleAnalyzePastedText} className="space-y-3">
-            <textarea
-              rows={4}
-              placeholder="Paste raw bank statement text lines here..."
-              value={pastedText}
-              onChange={(e) => setPastedText(e.target.value)}
-              className="w-full text-xs rounded-xl border border-slate-300 p-3 font-mono focus:outline-none focus:border-burgundy-800"
+        <div>
+          <label className="flex w-full items-center justify-center gap-2 h-11 rounded-xl border-2 border-dashed border-burgundy-300 bg-[#FAF6EF] hover:bg-burgundy-50/60 px-4 text-xs font-bold text-burgundy-950 cursor-pointer transition">
+            <Upload className="w-4 h-4 text-burgundy-800" />
+            <span>
+              {isParsing ? 'Analyzing Bank Statement...' : 'Select Bank Statement (PDF, Excel, CSV, TXT)'}
+            </span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.xlsx,.xls,.csv,.txt"
+              disabled={isParsing}
+              onChange={handleFileChange}
+              className="hidden"
             />
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-burgundy-900 hover:bg-burgundy-800 px-4 py-2 text-xs font-bold text-white shadow-xs transition"
-              >
-                <FileText className="w-3.5 h-3.5 text-gold-300" />
-                <span>Analyze Statement Text</span>
-              </button>
-            </div>
-          </form>
-        )}
+          </label>
+        </div>
 
         {/* Password Protected PDF Prompt */}
         {pendingPdfFile && (
@@ -694,15 +728,15 @@ export const StatementPage = () => {
                     );
                   })}
 
-                  <div className="ml-auto flex items-center gap-3 flex-wrap text-[11px] font-semibold">
-                    {debitCreditTotals?.hasDebit && (
+                  <div className="ml-auto flex items-center gap-2 flex-wrap text-[11px] font-semibold">
+                    {statementTotalsSummary?.hasDebit && (
                       <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200">
-                        Debit Total: {formatCurrency(debitCreditTotals.totalDebit)}
+                        Debit: {formatStatementCurrency(statementTotalsSummary.totalDebit)}
                       </span>
                     )}
-                    {debitCreditTotals?.hasCredit && (
+                    {statementTotalsSummary?.hasCredit && (
                       <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        Credit Total: {formatCurrency(debitCreditTotals.totalCredit)}
+                        Credit: {formatStatementCurrency(statementTotalsSummary.totalCredit)}
                       </span>
                     )}
                     <span className="text-burgundy-900">
@@ -711,6 +745,67 @@ export const StatementPage = () => {
                   </div>
                 </div>
               </>
+            )}
+
+            {/* Statement Opening Balance, Separate Debit & Credit Totals, Transaction Total & Closing Balance */}
+            {statementTotalsSummary && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2 border-t border-slate-100">
+                <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                    Opening Balance
+                  </span>
+                  <span className="text-sm font-extrabold font-mono text-slate-900 mt-0.5 block">
+                    {statementTotalsSummary.openingBalance !== null && statementTotalsSummary.openingBalance !== undefined
+                      ? formatStatementCurrency(statementTotalsSummary.openingBalance)
+                      : '—'}
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-rose-200 bg-rose-50/70 px-4 py-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 block">
+                    {statementTotalsSummary.isFiltered ? 'Filtered Debit Total' : 'Debit Total'}
+                  </span>
+                  <span className="text-sm font-extrabold font-mono text-rose-800 mt-0.5 block">
+                    {statementTotalsSummary.hasDebit ? formatStatementCurrency(statementTotalsSummary.totalDebit) : '—'}
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">
+                    {statementTotalsSummary.isFiltered ? 'Filtered Credit Total' : 'Credit Total'}
+                  </span>
+                  <span className="text-sm font-extrabold font-mono text-emerald-800 mt-0.5 block">
+                    {statementTotalsSummary.hasCredit ? formatStatementCurrency(statementTotalsSummary.totalCredit) : '—'}
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-gold-300 bg-[#FAF6EF] px-4 py-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 block">
+                    {statementTotalsSummary.isFiltered ? 'Filtered Transaction Total' : 'Transaction Total'}
+                  </span>
+                  <div className="flex items-baseline gap-2 mt-0.5 flex-wrap">
+                    <span className="text-sm font-extrabold font-mono text-burgundy-950">
+                      {statementTotalsSummary.transactionTotal !== null
+                        ? formatStatementCurrency(statementTotalsSummary.transactionTotal)
+                        : `${statementTotalsSummary.transactionCount} Txns`}
+                    </span>
+                    <span className="text-[10px] font-semibold text-slate-600">
+                      ({statementTotalsSummary.transactionCount} txns)
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-burgundy-200 bg-burgundy-50/70 px-4 py-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-burgundy-800 block">
+                    Closing Balance
+                  </span>
+                  <span className="text-sm font-extrabold font-mono text-burgundy-950 mt-0.5 block">
+                    {statementTotalsSummary.closingBalance !== null && statementTotalsSummary.closingBalance !== undefined
+                      ? formatStatementCurrency(statementTotalsSummary.closingBalance)
+                      : '—'}
+                  </span>
+                </div>
+              </div>
             )}
           </div>
 
@@ -761,26 +856,25 @@ export const StatementPage = () => {
 
               {/* Exact Extracted Columns Table */}
               {hasStructuredTable ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-800 min-w-[820px] border-collapse">
-                    <thead className="bg-[#FAF6EF] text-[11px] font-bold text-slate-900 border-b border-slate-300">
+                <div className="overflow-x-auto p-3 sm:p-4 bg-white">
+                  <table className="w-full text-left text-xs text-slate-900 border-collapse border border-slate-400 table-auto">
+                    <thead className="bg-[#FAF6EF] text-[11px] font-bold text-slate-950 border-b border-slate-400">
                       <tr>
                         {activeStatement.columns.map((col, cIdx) => (
                           <th
                             key={col.key || cIdx}
-                            className={`px-3.5 py-3 border-r last:border-r-0 border-slate-200 whitespace-nowrap ${
-                              col.isNumeric ? 'text-right' : 'text-left'
-                            }`}
+                            style={col.widthPct ? { width: `${col.widthPct}%` } : undefined}
+                            className="px-2.5 py-2.5 border border-slate-400 text-center align-middle leading-tight"
                           >
                             {col.label}
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200">
+                    <tbody>
                       {paginatedItems.length === 0 ? (
                         <tr>
-                          <td colSpan={activeStatement.columns.length} className="px-4 py-10 text-center text-xs text-slate-400 italic">
+                          <td colSpan={activeStatement.columns.length} className="px-4 py-10 text-center text-xs text-slate-400 italic border border-slate-300">
                             No matching entries found for the selected date range or search text.
                           </td>
                         </tr>
@@ -789,30 +883,94 @@ export const StatementPage = () => {
                           <tr
                             key={row.rowNo}
                             className={`transition align-top ${
-                              row.isBalanceBanner ? 'bg-slate-50/90 font-extrabold text-slate-950' : 'hover:bg-[#FAF6EF]/60'
+                              row.isBalanceBanner || row.isFullWidthRow
+                                ? 'bg-slate-50 font-extrabold text-slate-950'
+                                : 'hover:bg-[#FAF6EF]/60'
                             }`}
                           >
-                            {activeStatement.columns.map((col, cIdx) => {
-                              const val = row.cells[cIdx] || '';
-                              return (
-                                <td
-                                  key={col.key || cIdx}
-                                  className={`px-3.5 py-2.5 border-r last:border-r-0 border-slate-100 leading-relaxed ${
-                                    col.isNumeric
-                                      ? 'text-right font-mono tabular-nums whitespace-nowrap'
-                                      : col.isDate
-                                      ? 'font-mono whitespace-nowrap text-slate-800'
-                                      : 'break-words max-w-md'
-                                  }`}
-                                >
-                                  <HighlightText text={val} query={searchText} />
-                                </td>
-                              );
-                            })}
+                            {row.isFullWidthRow ? (
+                              <td
+                                colSpan={activeStatement.columns.length}
+                                className="px-2.5 py-2 text-left text-xs font-bold text-burgundy-900 bg-[#FAF6EF]/60 border border-slate-300"
+                              >
+                                <HighlightText text={row.joined || row.cells[0] || ''} query={searchText} />
+                              </td>
+                            ) : (
+                              activeStatement.columns.map((col, cIdx) => {
+                                const val = row.cells[cIdx] || '';
+                                const isBranchOrCode = /\b(br|init|chq|cheque|ref|type|mode)\b/i.test(col.label) && !col.isWideText;
+                                return (
+                                  <td
+                                    key={col.key || cIdx}
+                                    className={`px-2.5 py-2 border border-slate-300 leading-snug ${
+                                      isBranchOrCode
+                                        ? 'text-center font-mono whitespace-nowrap'
+                                        : col.isNumeric
+                                        ? 'text-right font-mono tabular-nums whitespace-nowrap'
+                                        : col.isDate
+                                        ? 'text-left font-mono whitespace-nowrap text-slate-900'
+                                        : 'text-left break-words [overflow-wrap:anywhere]'
+                                    }`}
+                                  >
+                                    <HighlightText text={val} query={searchText} />
+                                  </td>
+                                );
+                              })
+                            )}
                           </tr>
                         ))
                       )}
                     </tbody>
+                    {statementTotalsSummary && activeStatement.columns.length > 0 && (
+                      <tfoot className="bg-[#FAF6EF] border-t-2 border-slate-400 text-xs font-extrabold text-slate-950">
+                        <tr>
+                          {activeStatement.columns.map((col, cIdx) => {
+                            if (cIdx === statementTotalsSummary.debitIdx) {
+                              return (
+                                <td key={col.key || cIdx} className="px-2.5 py-2.5 text-right font-mono tabular-nums text-rose-800 whitespace-nowrap border border-slate-400">
+                                  {formatStatementCurrency(statementTotalsSummary.totalDebit)}
+                                </td>
+                              );
+                            }
+                            if (cIdx === statementTotalsSummary.creditIdx) {
+                              return (
+                                <td key={col.key || cIdx} className="px-2.5 py-2.5 text-right font-mono tabular-nums text-emerald-800 whitespace-nowrap border border-slate-400">
+                                  {formatStatementCurrency(statementTotalsSummary.totalCredit)}
+                                </td>
+                              );
+                            }
+                            if (cIdx === statementTotalsSummary.amountIdx) {
+                              return (
+                                <td key={col.key || cIdx} className="px-2.5 py-2.5 text-right font-mono tabular-nums text-burgundy-950 whitespace-nowrap border border-slate-400">
+                                  {statementTotalsSummary.transactionTotal !== null
+                                    ? formatStatementCurrency(statementTotalsSummary.transactionTotal)
+                                    : '—'}
+                                </td>
+                              );
+                            }
+                            if (cIdx === statementTotalsSummary.balanceIdx) {
+                              return (
+                                <td key={col.key || cIdx} className="px-2.5 py-2.5 text-right font-mono tabular-nums text-burgundy-950 whitespace-nowrap border border-slate-400">
+                                  {statementTotalsSummary.closingBalance !== null && statementTotalsSummary.closingBalance !== undefined
+                                    ? formatStatementCurrency(statementTotalsSummary.closingBalance)
+                                    : '—'}
+                                </td>
+                              );
+                            }
+                            if (col.isWideText || (statementTotalsSummary.debitIdx > 0 && cIdx === 0 && !activeStatement.columns.some(c => c.isWideText))) {
+                              return (
+                                <td key={col.key || cIdx} className="px-2.5 py-2.5 text-left uppercase tracking-wider text-burgundy-900 border border-slate-400">
+                                  TRANSACTION TOTAL &amp; CLOSING BALANCE
+                                </td>
+                              );
+                            }
+                            return (
+                              <td key={col.key || cIdx} className="px-2.5 py-2.5 border border-slate-400" />
+                            );
+                          })}
+                        </tr>
+                      </tfoot>
+                    )}
                   </table>
                 </div>
               ) : (
@@ -865,13 +1023,28 @@ export const StatementPage = () => {
                 </div>
               )}
 
-              <Pagination
-                currentPage={currentPage}
-                totalItems={activeItems.length}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-                summaryLabel={hasStructuredTable ? 'statement rows' : 'statement lines'}
-              />
+              <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 flex-wrap">
+                <span className="text-xs font-semibold text-slate-600">
+                  Showing {paginatedItems.length} of {activeItems.length} {hasStructuredTable ? 'statement rows' : 'statement lines'}
+                  {showAllRows ? ' (All data visible)' : ''}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAllRows(prev => !prev)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-xs font-bold text-burgundy-900 transition"
+                >
+                  {showAllRows ? 'Switch to 50 / Page' : `Show All (${activeItems.length})`}
+                </button>
+              </div>
+              {!showAllRows && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={activeItems.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                  summaryLabel={hasStructuredTable ? 'statement rows' : 'statement lines'}
+                />
+              )}
             </div>
           )}
 
