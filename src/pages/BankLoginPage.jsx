@@ -119,6 +119,7 @@ export const BankLoginPage = () => {
   const [disburseBankName, setDisburseBankName] = useState('');
   const [disburseLoanAmount, setDisburseLoanAmount] = useState('');
   const [disburseLoanType, setDisburseLoanType] = useState('');
+  const [disburseInterestRate, setDisburseInterestRate] = useState('');
   const [disburseDate, setDisburseDate] = useState(new Date().toISOString().split('T')[0]);
   const [disburseRemarks, setDisburseRemarks] = useState('');
 
@@ -706,6 +707,7 @@ export const BankLoginPage = () => {
     setDisburseBankName(login.bankName || '');
     setDisburseLoanAmount(login.loanAmount || '');
     setDisburseLoanType(login.loanType || 'Personal Loan');
+    setDisburseInterestRate(login.interestRate || '');
     setDisburseDate(new Date().toISOString().split('T')[0]);
     setDisburseRemarks('');
   };
@@ -723,6 +725,7 @@ export const BankLoginPage = () => {
       bankName: disburseBankName.trim(),
       loanAmount: String(disburseLoanAmount).trim(),
       loanType: disburseLoanType.trim(),
+      interestRate: disburseInterestRate.trim(),
       disbursementDate: disburseDate,
       remarks: disburseRemarks.trim()
     });
@@ -1368,7 +1371,12 @@ export const BankLoginPage = () => {
                               </div>
                             ) : login.status === 'Disbursed' ? (
                               <div className="text-[11px] text-emerald-800 font-semibold">
-                                Disbursed: {renderLoanAmount(login.disbursementDetails?.loanAmount)} ({login.disbursementDetails?.bankName})
+                                <div>Disbursed: {renderLoanAmount(login.disbursementDetails?.loanAmount)} ({login.disbursementDetails?.bankName})</div>
+                                {(login.disbursementDetails?.interestRate || login.interestRate) && (
+                                  <div className="text-[10px] text-emerald-700 mt-0.5">
+                                    ROI: {login.disbursementDetails?.interestRate || login.interestRate}
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <div className="text-[11px] text-rose-800 italic line-clamp-1 max-w-xs" title={login.rejectionRemarks}>
@@ -2086,17 +2094,31 @@ export const BankLoginPage = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Disbursement Date <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={disburseDate}
-                  onChange={(e) => setDisburseDate(e.target.value)}
-                  className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-emerald-700"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Rate of Interest (%)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 9.25% p.a."
+                    value={disburseInterestRate}
+                    onChange={(e) => setDisburseInterestRate(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-emerald-700 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Disbursement Date <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={disburseDate}
+                    onChange={(e) => setDisburseDate(e.target.value)}
+                    className="w-full text-xs rounded-xl border border-slate-300 py-2 px-3 focus:outline-none focus:border-emerald-700"
+                  />
+                </div>
               </div>
 
               <div>
@@ -2397,6 +2419,12 @@ export const BankLoginPage = () => {
                     <div>
                       <span className="text-emerald-700 text-[10px] font-semibold uppercase block">Disbursement Bank</span>
                       <span className="font-semibold text-emerald-900">{viewHistoryLogin.disbursementDetails.bankName}</span>
+                    </div>
+                    <div>
+                      <span className="text-emerald-700 text-[10px] font-semibold uppercase block">Rate of Interest</span>
+                      <span className="font-semibold text-emerald-900">
+                        {viewHistoryLogin.disbursementDetails.interestRate || viewHistoryLogin.interestRate || '—'}
+                      </span>
                     </div>
                     <div>
                       <span className="text-emerald-700 text-[10px] font-semibold uppercase block">Disbursement Date</span>

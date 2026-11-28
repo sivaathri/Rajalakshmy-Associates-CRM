@@ -2266,17 +2266,19 @@ export const CRMProvider = ({ children }) => {
   };
 
   // Disburse Login (Req 5: convert to Disposement with bank name, loan amount, type of loan)
-  const disburseLogin = (loginId, { bankName, loanAmount, loanType, disbursementDate, remarks = '' }) => {
+  const disburseLogin = (loginId, { bankName, loanAmount, loanType, interestRate = '', disbursementDate, remarks = '' }) => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     const login = bankLogins.find(l => l.id === loginId || l.loginId === loginId);
     if (!login) return;
 
+    const resolvedInterestRate = (interestRate || login.interestRate || '').trim();
     const disburseData = {
       bankName: bankName || login.bankName,
       loanAmount: loanAmount || login.loanAmount,
       loanType: loanType || login.loanType,
+      interestRate: resolvedInterestRate,
       disbursementDate: disbursementDate || todayStr,
       disbursedTime: timeStr,
       disbursedById: currentUser?.id || 'EMP004',
@@ -2300,12 +2302,13 @@ export const CRMProvider = ({ children }) => {
         const disburseUpdate = {
           id: `UPD-${Date.now().toString().slice(-4)}`,
           date: todayStr,
-          note: `Loan Disbursed: ${displayAmt} via ${disburseData.bankName} (${disburseData.loanType})${remarks ? `. ${remarks}` : ''}`,
+          note: `Loan Disbursed: ${displayAmt} via ${disburseData.bankName} (${disburseData.loanType}${resolvedInterestRate ? ` @ ${resolvedInterestRate}` : ''})${remarks ? `. ${remarks}` : ''}`,
           updatedBy: currentUser?.name || 'RM'
         };
         return {
           ...l,
           status: 'Disbursed',
+          interestRate: resolvedInterestRate || l.interestRate || '',
           lastUpdateDate: todayStr,
           disbursementDetails: disburseData,
           updates: [disburseUpdate, ...(l.updates || [])]
@@ -2330,7 +2333,7 @@ export const CRMProvider = ({ children }) => {
       actorRole: currentUser?.role || 'RM',
       bankName: disburseData.bankName,
       loanAmount: disburseData.loanAmount,
-      details: `${disburseData.loanType} • ${displayAmt}${remarks ? ` • Remarks: ${remarks}` : ''}`
+      details: `${disburseData.loanType} • ${displayAmt}${resolvedInterestRate ? ` • ROI: ${resolvedInterestRate}` : ''}${remarks ? ` • Remarks: ${remarks}` : ''}`
     });
 
     // Record into Performance Case Dispositions

@@ -303,6 +303,7 @@ export const FollowUpReminderModal = () => {
         bankName: login.bankName || '',
         loanAmount: login.loanAmount || '',
         loanType: login.loanType || 'Personal Loan',
+        interestRate: login.interestRate || '',
         disbursementDate: todayIsoStr,
         disburseRemarks: '',
         rejectionRemarks: ''
@@ -348,6 +349,7 @@ export const FollowUpReminderModal = () => {
         bankName: form.bankName.trim(),
         loanAmount: String(form.loanAmount).trim(),
         loanType: form.loanType.trim(),
+        interestRate: (form.interestRate || '').trim(),
         disbursementDate: form.disbursementDate || todayIsoStr,
         remarks: (form.disburseRemarks || '').trim()
       });
@@ -617,6 +619,18 @@ export const FollowUpReminderModal = () => {
                                       type="text"
                                       value={form.loanType || ''}
                                       onChange={(e) => updateLoginFormField(b.id, 'loanType', e.target.value)}
+                                      className="w-full text-xs rounded-lg border border-slate-300 px-2.5 py-1.5 focus:outline-none focus:border-burgundy-800"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                      Rate of Interest (%)
+                                    </label>
+                                    <input
+                                      type="text"
+                                      placeholder="e.g. 9.25% p.a."
+                                      value={form.interestRate || ''}
+                                      onChange={(e) => updateLoginFormField(b.id, 'interestRate', e.target.value)}
                                       className="w-full text-xs rounded-lg border border-slate-300 px-2.5 py-1.5 focus:outline-none focus:border-burgundy-800"
                                     />
                                   </div>
