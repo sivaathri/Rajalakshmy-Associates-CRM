@@ -88,8 +88,19 @@ export const getSystemNotifications = ({
     if (b.status !== 'In Progress') return false;
     const isDue = !b.nextFollowUpDate || b.nextFollowUpDate <= todayIso;
     if (!isDue) return false;
-    if (currentUser.role === 'RM') {
-      return b.assignedRMId === currentUser.id || b.assignedRMName === currentUser.name;
+    if (['RM', 'Sales Manager'].includes(currentUser.role)) {
+      const myNameLower = (currentUser.name || '').trim().toLowerCase();
+      const matchId =
+        (b.assignedRMId && b.assignedRMId === currentUser.id) ||
+        (b.createdBy && b.createdBy === currentUser.id) ||
+        (b.submittedBy && b.submittedBy === currentUser.id);
+      const matchName = Boolean(
+        myNameLower &&
+          ((b.assignedRMName && b.assignedRMName.trim().toLowerCase() === myNameLower) ||
+            (b.createdByName && b.createdByName.trim().toLowerCase() === myNameLower) ||
+            (b.submittedByName && b.submittedByName.trim().toLowerCase() === myNameLower))
+      );
+      return matchId || matchName;
     }
     return true;
   });
