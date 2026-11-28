@@ -128,8 +128,6 @@ export const SettingsPage = () => {
       avatar: profileForm.avatar || '',
       mobile: formattedMobile,
       dob: profileForm.dob || '',
-      dateOfJoining: profileForm.dateOfJoining || '',
-      joiningDate: profileForm.dateOfJoining || '',
       address: profileForm.address.trim(),
       target: profileForm.target.trim()
     };
@@ -354,15 +352,10 @@ export const SettingsPage = () => {
             </label>
             <input
               type="date"
-              readOnly={!isEditing}
-              disabled={!isEditing}
+              readOnly
+              disabled
               value={profileForm.dateOfJoining}
-              onChange={(e) => setProfileForm(prev => ({ ...prev, dateOfJoining: e.target.value }))}
-              className={`w-full text-xs rounded-xl border py-2.5 px-3 focus:outline-none text-slate-900 transition ${
-                isEditing
-                  ? 'border-slate-300 bg-white focus:border-burgundy-800'
-                  : 'border-slate-200 bg-slate-50/90 text-slate-700 cursor-default'
-              }`}
+              className="w-full text-xs rounded-xl border border-slate-200 py-2.5 px-3 bg-slate-100 text-slate-700 cursor-not-allowed"
             />
           </div>
 
