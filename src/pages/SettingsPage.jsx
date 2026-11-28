@@ -12,7 +12,10 @@ import {
   Calendar,
   BadgeCheck,
   Edit3,
-  X
+  X,
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 // Resize uploaded profile image cleanly to avoid exceeding localStorage quota
@@ -46,6 +49,7 @@ export const SettingsPage = () => {
   const fileInputRef = useRef(null);
   const liveEmployee = (employees || []).find(e => e.id === currentUser?.id) || currentUser || {};
   const [isEditing, setIsEditing] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const buildFormFromEmployee = (emp = {}) => ({
     name: emp.name || '',
@@ -56,7 +60,8 @@ export const SettingsPage = () => {
     dob: emp.dob || '',
     dateOfJoining: emp.dateOfJoining || emp.joiningDate || '',
     address: emp.address || emp.location || '',
-    target: emp.target || ''
+    target: emp.target || '',
+    password: emp.password || 'password123'
   });
 
   const [profileForm, setProfileForm] = useState(() => buildFormFromEmployee(liveEmployee));
@@ -74,11 +79,13 @@ export const SettingsPage = () => {
     liveEmployee.joiningDate,
     liveEmployee.address,
     liveEmployee.location,
-    liveEmployee.target
+    liveEmployee.target,
+    liveEmployee.password
   ]);
 
   useEffect(() => {
     setIsEditing(false);
+    setShowPassword(false);
   }, [currentUser?.id]);
 
   const handleAvatarUpload = async (e) => {
@@ -103,6 +110,10 @@ export const SettingsPage = () => {
       alert('Please enter your Name');
       return;
     }
+    if (!profileForm.password.trim()) {
+      alert('Please enter a Password');
+      return;
+    }
     const digits = String(profileForm.mobile || '').replace(/\D/g, '');
     if (profileForm.mobile.trim() && digits.length < 10) {
       alert('Please enter a valid 10-digit Mobile Number');
@@ -119,19 +130,21 @@ export const SettingsPage = () => {
       mobile: formattedMobile,
       dob: profileForm.dob || '',
       address: profileForm.address.trim(),
-      target: profileForm.target.trim()
+      password: profileForm.password.trim()
     };
 
     if (currentUser?.id) {
       updateEmployee(currentUser.id, updatedPayload);
       updateCurrentUser(updatedPayload);
       setIsEditing(false);
+      setShowPassword(false);
     }
   };
 
   const handleCancelEdit = () => {
     setProfileForm(buildFormFromEmployee(liveEmployee));
     setIsEditing(false);
+    setShowPassword(false);
   };
 
   return (
@@ -315,24 +328,50 @@ export const SettingsPage = () => {
             />
           </div>
 
-          <div className="sm:col-span-2">
+          <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
               <Target className="w-3.5 h-3.5 text-burgundy-700" />
               <span>Target</span>
             </label>
             <input
               type="text"
-              readOnly={!isEditing}
-              disabled={!isEditing}
-              placeholder={isEditing ? 'e.g. ₹25,00,000 / 50 Calls per day' : 'Not set'}
+              readOnly
+              disabled
+              placeholder="Assigned by Admin"
               value={profileForm.target}
-              onChange={(e) => setProfileForm(prev => ({ ...prev, target: e.target.value }))}
-              className={`w-full text-xs rounded-xl border py-2.5 px-3 focus:outline-none font-semibold text-slate-900 transition ${
-                isEditing
-                  ? 'border-slate-300 bg-white focus:border-burgundy-800'
-                  : 'border-slate-200 bg-slate-50/90 text-slate-700 cursor-default'
-              }`}
+              className="w-full text-xs rounded-xl border border-slate-200 py-2.5 px-3 bg-slate-100 text-slate-700 font-semibold cursor-not-allowed"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
+              <Lock className="w-3.5 h-3.5 text-slate-400" />
+              <span>Password {isEditing && <span className="text-rose-500">*</span>}</span>
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required={isEditing}
+                readOnly={!isEditing}
+                disabled={!isEditing}
+                placeholder="Enter password"
+                value={profileForm.password}
+                onChange={(e) => setProfileForm(prev => ({ ...prev, password: e.target.value }))}
+                className={`w-full text-xs rounded-xl border py-2.5 pl-3 pr-9 focus:outline-none font-mono text-slate-900 transition ${
+                  isEditing
+                    ? 'border-slate-300 bg-white focus:border-burgundy-800'
+                    : 'border-slate-200 bg-slate-50/90 text-slate-700 cursor-default'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(prev => !prev)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-0.5"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           <div className="sm:col-span-2 lg:col-span-4">

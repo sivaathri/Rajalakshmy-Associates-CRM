@@ -79,6 +79,13 @@ export const AuthProvider = ({ children }) => {
           message: `User account ${employee.id} (${employee.name}) is Inactive. Please contact Admin.`
         };
       }
+      const expectedPassword = employee.password || 'password123';
+      if (password !== undefined && password !== '' && password !== expectedPassword) {
+        return {
+          success: false,
+          message: 'Incorrect password. Please check your password and try again.'
+        };
+      }
       setCurrentUser(employee);
       setLoginSessionNonce(n => n + 1);
       if (['RM', 'Sales Manager', 'Ops'].includes(employee.role)) {
