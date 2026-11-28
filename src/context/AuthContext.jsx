@@ -123,6 +123,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateCurrentUser = (updatedFields) => {
+    if (!updatedFields || typeof updatedFields !== 'object') return;
+    setCurrentUser(prev => {
+      if (!prev) return prev;
+      return normalizeUserContact({ ...prev, ...updatedFields });
+    });
+  };
+
   const logout = () => {
     setCurrentUser(null);
     setShowFollowUpModal(false);
@@ -201,6 +209,7 @@ export const AuthProvider = ({ children }) => {
         login,
         loginAsRole,
         switchUser,
+        updateCurrentUser,
         logout,
         confirmAndLogout,
         showLogoutConfirmModal,

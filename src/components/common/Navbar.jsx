@@ -124,8 +124,12 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
             }}
             className="flex items-center gap-1.5 rounded-xl p-1 hover:bg-white/10 transition"
           >
-            <div className="w-8 h-8 rounded-full bg-white/15 text-gold-300 font-bold flex items-center justify-center border border-gold-400/80 ring-2 ring-white/10 shadow-sm shrink-0">
-              <User className="w-4 h-4 text-gold-300" />
+            <div className="w-8 h-8 rounded-full bg-white/15 text-gold-300 font-bold flex items-center justify-center border border-gold-400/80 ring-2 ring-white/10 shadow-sm shrink-0 overflow-hidden">
+              {currentUser?.avatar ? (
+                <img src={currentUser.avatar} alt={currentUser.name || 'Profile'} className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-4 h-4 text-gold-300" />
+              )}
             </div>
             <div className="text-left hidden xl:block">
               <div className="text-xs font-bold text-white leading-tight">
@@ -141,8 +145,12 @@ export const Navbar = ({ pageTitle, toggleSidebar, isSidebarOpen }) => {
           {profileOpen && (
             <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl z-50">
               <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-                <div className="w-10 h-10 rounded-xl bg-burgundy-900 text-gold-300 font-bold flex items-center justify-center border border-gold-400 shadow-sm shrink-0">
-                  <User className="w-5 h-5 text-gold-300" />
+                <div className="w-10 h-10 rounded-xl bg-burgundy-900 text-gold-300 font-bold flex items-center justify-center border border-gold-400 shadow-sm shrink-0 overflow-hidden">
+                  {currentUser?.avatar ? (
+                    <img src={currentUser.avatar} alt={currentUser.name || 'Profile'} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-5 h-5 text-gold-300" />
+                  )}
                 </div>
                 <div>
                   <div className="text-sm font-bold text-slate-900">{currentUser?.name}</div>
