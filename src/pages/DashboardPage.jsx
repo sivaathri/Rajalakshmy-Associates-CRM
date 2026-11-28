@@ -985,13 +985,7 @@ export const DashboardPage = () => {
                   ? 'Monthly Disbursements & Activity Trend'
                   : 'Monthly Performance & Sanction Growth'}
               </h4>
-              <p className="text-xs text-slate-500">
-                {isRM
-                  ? 'Track monthly total calls vs disbursed loan portfolio in Lakhs (₹)'
-                  : isSalesManager
-                  ? 'Track monthly contacts added vs disbursed loan portfolio in Lakhs (₹)'
-                  : 'Track case submissions vs approved volumes in Lakhs (₹)'}
-              </p>
+             
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
