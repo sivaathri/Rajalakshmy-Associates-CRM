@@ -16,6 +16,42 @@ export const getSystemNotifications = ({
   const notifications = [];
   const todayIso = new Date().toISOString().split('T')[0];
   const todayFormatted = formatDateDDMMYYYY(new Date());
+  const roleLower = String(currentUser.role || '').toLowerCase();
+  const isOpsOrAdmin = roleLower === 'admin' || roleLower === 'ops' || roleLower === 'operations';
+
+  // 0. New Bank Logins Created -> Notify OPS & Admin roles (click opens Customer menu for that customer)
+  if (isOpsOrAdmin) {
+    [...bankLogins]
+      .filter(b => Boolean(b.createdAt))
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+      .forEach(b => {
+        const cleanMob = String(b.mobile || '').replace(/\D/g, '').slice(-10);
+        const queryParams = new URLSearchParams();
+        if (b.customerId) queryParams.set('customerId', b.customerId);
+        if (cleanMob) queryParams.set('mobile', cleanMob);
+        const targetLink = `/customers${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+
+        const amountText = b.loanAmount
+          ? ` • ₹${Number(String(b.loanAmount).replace(/[^\d.]/g, '') || 0).toLocaleString('en-IN')}`
+          : '';
+        const creatorText = b.createdByName
+          ? ` • Created by ${b.createdByName}${b.createdBy ? ` (${b.createdBy})` : ''}`
+          : '';
+
+        notifications.push({
+          id: `notif-new-login-${b.id}`,
+          type: 'new_login',
+          category: 'New Login',
+          title: `New Login Created: ${b.customerName || 'Customer'}`,
+          message: `${b.bankName || 'Bank'} (${b.loanType || 'Loan'}${amountText})${creatorText} — Click to view in Customer menu`,
+          time: b.loginDate ? formatDateDDMMYYYY(b.loginDate) : todayFormatted,
+          link: targetLink,
+          customerId: b.customerId || '',
+          priority: 'high',
+          createdAt: b.createdAt || b.loginDate || todayIso
+        });
+      });
+  }
 
   // 1. Telecalling Reminders
   const myReminders = customers.filter(c => {

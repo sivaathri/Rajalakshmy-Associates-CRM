@@ -99,6 +99,13 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
     }).length;
   }, [leads, bankLogins, currentUser?.id]);
 
+  const [notifSyncTick, setNotifSyncTick] = React.useState(0);
+  React.useEffect(() => {
+    const onUpdate = () => setNotifSyncTick(t => t + 1);
+    window.addEventListener('notifications-read-updated', onUpdate);
+    return () => window.removeEventListener('notifications-read-updated', onUpdate);
+  }, []);
+
   // Unread System Notifications count
   const unreadNotificationsCount = React.useMemo(() => {
     try {
@@ -113,12 +120,13 @@ export const Sidebar = ({ isOpen, setIsOpen }) => {
         performanceCases,
         attendance
       });
-      const read = JSON.parse(localStorage.getItem('rajalakshmy_read_notifications') || '[]');
+      const storageKey = `rajalakshmy_read_notifications_${currentUser?.id || 'guest'}`;
+      const read = JSON.parse(localStorage.getItem(storageKey) || '[]');
       return all.filter(n => !read.includes(n.id)).length;
     } catch {
       return 0;
     }
-  }, [currentUser, customers, bankLogins, leads, leaves, advanceAmounts, resignations, performanceCases, attendance]);
+  }, [currentUser, customers, bankLogins, leads, leaves, advanceAmounts, resignations, performanceCases, attendance, notifSyncTick]);
 
   const NavContent = ({ isExpanded = true, isMobile = false }) => {
     const dailyActivitiesMenu = canAccessRoute('daily-activities') && currentUser?.role !== 'Admin' && (

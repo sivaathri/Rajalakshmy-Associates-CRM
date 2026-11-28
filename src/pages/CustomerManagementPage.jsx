@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCRM } from '../context/CRMContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -24,6 +25,7 @@ import { Pagination } from '../components/common/Pagination';
 export const CustomerManagementPage = () => {
   const { customers } = useCRM();
   const { currentUser } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const isSalesManager = currentUser?.role === 'Sales Manager';
 
@@ -61,16 +63,44 @@ export const CustomerManagementPage = () => {
     return verifiedCustomersOnly;
   }, [customers, isSalesManager, currentUser]);
 
+  // Deep-link support from notifications (/customers?customerId=...&mobile=...)
+  const queryCustomerId = searchParams.get('customerId') || '';
+  const queryMobile = (searchParams.get('mobile') || '').replace(/\D/g, '').slice(-10);
+
+  useEffect(() => {
+    if (!queryCustomerId && !queryMobile) return;
+    const matched = scopedCustomers.find(c => {
+      if (queryCustomerId && (c.customerId === queryCustomerId || c.id === queryCustomerId)) {
+        return true;
+      }
+      if (queryMobile) {
+        const custMob = String(c.mobile || '').replace(/\D/g, '').slice(-10);
+        if (custMob && custMob === queryMobile) return true;
+      }
+      return false;
+    });
+
+    if (matched) {
+      setSearchTerm(matched.customerId || matched.id || matched.name || '');
+      setSelectedCustomer(matched);
+      // Clear deep-link query params once opened so closing the modal stays cleanly on /customers
+      setSearchParams({}, { replace: true });
+    } else if (queryMobile || queryCustomerId) {
+      setSearchTerm(queryCustomerId || queryMobile);
+    }
+  }, [queryCustomerId, queryMobile, scopedCustomers, setSearchParams]);
+
   // Filtered dataset
   const filteredCustomers = useMemo(() => {
     if (!searchTerm.trim()) return scopedCustomers;
     const q = searchTerm.toLowerCase();
     return scopedCustomers.filter(c => {
+      const matchesId = (c.customerId && c.customerId.toLowerCase().includes(q)) || (c.id && c.id.toLowerCase().includes(q));
       const matchesName = c.name && c.name.toLowerCase().includes(q);
       const matchesMobile = matchesMobileSearch(c.mobile, searchTerm) || matchesMobileSearch(c.altMobile, searchTerm);
       const matchesBusiness = c.business && c.business.toLowerCase().includes(q);
       const matchesCity = c.city && c.city.toLowerCase().includes(q);
-      return matchesName || matchesMobile || matchesBusiness || matchesCity;
+      return matchesId || matchesName || matchesMobile || matchesBusiness || matchesCity;
     });
   }, [scopedCustomers, searchTerm]);
 

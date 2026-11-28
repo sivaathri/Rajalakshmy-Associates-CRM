@@ -23,17 +23,33 @@ export const NotificationsPage = () => {
   const crm = useCRM();
   const navigate = useNavigate();
 
-  // Stored read notification IDs in localStorage
+  const storageKey = `rajalakshmy_read_notifications_${currentUser?.id || 'guest'}`;
+
+  // Stored read notification IDs in localStorage (scoped per user)
   const [readIds, setReadIds] = useState(() => {
     try {
-      const saved = localStorage.getItem('rajalakshmy_read_notifications');
+      const saved = localStorage.getItem(storageKey);
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
   });
 
-  const [filterType, setFilterType] = useState('all'); // 'all' | 'unread' | 'Telecalling' | 'Bank File' | 'Attendance' | 'Approval'
+  React.useEffect(() => {
+    const syncReadIds = () => {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        setReadIds(saved ? JSON.parse(saved) : []);
+      } catch {
+        setReadIds([]);
+      }
+    };
+    syncReadIds();
+    window.addEventListener('notifications-read-updated', syncReadIds);
+    return () => window.removeEventListener('notifications-read-updated', syncReadIds);
+  }, [storageKey]);
+
+  const [filterType, setFilterType] = useState('all'); // 'all' | 'unread' | 'New Login' | 'Telecalling' | 'Bank File' | 'Attendance' | 'Approval'
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch all notifications
@@ -60,7 +76,8 @@ export const NotificationsPage = () => {
       if (prev.includes(id)) return prev;
       const updated = [...prev, id];
       try {
-        localStorage.setItem('rajalakshmy_read_notifications', JSON.stringify(updated));
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        window.dispatchEvent(new Event('notifications-read-updated'));
       } catch (err) {
         console.warn(err);
       }
@@ -72,7 +89,8 @@ export const NotificationsPage = () => {
     const allIds = allNotifications.map(n => n.id);
     setReadIds(allIds);
     try {
-      localStorage.setItem('rajalakshmy_read_notifications', JSON.stringify(allIds));
+      localStorage.setItem(storageKey, JSON.stringify(allIds));
+      window.dispatchEvent(new Event('notifications-read-updated'));
     } catch (err) {
       console.warn(err);
     }
@@ -82,7 +100,8 @@ export const NotificationsPage = () => {
   const clearAllRead = () => {
     setReadIds([]);
     try {
-      localStorage.removeItem('rajalakshmy_read_notifications');
+      localStorage.removeItem(storageKey);
+      window.dispatchEvent(new Event('notifications-read-updated'));
     } catch (err) {
       console.warn(err);
     }
@@ -111,6 +130,8 @@ export const NotificationsPage = () => {
     switch (type) {
       case 'reminder':
         return <CalendarCheck className="w-5 h-5 text-amber-600" />;
+      case 'new_login':
+        return <FileCheck className="w-5 h-5 text-burgundy-700" />;
       case 'bank_login':
         return <FileCheck className="w-5 h-5 text-emerald-600" />;
       case 'lead_assign':
@@ -159,6 +180,9 @@ export const NotificationsPage = () => {
           {[
             { id: 'all', label: `All (${allNotifications.length})` },
             { id: 'unread', label: `Unread (${unreadCount})` },
+            ...(['admin', 'ops', 'operations'].includes(String(currentUser?.role || '').toLowerCase())
+              ? [{ id: 'New Login', label: 'New Logins' }]
+              : []),
             { id: 'Telecalling', label: 'Call Reminders' },
             { id: 'Assign Lead', label: 'Assign Leads' },
             { id: 'Bank File', label: 'Bank 2-Day Due' },
