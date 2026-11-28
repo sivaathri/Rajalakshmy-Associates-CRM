@@ -26,7 +26,7 @@ import {
   AlertCircle,
   FileSpreadsheet,
   Check,
-  Lock
+  Edit3
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatMobileNumber, matchesMobileSearch } from '../utils/formatters';
 
@@ -408,14 +408,21 @@ export const BankLoginPage = () => {
       ]);
 
       setCustomerName(fetchedName);
-      setCustomerDob(fetchedDob);
+      // Normalize DD-MM-YYYY or DD/MM/YYYY to YYYY-MM-DD for <input type="date">
+      let normalizedDob = fetchedDob;
+      if (normalizedDob && /^\d{2}[/-]\d{2}[/-]\d{4}$/.test(normalizedDob)) {
+        const [dd, mm, yyyy] = normalizedDob.split(/[/-]/);
+        normalizedDob = `${yyyy}-${mm}-${dd}`;
+      }
+      setCustomerDob(normalizedDob);
       setCustomerBusiness(fetchedBusiness);
       setCustomerCity(fetchedCity);
+      // Allow editing pre-filled customer details before submitting bank login
       setProfileLocks({
-        name: Boolean(fetchedName),
-        dob: Boolean(fetchedDob),
-        business: Boolean(fetchedBusiness),
-        city: Boolean(fetchedCity)
+        name: false,
+        dob: false,
+        business: false,
+        city: false
       });
     } else {
       setSelectedCustomerId('');
@@ -1688,7 +1695,7 @@ export const BankLoginPage = () => {
                 </div>
               ) : (
                 <>
-                  {/* Customer Profile Details (Existing values locked; missing fields remain editable) */}
+                  {/* Customer Profile Details (Pre-filled for existing customers; editable before submit) */}
                   <div className="space-y-2.5 pt-1 border-t border-slate-100">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
@@ -1696,13 +1703,9 @@ export const BankLoginPage = () => {
                         <span>Customer Profile Details</span>
                       </span>
                       {isExistingCustomer && (
-                        <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 flex items-center gap-1">
-                          <Lock className="w-2.5 h-2.5 text-slate-500" />
-                          <span>
-                            {profileLocks.name && profileLocks.dob && profileLocks.business && profileLocks.city
-                              ? 'Profile Data (Non-editable)'
-                              : 'Existing Data Locked • Missing Fields Editable'}
-                          </span>
+                        <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
+                          <Edit3 className="w-2.5 h-2.5 text-emerald-600" />
+                          <span>Existing Details Fetched — Editable Before Submit</span>
                         </span>
                       )}
                     </div>
