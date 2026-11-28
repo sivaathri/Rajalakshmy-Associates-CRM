@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useCRM } from '../../context/CRMContext';
 import { useAuth } from '../../context/AuthContext';
@@ -22,8 +22,10 @@ import {
 import { formatDate, getStatusBadgeClass, formatMobileNumber } from '../../utils/formatters';
 import { NumberLifecycleModal } from '../common/NumberLifecycleModal';
 
-export const CustomerDetailModal = ({ customer, onClose }) => {
+export const CustomerDetailModal = ({ customer: initialCustomer, onClose }) => {
   const {
+    customers = [],
+    updateCustomer,
     addCustomerDocument,
     deleteCustomerDocument,
     addCustomerService,
@@ -32,7 +34,14 @@ export const CustomerDetailModal = ({ customer, onClose }) => {
   } = useCRM();
   const { currentUser } = useAuth();
 
+  const customer = initialCustomer ? (customers.find(c => c.id === initialCustomer.id) || initialCustomer) : null;
+
   const [activeTab, setActiveTab] = useState('details'); // 'details' | 'documents' | 'services' | 'calls'
+  const [panInput, setPanInput] = useState('');
+
+  useEffect(() => {
+    setPanInput(customer?.panNumber || customer?.pan || '');
+  }, [customer?.id, customer?.panNumber, customer?.pan]);
 
   // Document upload state
   const [docCategory, setDocCategory] = useState('KYC 1');
@@ -47,6 +56,12 @@ export const CustomerDetailModal = ({ customer, onClose }) => {
   const [showLifecycleModal, setShowLifecycleModal] = useState(false);
 
   if (!customer) return null;
+
+  const handleSavePan = (e) => {
+    e.preventDefault();
+    const cleanedPan = panInput.trim().toUpperCase();
+    updateCustomer(customer.id, { panNumber: cleanedPan });
+  };
 
   const handleDocUpload = (e) => {
     e.preventDefault();
@@ -210,6 +225,29 @@ export const CustomerDetailModal = ({ customer, onClose }) => {
                       <span className="text-slate-500">Registered Address:</span>
                       <span className="font-medium text-slate-800 text-right max-w-xs">{customer.address || 'Standard Registered Zone'}</span>
                     </div>
+                    <form onSubmit={handleSavePan} className="pt-2 border-t border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <label htmlFor="customer-pan-input" className="text-slate-500 font-medium shrink-0">
+                        PAN Card Number:
+                      </label>
+                      <div className="flex items-center gap-1.5 flex-1 sm:max-w-[230px] justify-end">
+                        <input
+                          id="customer-pan-input"
+                          type="text"
+                          maxLength={10}
+                          placeholder="e.g. ABCDE1234F"
+                          value={panInput}
+                          onChange={(e) => setPanInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
+                          className="w-full text-xs font-mono font-bold uppercase rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-slate-900 focus:outline-none focus:border-burgundy-800"
+                        />
+                        <button
+                          type="submit"
+                          disabled={panInput.trim().toUpperCase() === String(customer.panNumber || customer.pan || '').trim().toUpperCase()}
+                          className="px-3 py-1.5 rounded-lg bg-burgundy-900 hover:bg-burgundy-800 disabled:bg-slate-200 disabled:text-slate-500 text-white text-[11px] font-bold transition shrink-0"
+                        >
+                          {customer.panNumber ? 'Update' : 'Save'}
+                        </button>
+                      </div>
+                    </form>
                   </div>
                 </div>
 
